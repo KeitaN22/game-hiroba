@@ -152,6 +152,7 @@
   </div>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -177,6 +178,7 @@
     const SMALL_H = 40, BIG_H = 60;
 
     let player, enemies, blocks, poppedMushrooms, scenery, bananas, shells, speedItems, camera, input, playing, gameOver, win;
+    let runStartTime = 0;
 
     function makeEnemy(baseX, range, speed) {
       return { baseX, x: baseX, y: GROUND_Y - 38, w: 38, h: 38, range, speed, dir: 1, alive: true, squished: false, squishTimer: 0 };
@@ -316,6 +318,8 @@
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
       winOverlay.classList.remove('hide');
+      const clearTime = Math.round(((performance.now() - runStartTime) / 1000) * 10) / 10;
+      Leaderboard.showRankFlow({ gameId: 'mario', score: clearTime, higherIsBetter: false, unit: 'びょう', title: '🧒 クリアタイム ランキング' });
     }
 
     function update() {
@@ -737,6 +741,7 @@
     document.getElementById('startBtn').addEventListener('click', () => {
       startOverlay.classList.add('hide');
       playing = true;
+      runStartTime = performance.now();
       GameAudio.playBGM();
     });
     document.getElementById('retryBtn1').addEventListener('click', () => { resetGame(); });

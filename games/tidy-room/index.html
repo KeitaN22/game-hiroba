@@ -111,6 +111,7 @@
   </div>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -224,6 +225,7 @@
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
       winOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'tidy-room', score: timeLeft, higherIsBetter: true, unit: 'びょう のこし', title: '🧹 のこり じかん ランキング' });
     }
 
     function triggerLose() {

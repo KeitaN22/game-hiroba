@@ -212,6 +212,7 @@
   </div>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     // まいろは じっさいに アルゴリズムで つくる（いきどまり あり の ほんかくてきな めいろ）。
     const STAGES = [
@@ -724,6 +725,7 @@
       shopMoneyEl.textContent = 0;
       bestSaleEl.textContent = getBestSale();
       GameAudio.playClearFanfare();
+      Leaderboard.showRankFlow({ gameId: 'heist', score: amount, higherIsBetter: true, unit: '円', title: '🥷 うりあげ ランキング' });
     });
 
     updateBankDisplay();

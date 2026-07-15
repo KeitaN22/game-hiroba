@@ -133,6 +133,7 @@
   </div>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -355,6 +356,7 @@
       GameAudio.playClearFanfare();
       document.getElementById('winScore').textContent = score;
       winOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'zombie', score, higherIsBetter: true, unit: 'たい', title: '🧟 たおした かず ランキング' });
     }
 
     function drawBackground() {

@@ -94,6 +94,7 @@
   <button class="action-btn hide" id="actionBtn">🎯 ねらいを きめる</button>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -232,6 +233,7 @@
         GameAudio.playClickTick();
       }
       resultOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'bowling', score: pinsDownTotal, higherIsBetter: true, unit: 'ほん', title: '🎳 たおした ピン ランキング' });
     }
 
     function update(dt) {

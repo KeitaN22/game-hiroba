@@ -92,6 +92,7 @@
   <button class="spin-btn" id="spinBtn">🌀 まわす！</button>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -180,6 +181,7 @@
       }
       timeBestEl.textContent = getBest().toFixed(1);
       overOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'marble-cup', score: Math.round(elapsed * 10) / 10, higherIsBetter: true, unit: 'びょう', title: '🥤 まわしつづけた じかん ランキング' });
     }
 
     function update(dt) {

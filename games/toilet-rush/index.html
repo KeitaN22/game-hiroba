@@ -169,6 +169,7 @@
   </div>
 
   <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
   <script>
     // 0 = floor, 1 = wall. START is always (0,0), GOAL is always (6,6).
     const STAGES = [
@@ -412,7 +413,11 @@
       clearInterval(countdownTimer);
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
+      const priorBest = getCleared().reduce((m, id) => Math.max(m, id), 0);
       markCleared(currentStage);
+      if (currentStage > priorBest) {
+        Leaderboard.showRankFlow({ gameId: 'toilet-rush', score: currentStage, higherIsBetter: true, unit: 'ステージ', title: '🚻 たどりついた ステージ ランキング' });
+      }
       const next = STAGES[currentStage];
       if (next) {
         winTitleEl.textContent = '🎉 まにあった！ 🎉';
