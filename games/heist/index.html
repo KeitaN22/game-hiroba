@@ -30,6 +30,13 @@
     display: inline-block;
   }
 
+  @media (max-width: 420px) {
+    .maze-frame { transform: scale(0.7); transform-origin: top center; margin-bottom: -90px; }
+  }
+  @media (max-width: 340px) {
+    .maze-frame { transform: scale(0.58); margin-bottom: -140px; }
+  }
+
   .maze-board {
     position: relative;
     display: grid;

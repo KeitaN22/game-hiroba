@@ -92,4 +92,12 @@ const GAMES = [
     path: 'games/heist/index.html',
     desc: 'けいびに みつからずに おかねを あつめて、おみせで うろう！10ステージ！',
   },
+  {
+    id: 'coloring',
+    title: 'そうすけの ぬりえ',
+    emoji: '🎨',
+    color: '#FF9A56',
+    path: 'games/coloring/index.html',
+    desc: 'すきな たべものを えらんで、すきな いろで ぬろう！',
+  },
 ];

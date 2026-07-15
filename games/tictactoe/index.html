@@ -56,6 +56,12 @@
   .ttt-cell.x { color: #FF5D8F; }
   .ttt-cell.win { background: #FFE58A; }
 
+  @media (max-width: 400px) {
+    .ttt-wrap { padding: 12px; min-height: 400px; }
+    .ttt-board { grid-template-columns: repeat(3, 84px); grid-template-rows: repeat(3, 84px); gap: 8px; }
+    .ttt-cell { width: 84px; height: 84px; font-size: 2.6rem; }
+  }
+
   .overlay {
     position: absolute; inset: 0; background: rgba(0,0,0,0.6);
     border-radius: 20px;

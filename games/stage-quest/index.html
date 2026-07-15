@@ -106,6 +106,9 @@
     cursor: default;
   }
 
+  @media (max-width: 400px) {
+    .puzzle-wrap { transform: scale(0.78); transform-origin: top center; margin-bottom: -110px; }
+  }
 </style>
 </head>
 <body class="game-body">
@@ -294,12 +297,14 @@
     let dragOffsetX = 0, dragOffsetY = 0;
     let placedCount = 0;
 
-    function computeTrayPositions(count, cols, trayTop) {
+    function computeTrayPositions(count, cols, trayTop, maxWidth) {
       const size = 90, gap = 10;
+      const fitCols = Math.max(1, Math.floor((maxWidth - 30) / (size + gap)));
+      const trayCols = Math.min(cols, fitCols);
       const positions = [];
       for (let i = 0; i < count; i++) {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
+        const col = i % trayCols;
+        const row = Math.floor(i / trayCols);
         positions.push({ x: 30 + col * (size + gap), y: trayTop + row * (size + gap) });
       }
       return positions;
@@ -372,7 +377,7 @@
       placedCount = 0;
 
       const trayTop = 20 + boardHeight + 30;
-      const trayPositions = computeTrayPositions(count, cols, trayTop);
+      const trayPositions = computeTrayPositions(count, cols, trayTop, puzzleWrap.clientWidth);
       const shuffledTray = [...trayPositions].sort(() => Math.random() - 0.5);
 
       puzzlePieces = [];

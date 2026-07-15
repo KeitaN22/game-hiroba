@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ぬりえ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .palette {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 10px;
+    margin-top: 14px;
+  }
+  .swatch {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 3px solid rgba(0,0,0,0.15);
+    cursor: pointer;
+    padding: 0;
+  }
+  .swatch.selected { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333; }
+
+  .tool-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+    margin-top: 14px;
+  }
+  .tool-btn {
+    font-size: 1.05rem; font-weight: bold;
+    padding: 10px 20px;
+    border: none; border-radius: 999px;
+    background: #fff; color: #333;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .tool-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .tool-btn.done { background: #FF9A56; color: #fff; box-shadow: 0 5px 0 #c96e2e; }
+
+  .pick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 12px;
+    width: 100%;
+    margin: 10px 0 20px;
+  }
+  .pick-card {
+    border: none;
+    border-radius: 18px;
+    padding: 14px 8px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-weight: bold;
+  }
+  .pick-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .pick-card .picoji { font-size: 2.2rem; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🎨 そうすけの ぬりえ</h1>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="360" height="360"></canvas>
+
+    <div class="palette hide" id="palette"></div>
+    <div class="tool-row hide" id="toolRow">
+      <button class="tool-btn" id="clearBtn">🔄 まっさら に する</button>
+      <button class="tool-btn done" id="doneBtn">✅ できた！</button>
+      <button class="tool-btn" id="toListBtn">🖼️ えを えらびなおす</button>
+    </div>
+
+    <div class="overlay" id="pickOverlay">
+      <h2>🎨 なにを ぬる？</h2>
+      <p>すきな たべものを えらんでね！したの いろから すきな いろを えらんで、なかを タッチすると ぬれるよ。</p>
+      <div class="pick-grid" id="pickGrid"></div>
+    </div>
+
+    <div class="overlay hide" id="doneOverlay">
+      <h2>🎉 じょうずに ぬれたね！ 🎉</h2>
+      <p id="doneText"></p>
+      <button class="big-btn" id="anotherBtn">🖼️ べつの えを ぬる</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const CX = W / 2, CY = H / 2;
+
+    const paletteEl = document.getElementById('palette');
+    const toolRowEl = document.getElementById('toolRow');
+    const pickOverlay = document.getElementById('pickOverlay');
+    const pickGridEl = document.getElementById('pickGrid');
+    const doneOverlay = document.getElementById('doneOverlay');
+    const doneTextEl = document.getElementById('doneText');
+
+    const COLORS = [
+      { name: 'あか', hex: '#FF3B3B' },
+      { name: 'だいだい', hex: '#FF8C42' },
+      { name: 'きいろ', hex: '#FFD93D' },
+      { name: 'きみどり', hex: '#A0D468' },
+      { name: 'みどり', hex: '#4CAF50' },
+      { name: 'みずいろ', hex: '#4FC3F7' },
+      { name: 'あお', hex: '#4C7BF3' },
+      { name: 'こん', hex: '#2C3E92' },
+      { name: 'むらさき', hex: '#9B59B6' },
+      { name: 'ピンク', hex: '#FF6FA5' },
+      { name: 'ももいろ', hex: '#FFC0CB' },
+      { name: 'ちゃいろ', hex: '#8B5E3C' },
+      { name: 'くろ', hex: '#333333' },
+      { name: 'はいいろ', hex: '#999999' },
+      { name: 'しろ', hex: '#FFFFFF' },
+      { name: 'きんいろ', hex: '#FFD700' },
+    ];
+
+    let selectedColor = COLORS[0].hex;
+
+    const ITEMS = [
+      { id: 'apple', name: 'りんご', emoji: '🍎', draw: drawApple },
+      { id: 'banana', name: 'バナナ', emoji: '🍌', draw: drawBanana },
+      { id: 'strawberry', name: 'いちご', emoji: '🍓', draw: drawStrawberry },
+      { id: 'grapes', name: 'ぶどう', emoji: '🍇', draw: drawGrapes },
+      { id: 'mikan', name: 'みかん', emoji: '🍊', draw: drawMikan },
+      { id: 'watermelon', name: 'すいか', emoji: '🍉', draw: drawWatermelon },
+      { id: 'peach', name: 'もも', emoji: '🍑', draw: drawPeach },
+      { id: 'corn', name: 'とうもろこし', emoji: '🌽', draw: drawCorn },
+    ];
+
+    let currentItem = null;
+
+    // ---- line-art drawing (white background + black outline strokes only) ----
+    function strokeStyle() {
+      ctx.strokeStyle = '#333333';
+      ctx.lineWidth = 5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+    }
+
+    function drawApple() {
+      strokeStyle();
+      // body
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 90);
+      ctx.bezierCurveTo(CX + 100, CY - 110, CX + 110, CY + 60, CX + 60, CY + 110);
+      ctx.bezierCurveTo(CX + 20, CY + 145, CX - 20, CY + 145, CX - 60, CY + 110);
+      ctx.bezierCurveTo(CX - 110, CY + 60, CX - 100, CY - 110, CX, CY - 90);
+      ctx.stroke();
+      // top dip
+      ctx.beginPath();
+      ctx.moveTo(CX - 14, CY - 92);
+      ctx.quadraticCurveTo(CX, CY - 75, CX + 14, CY - 92);
+      ctx.stroke();
+      // stem
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 92);
+      ctx.quadraticCurveTo(CX + 6, CY - 120, CX + 4, CY - 138);
+      ctx.stroke();
+      // leaf
+      ctx.beginPath();
+      ctx.ellipse(CX + 34, CY - 122, 22, 12, -0.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawBanana() {
+      strokeStyle();
+      ctx.beginPath();
+      ctx.moveTo(CX - 40, CY + 80);
+      ctx.quadraticCurveTo(CX - 100, CY - 30, CX + 20, CY - 120);
+      ctx.quadraticCurveTo(CX + 60, CY - 140, CX + 80, CY - 110);
+      ctx.quadraticCurveTo(CX - 20, CY - 50, CX - 5, CY + 70);
+      ctx.quadraticCurveTo(CX - 10, CY + 95, CX - 40, CY + 80);
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    function drawStrawberry() {
+      strokeStyle();
+      // body
+      ctx.beginPath();
+      ctx.moveTo(CX - 85, CY - 40);
+      ctx.bezierCurveTo(CX - 95, CY + 40, CX - 40, CY + 130, CX, CY + 140);
+      ctx.bezierCurveTo(CX + 40, CY + 130, CX + 95, CY + 40, CX + 85, CY - 40);
+      ctx.bezierCurveTo(CX + 60, CY - 20, CX - 60, CY - 20, CX - 85, CY - 40);
+      ctx.stroke();
+      // calyx (leaves)
+      for (let i = -2; i <= 2; i++) {
+        const x = CX + i * 26;
+        ctx.beginPath();
+        ctx.moveTo(x, CY - 40);
+        ctx.lineTo(x + 10, CY - 90);
+        ctx.lineTo(x + 22, CY - 38);
+        ctx.stroke();
+      }
+      // seeds
+      const seedPos = [[-30,10],[0,-5],[30,10],[-15,45],[15,45],[0,75],[-35,55],[35,55]];
+      seedPos.forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.ellipse(CX + dx, CY + dy, 5, 8, 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+
+    function drawGrapes() {
+      strokeStyle();
+      const r = 32;
+      const grapeCenters = [
+        [0, -60], [-30, -30], [30, -30], [-58, 0], [0, 0], [58, 0],
+        [-30, 30], [30, 30], [0, 60],
+      ];
+      grapeCenters.forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.arc(CX + dx, CY + dy, r * 0.55, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      // vine
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 92);
+      ctx.quadraticCurveTo(CX + 20, CY - 120, CX + 5, CY - 140);
+      ctx.stroke();
+      // leaf
+      ctx.beginPath();
+      ctx.ellipse(CX + 40, CY - 118, 24, 14, -0.4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawMikan() {
+      strokeStyle();
+      ctx.beginPath();
+      ctx.arc(CX, CY + 5, 100, 0, Math.PI * 2);
+      ctx.stroke();
+      // stem
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 95);
+      ctx.lineTo(CX, CY - 118);
+      ctx.stroke();
+      // leaf
+      ctx.beginPath();
+      ctx.ellipse(CX + 26, CY - 108, 24, 13, -0.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawWatermelon() {
+      strokeStyle();
+      // outer rind edge (half-circle, flat top)
+      ctx.beginPath();
+      ctx.arc(CX, CY - 10, 130, 0, Math.PI);
+      ctx.closePath();
+      ctx.stroke();
+      // inner flesh boundary (concentric half-circle)
+      ctx.beginPath();
+      ctx.arc(CX, CY - 10, 104, 0, Math.PI);
+      ctx.closePath();
+      ctx.stroke();
+      // seeds
+      const seeds = [[-40, 60], [-10, 90], [20, 65], [45, 95], [0, 45], [-55, 95]];
+      seeds.forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.ellipse(CX + dx, CY - 10 + dy, 5, 8, 0.4, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+
+    function drawPeach() {
+      strokeStyle();
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 95);
+      ctx.bezierCurveTo(CX + 95, CY - 90, CX + 105, CY + 40, CX + 55, CY + 100);
+      ctx.bezierCurveTo(CX + 25, CY + 135, CX - 25, CY + 135, CX - 55, CY + 100);
+      ctx.bezierCurveTo(CX - 105, CY + 40, CX - 95, CY - 90, CX, CY - 95);
+      ctx.stroke();
+      // center cleft
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 90);
+      ctx.quadraticCurveTo(CX - 10, CY, CX, CY + 100);
+      ctx.stroke();
+      // leaf
+      ctx.beginPath();
+      ctx.ellipse(CX + 20, CY - 105, 22, 12, -0.3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawCorn() {
+      strokeStyle();
+      // body
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - 140);
+      ctx.bezierCurveTo(CX + 70, CY - 110, CX + 75, CY + 90, CX + 20, CY + 140);
+      ctx.bezierCurveTo(CX + 5, CY + 150, CX - 5, CY + 150, CX - 20, CY + 140);
+      ctx.bezierCurveTo(CX - 75, CY + 90, CX - 70, CY - 110, CX, CY - 140);
+      ctx.stroke();
+      // kernel rows
+      for (let row = -100; row <= 110; row += 26) {
+        ctx.beginPath();
+        ctx.moveTo(CX - 55, row + CY - CY + 5);
+        ctx.lineTo(CX + 55, row);
+        ctx.stroke();
+      }
+      // husk leaves
+      ctx.beginPath();
+      ctx.moveTo(CX - 15, CY - 135);
+      ctx.quadraticCurveTo(CX - 55, CY - 150, CX - 40, CY - 90);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(CX + 15, CY - 135);
+      ctx.quadraticCurveTo(CX + 55, CY - 150, CX + 40, CY - 90);
+      ctx.stroke();
+    }
+
+    function resetCanvas() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+      currentItem.draw();
+    }
+
+    // ---- flood fill ----
+    function hexToRgb(hex) {
+      const v = parseInt(hex.slice(1), 16);
+      return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+    }
+
+    function floodFill(startX, startY, hex) {
+      const [fr, fg, fb] = hexToRgb(hex);
+      const imgData = ctx.getImageData(0, 0, W, H);
+      const data = imgData.data;
+      const startIdx = (startY * W + startX) * 4;
+      const startR = data[startIdx], startG = data[startIdx + 1], startB = data[startIdx + 2];
+      if (startR === fr && startG === fg && startB === fb) return;
+      const tolerance = 60;
+      const visited = new Uint8Array(W * H);
+      const stack = [[startX, startY]];
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        if (x < 0 || x >= W || y < 0 || y >= H) continue;
+        const px = y * W + x;
+        if (visited[px]) continue;
+        const p = px * 4;
+        const dr = data[p] - startR, dg = data[p + 1] - startG, db = data[p + 2] - startB;
+        if (Math.sqrt(dr * dr + dg * dg + db * db) > tolerance) continue;
+        visited[px] = 1;
+        data[p] = fr; data[p + 1] = fg; data[p + 2] = fb; data[p + 3] = 255;
+        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function getCanvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width, scaleY = H / rect.height;
+      return {
+        x: Math.floor((evt.clientX - rect.left) * scaleX),
+        y: Math.floor((evt.clientY - rect.top) * scaleY),
+      };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!currentItem) return;
+      const pos = getCanvasPos(e);
+      floodFill(pos.x, pos.y, selectedColor);
+      GameAudio.playClickTick();
+    });
+
+    // ---- UI ----
+    function renderPalette() {
+      paletteEl.innerHTML = '';
+      COLORS.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'swatch' + (i === 0 ? ' selected' : '');
+        btn.style.background = c.hex;
+        btn.title = c.name;
+        btn.addEventListener('click', () => {
+          selectedColor = c.hex;
+          paletteEl.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+          btn.classList.add('selected');
+        });
+        paletteEl.appendChild(btn);
+      });
+    }
+
+    function renderPickGrid() {
+      pickGridEl.innerHTML = '';
+      ITEMS.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'pick-card';
+        btn.innerHTML = `<span class="picoji">${item.emoji}</span><span>${item.name}</span>`;
+        btn.addEventListener('click', () => openItem(item));
+        pickGridEl.appendChild(btn);
+      });
+    }
+
+    function openItem(item) {
+      currentItem = item;
+      pickOverlay.classList.add('hide');
+      doneOverlay.classList.add('hide');
+      paletteEl.classList.remove('hide');
+      toolRowEl.classList.remove('hide');
+      resetCanvas();
+      GameAudio.playBGM();
+    }
+
+    function backToList() {
+      GameAudio.stopBGM();
+      currentItem = null;
+      paletteEl.classList.add('hide');
+      toolRowEl.classList.add('hide');
+      doneOverlay.classList.add('hide');
+      pickOverlay.classList.remove('hide');
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (currentItem) resetCanvas();
+    });
+    document.getElementById('doneBtn').addEventListener('click', () => {
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      doneTextEl.textContent = `${currentItem.emoji} ${currentItem.name} が すてきに できあがったね！`;
+      doneOverlay.classList.remove('hide');
+    });
+    document.getElementById('toListBtn').addEventListener('click', backToList);
+    document.getElementById('anotherBtn').addEventListener('click', backToList);
+
+    renderPalette();
+    renderPickGrid();
+  </script>
+</body>
+</html>
