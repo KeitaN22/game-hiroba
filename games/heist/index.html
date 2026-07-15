@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの おたからどろぼう</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #2C3E50 0%, #4A6572 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .maze-frame {
+    position: relative;
+    background: #FFF6DA;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 10px;
+    display: inline-block;
+  }
+
+  .maze-board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, 52px);
+    grid-template-rows: repeat(7, 52px);
+    gap: 4px;
+  }
+
+  .maze-cell {
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem;
+  }
+  .maze-cell.floor { background: #FFFDF5; }
+  .maze-cell.wall { background: #3B3B58; }
+
+  .player-token, .guard-token, .coin-token {
+    position: absolute;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem;
+    transition: left 0.15s ease, top 0.15s ease;
+    pointer-events: none;
+  }
+  .coin-token { font-size: 1.5rem; }
+  .coin-token.collected { display: none; }
+
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 8px;
+    justify-content: center;
+    margin: 20px auto 0;
+  }
+  .dpad-btn {
+    font-size: 1.8rem;
+    border: none;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    width: 100%;
+    margin: 10px 0 20px;
+  }
+  .stage-card {
+    border: none;
+    border-radius: 16px;
+    padding: 12px 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-weight: bold;
+  }
+  .stage-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .stage-card .semoji { font-size: 1.8rem; }
+  .stage-card.locked { background: #999; color: #eee; cursor: default; opacity: 0.7; }
+
+  .bank-line {
+    font-size: 1.3rem;
+    font-weight: bold;
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    padding: 8px 20px;
+    margin: 6px 0 4px;
+  }
+  .shop-btn {
+    font-size: 1.1rem;
+    font-weight: bold;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 999px;
+    background: #FFD166;
+    color: #6B4A2F;
+    box-shadow: 0 5px 0 #C99A3E;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .shop-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #C99A3E; }
+  .sell-amount {
+    font-size: 2.6rem;
+    font-weight: bold;
+    color: #FFD166;
+    margin: 10px 0;
+  }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🥷 そうすけの おたからどろぼう</h1>
+
+  <div class="hud" id="hud">
+    <span id="stageLabel">ステージ せんたくちゅう</span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">40</span> びょう</span>
+    <span>💰 <span id="stageCoin">0</span>/<span id="stageCoinMax">0</span></span>
+    <span>🏦 <span id="bankTotal">0</span>円</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="maze-frame">
+      <div class="maze-board" id="mazeBoard"></div>
+    </div>
+
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+
+    <div class="overlay" id="stageSelectOverlay">
+      <h2>🥷 おたからどろぼう</h2>
+      <p>
+        けいびの 👮さんに つかまらないように、💰おかねを あつめて<br>
+        🚪でぐちまで にげよう！ あつまった おかねは おみせで うれるよ。
+      </p>
+      <div class="bank-line">🏦 いまの おかね: <span id="bankTotal2">0</span>円</div>
+      <button class="shop-btn" id="openShopBtn">🏪 おみせで うる</button>
+      <div class="stage-grid" id="stageGrid"></div>
+    </div>
+
+    <div class="overlay hide" id="startOverlay">
+      <h2 id="startTitle">🥷 ステージ1</h2>
+      <p id="startText"></p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="loseOverlay">
+      <h2>🚨 つかまっちゃった！</h2>
+      <p>けいびに みつかっちゃったね。もういちど チャレンジしよう。</p>
+      <button class="big-btn" id="retryBtnLose">🔄 もういちど</button>
+      <button class="big-btn" id="toSelectBtnLose" style="margin-top:10px;">🗺️ ステージせんたくへ</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2 id="winTitle">🎉 だっしゅつ せいこう！ 🎉</h2>
+      <p id="winText"></p>
+      <button class="big-btn" id="nextStageBtn">▶ つぎのステージへ</button>
+      <button class="big-btn" id="toSelectBtnWin" style="margin-top:10px;">🗺️ ステージせんたくへ</button>
+    </div>
+
+    <div class="overlay hide" id="shopOverlay">
+      <h2>🏪 おみせ</h2>
+      <p>あつめた おかねを うって、とくてんに かえられるよ！</p>
+      <div class="sell-amount">💰 <span id="shopMoney">0</span>円</div>
+      <button class="big-btn" id="sellBtn">💵 うる！</button>
+      <p style="margin-top:16px;">さいこう うりあげ 🏆 <span id="bestSale">0</span>円</p>
+      <button class="big-btn" id="closeShopBtn" style="margin-top:10px;">🗺️ もどる</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    // まいろは じっさいに アルゴリズムで つくる（いきどまり あり の ほんかくてきな めいろ）。
+    const STAGES = [
+      { id: 1, rooms: { r: 4, c: 4 }, cellPx: 52, time: 45, coinCount: 3, deadEndCoins: 1, guardTick: 650, idlePause: 1500, seed: 1001 },
+      { id: 2, rooms: { r: 4, c: 4 }, cellPx: 52, time: 48, coinCount: 3, deadEndCoins: 1, guardTick: 620, idlePause: 1400, seed: 1002 },
+      { id: 3, rooms: { r: 4, c: 5 }, cellPx: 48, time: 52, coinCount: 4, deadEndCoins: 2, guardTick: 590, idlePause: 1300, seed: 1003 },
+      { id: 4, rooms: { r: 5, c: 5 }, cellPx: 44, time: 56, coinCount: 4, deadEndCoins: 2, guardTick: 560, idlePause: 1250, seed: 1004 },
+      { id: 5, rooms: { r: 5, c: 5 }, cellPx: 44, time: 60, coinCount: 5, deadEndCoins: 2, guardTick: 530, idlePause: 1200, seed: 1005 },
+      { id: 6, rooms: { r: 5, c: 6 }, cellPx: 40, time: 66, coinCount: 5, deadEndCoins: 3, guardTick: 500, idlePause: 1100, seed: 1006 },
+      { id: 7, rooms: { r: 6, c: 6 }, cellPx: 36, time: 72, coinCount: 6, deadEndCoins: 3, guardTick: 470, idlePause: 1000, seed: 1007 },
+      { id: 8, rooms: { r: 6, c: 6 }, cellPx: 36, time: 78, coinCount: 6, deadEndCoins: 3, guardTick: 440, idlePause: 900, seed: 1008 },
+      { id: 9, rooms: { r: 6, c: 7 }, cellPx: 32, time: 86, coinCount: 7, deadEndCoins: 4, guardTick: 410, idlePause: 800, seed: 1009 },
+      { id: 10, rooms: { r: 7, c: 7 }, cellPx: 30, time: 95, coinCount: 8, deadEndCoins: 4, guardTick: 380, idlePause: 700, seed: 1010 },
+    ];
+
+    let START = { row: 0, col: 0 };
+    let GOAL = { row: 0, col: 0 };
+    let CELL = 56;
+    const COIN_VALUE = 100;
+
+    function mulberry32(seed) {
+      let a = seed >>> 0;
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function shuffle(arr, rng) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // ほんかくてきな めいろを アルゴリズムで ほる（recursive backtracker）。
+    // 「へや」を rows x cols こ ならべて、へやの あいだの かべを ランダムに けずる。
+    // ぜんぶの へやが つながる き（tree）に なるので、いきどまりが たくさん できる。
+    function generateMaze(rows, cols, rng) {
+      const gridH = rows * 2 - 1, gridW = cols * 2 - 1;
+      const grid = Array.from({ length: gridH }, () => Array(gridW).fill(1));
+      const visited = Array.from({ length: rows }, () => Array(cols).fill(false));
+      const stack = [[0, 0]];
+      visited[0][0] = true;
+      grid[0][0] = 0;
+      while (stack.length) {
+        const [r, c] = stack[stack.length - 1];
+        const dirs = shuffle([[0, 1], [0, -1], [1, 0], [-1, 0]], rng);
+        let moved = false;
+        for (const [dr, dc] of dirs) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+            visited[nr][nc] = true;
+            grid[r * 2 + dr][c * 2 + dc] = 0;
+            grid[nr * 2][nc * 2] = 0;
+            stack.push([nr, nc]);
+            moved = true;
+            break;
+          }
+        }
+        if (!moved) stack.pop();
+      }
+      return { grid, gridH, gridW };
+    }
+
+    function bfsPath(grid, start, goal) {
+      const gridH = grid.length, gridW = grid[0].length;
+      const key = (r, c) => r + ',' + c;
+      const visited = new Set([key(start.row, start.col)]);
+      const parent = new Map();
+      const queue = [start];
+      let qi = 0;
+      while (qi < queue.length) {
+        const cur = queue[qi++];
+        if (cur.row === goal.row && cur.col === goal.col) break;
+        const neighbors = [
+          { row: cur.row - 1, col: cur.col }, { row: cur.row + 1, col: cur.col },
+          { row: cur.row, col: cur.col - 1 }, { row: cur.row, col: cur.col + 1 },
+        ];
+        for (const n of neighbors) {
+          if (n.row < 0 || n.row >= gridH || n.col < 0 || n.col >= gridW) continue;
+          if (grid[n.row][n.col] === 1) continue;
+          const k = key(n.row, n.col);
+          if (visited.has(k)) continue;
+          visited.add(k);
+          parent.set(k, cur);
+          queue.push(n);
+        }
+      }
+      const gk = key(goal.row, goal.col);
+      if (!visited.has(gk)) return null;
+      const path = [];
+      let cur = goal;
+      while (true) {
+        path.push(cur);
+        if (cur.row === start.row && cur.col === start.col) break;
+        cur = parent.get(key(cur.row, cur.col));
+      }
+      path.reverse();
+      return path;
+    }
+
+    // メインルート じゃない ばしょで、となりの ゆかが 1こしか ない ばしょ = いきどまり。
+    function findDeadEnds(grid, pathSet) {
+      const gridH = grid.length, gridW = grid[0].length;
+      const deadEnds = [];
+      for (let r = 0; r < gridH; r++) {
+        for (let c = 0; c < gridW; c++) {
+          if (grid[r][c] === 1) continue;
+          if (pathSet.has(r + ',' + c)) continue;
+          let deg = 0;
+          [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([nr, nc]) => {
+            if (nr >= 0 && nr < gridH && nc >= 0 && nc < gridW && grid[nr][nc] === 0) deg++;
+          });
+          if (deg === 1) deadEnds.push({ row: r, col: c });
+        }
+      }
+      return deadEnds;
+    }
+
+    const mazeBoardEl = document.getElementById('mazeBoard');
+    const hudEl = document.getElementById('hud');
+    const stageLabelEl = document.getElementById('stageLabel');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const stageCoinEl = document.getElementById('stageCoin');
+    const stageCoinMaxEl = document.getElementById('stageCoinMax');
+    const bankTotalEl = document.getElementById('bankTotal');
+    const bankTotalEl2 = document.getElementById('bankTotal2');
+    const stageSelectOverlay = document.getElementById('stageSelectOverlay');
+    const stageGridEl = document.getElementById('stageGrid');
+    const startOverlay = document.getElementById('startOverlay');
+    const startTitleEl = document.getElementById('startTitle');
+    const startTextEl = document.getElementById('startText');
+    const loseOverlay = document.getElementById('loseOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTitleEl = document.getElementById('winTitle');
+    const winTextEl = document.getElementById('winText');
+    const nextStageBtn = document.getElementById('nextStageBtn');
+    const shopOverlay = document.getElementById('shopOverlay');
+    const shopMoneyEl = document.getElementById('shopMoney');
+    const bestSaleEl = document.getElementById('bestSale');
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    let currentStage = 1;
+    let currentMaze = null;
+    let currentStageConf = STAGES[0];
+    let currentPath = [];
+    let currentPatrolLo = 0;
+    let currentPatrolHi = 0;
+    let playerPos = { ...START };
+    let playerToken = null;
+    let guardToken = null;
+    let guardPathIndex = 0;
+    let guardDir = 1;
+    let guardPos = null;
+    let coins = [];
+    let stageCoinCount = 0;
+    let timeLeft = 40;
+    let playing = false;
+    let countdownTimer = null;
+    let guardTimer = null;
+
+    const CLEARED_KEY = 'soutaHeistCleared';
+    const MONEY_KEY = 'soutaHeistMoney';
+    const BEST_SALE_KEY = 'soutaHeistBestSale';
+
+    function getCleared() {
+      try { return JSON.parse(localStorage.getItem(CLEARED_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+    function markCleared(id) {
+      const cleared = getCleared();
+      if (!cleared.includes(id)) {
+        cleared.push(id);
+        localStorage.setItem(CLEARED_KEY, JSON.stringify(cleared));
+      }
+    }
+    function isUnlocked(id) {
+      if (id <= 1) return true;
+      return getCleared().includes(id - 1);
+    }
+    function getBank() { return parseInt(localStorage.getItem(MONEY_KEY) || '0', 10); }
+    function setBank(v) { localStorage.setItem(MONEY_KEY, String(v)); updateBankDisplay(); }
+    function getBestSale() { return parseInt(localStorage.getItem(BEST_SALE_KEY) || '0', 10); }
+    function setBestSale(v) { localStorage.setItem(BEST_SALE_KEY, String(v)); }
+
+    function updateBankDisplay() {
+      const v = getBank();
+      bankTotalEl.textContent = v;
+      bankTotalEl2.textContent = v;
+    }
+
+    function pickCoinIndices(pathLen, count) {
+      const usable = pathLen - 2;
+      const set = new Set();
+      for (let i = 0; i < count; i++) {
+        const idx = 1 + Math.round(((i + 1) * usable) / (count + 1));
+        set.add(Math.max(1, Math.min(pathLen - 2, idx)));
+      }
+      return [...set];
+    }
+
+    function renderStageSelect() {
+      stageGridEl.innerHTML = '';
+      STAGES.forEach(stage => {
+        const btn = document.createElement('button');
+        if (isUnlocked(stage.id)) {
+          btn.className = 'stage-card';
+          btn.innerHTML = `<span class="semoji">🥷</span><span>${stage.id}</span>`;
+          btn.addEventListener('click', () => openStage(stage.id));
+        } else {
+          btn.className = 'stage-card locked';
+          btn.innerHTML = `<span class="semoji">🔒</span><span>${stage.id}</span>`;
+        }
+        stageGridEl.appendChild(btn);
+      });
+    }
+
+    let currentDeadEnds = [];
+
+    function openStage(n) {
+      const stage = STAGES[n - 1];
+      if (!stage) return;
+      currentStage = n;
+      currentStageConf = stage;
+      CELL = stage.cellPx + 4;
+
+      const rng = mulberry32(stage.seed);
+      const { grid, gridH, gridW } = generateMaze(stage.rooms.r, stage.rooms.c, rng);
+      currentMaze = grid;
+      START = { row: 0, col: 0 };
+      GOAL = { row: gridH - 1, col: gridW - 1 };
+      currentPath = bfsPath(grid, START, GOAL);
+      const pathSet = new Set(currentPath.map(p => p.row + ',' + p.col));
+      currentDeadEnds = shuffle(findDeadEnds(grid, pathSet), rng);
+
+      currentPatrolLo = Math.max(1, Math.floor(currentPath.length * 0.3));
+      currentPatrolHi = Math.min(currentPath.length - 2, Math.ceil(currentPath.length * 0.7));
+      if (currentPatrolHi <= currentPatrolLo) currentPatrolHi = Math.min(currentPath.length - 2, currentPatrolLo + 2);
+
+      stageLabelEl.textContent = `ステージ${stage.id}`;
+      stageSelectOverlay.classList.add('hide');
+      startTitleEl.textContent = `🥷 ステージ${stage.id}`;
+      startTextEl.innerHTML = `
+        👮けいびに つかまらないように すすんで、💰おかねを あつめよう！<br>
+        じっとしていれば けいびに みつからないよ。うごいて ぶつかると アウト！<br>
+        わきみちの いきどまりにも おたからが かくれてるかも！？<br>
+        🚪でぐちまで たどりつけたら クリア！ せいげんじかんは ${stage.time}びょうだよ。
+      `;
+      startOverlay.classList.remove('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      buildMaze();
+    }
+
+    function backToStageSelect() {
+      GameAudio.stopBGM();
+      clearInterval(countdownTimer);
+      clearTimeout(guardTimer);
+      startOverlay.classList.add('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      shopOverlay.classList.add('hide');
+      renderStageSelect();
+      updateBankDisplay();
+      stageSelectOverlay.classList.remove('hide');
+      stageLabelEl.textContent = 'ステージ せんたくちゅう';
+    }
+
+    function sizeToken(el) {
+      const px = currentStageConf.cellPx;
+      el.style.width = px + 'px';
+      el.style.height = px + 'px';
+      el.style.fontSize = Math.max(12, Math.round(px * 0.55)) + 'px';
+    }
+
+    function buildMaze() {
+      const px = currentStageConf.cellPx;
+      mazeBoardEl.style.gridTemplateColumns = `repeat(${currentMaze[0].length}, ${px}px)`;
+      mazeBoardEl.style.gridTemplateRows = `repeat(${currentMaze.length}, ${px}px)`;
+      mazeBoardEl.innerHTML = '';
+      for (let r = 0; r < currentMaze.length; r++) {
+        for (let c = 0; c < currentMaze[r].length; c++) {
+          const cell = document.createElement('div');
+          const isWall = currentMaze[r][c] === 1;
+          cell.className = 'maze-cell ' + (isWall ? 'wall' : 'floor');
+          cell.style.fontSize = Math.max(12, Math.round(px * 0.5)) + 'px';
+          if (!isWall && r === GOAL.row && c === GOAL.col) {
+            cell.textContent = '🚪';
+          }
+          mazeBoardEl.appendChild(cell);
+        }
+      }
+
+      // coins on the guarded main route
+      const coinIndices = pickCoinIndices(currentPath.length, currentStageConf.coinCount);
+      const onPathCoins = coinIndices.map(idx => ({ ...currentPath[idx] }));
+      // bonus coins tucked into dead-end side branches (no guard there)
+      const deadEndCoins = currentDeadEnds.slice(0, currentStageConf.deadEndCoins).map(p => ({ ...p }));
+      coins = [...onPathCoins, ...deadEndCoins].map(pos => ({ ...pos, collected: false, el: null }));
+      stageCoinCount = 0;
+      stageCoinEl.textContent = 0;
+      stageCoinMaxEl.textContent = coins.length;
+      coins.forEach(coin => {
+        const el = document.createElement('div');
+        el.className = 'coin-token';
+        sizeToken(el);
+        el.textContent = '💰';
+        el.style.left = (coin.col * CELL) + 'px';
+        el.style.top = (coin.row * CELL) + 'px';
+        mazeBoardEl.appendChild(el);
+        coin.el = el;
+      });
+
+      // guard
+      guardPathIndex = currentPatrolLo;
+      guardDir = 1;
+      guardPos = { ...currentPath[guardPathIndex] };
+      guardToken = document.createElement('div');
+      guardToken.className = 'guard-token';
+      sizeToken(guardToken);
+      guardToken.textContent = '👮';
+      guardToken.style.left = (guardPos.col * CELL) + 'px';
+      guardToken.style.top = (guardPos.row * CELL) + 'px';
+      mazeBoardEl.appendChild(guardToken);
+
+      // player
+      playerPos = { ...START };
+      playerToken = document.createElement('div');
+      playerToken.className = 'player-token';
+      sizeToken(playerToken);
+      playerToken.textContent = '🥷';
+      mazeBoardEl.appendChild(playerToken);
+      updatePlayerPosition(false);
+    }
+
+    function updatePlayerPosition(animate) {
+      if (!animate) playerToken.style.transition = 'none';
+      playerToken.style.left = (playerPos.col * CELL) + 'px';
+      playerToken.style.top = (playerPos.row * CELL) + 'px';
+      if (!animate) {
+        void playerToken.offsetWidth;
+        playerToken.style.transition = '';
+      }
+    }
+
+    function collectCoinAt(row, col) {
+      const coin = coins.find(c => !c.collected && c.row === row && c.col === col);
+      if (coin) {
+        coin.collected = true;
+        coin.el.classList.add('collected');
+        stageCoinCount++;
+        stageCoinEl.textContent = stageCoinCount;
+        setBank(getBank() + COIN_VALUE);
+        GameAudio.playClickTick();
+      }
+    }
+
+    function checkCaught() {
+      if (guardPos && playerPos.row === guardPos.row && playerPos.col === guardPos.col) {
+        triggerLose();
+        return true;
+      }
+      return false;
+    }
+
+    function tryMove(dRow, dCol) {
+      if (!playing) return;
+      const newRow = playerPos.row + dRow;
+      const newCol = playerPos.col + dCol;
+      if (newRow < 0 || newRow >= currentMaze.length || newCol < 0 || newCol >= currentMaze[0].length) return;
+      if (currentMaze[newRow][newCol] === 1) return;
+      playerPos = { row: newRow, col: newCol };
+      updatePlayerPosition(true);
+      collectCoinAt(playerPos.row, playerPos.col);
+      if (checkCaught()) return;
+      if (playerPos.row === GOAL.row && playerPos.col === GOAL.col) {
+        triggerWin();
+      }
+    }
+
+    function scheduleGuardMove(delay) {
+      clearTimeout(guardTimer);
+      guardTimer = setTimeout(tickGuard, delay);
+    }
+
+    function tickGuard() {
+      if (!playing) return;
+      guardPathIndex += guardDir;
+      let nextDelay = currentStageConf.guardTick;
+      if (guardPathIndex >= currentPatrolHi) {
+        guardPathIndex = currentPatrolHi;
+        guardDir = -1;
+        nextDelay = currentStageConf.idlePause;
+      } else if (guardPathIndex <= currentPatrolLo) {
+        guardPathIndex = currentPatrolLo;
+        guardDir = 1;
+        nextDelay = currentStageConf.idlePause;
+      }
+      guardPos = { ...currentPath[guardPathIndex] };
+      guardToken.style.left = (guardPos.col * CELL) + 'px';
+      guardToken.style.top = (guardPos.row * CELL) + 'px';
+      // じっとしていれば けいびが よこを とおっても つかまらない。
+      // うごいて けいびの ますに ぶつかった ときだけ アウト（tryMove がわで はんてい）。
+      if (playing) scheduleGuardMove(nextDelay);
+    }
+
+    function triggerWin() {
+      playing = false;
+      clearInterval(countdownTimer);
+      clearTimeout(guardTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      markCleared(currentStage);
+      const next = STAGES[currentStage];
+      const earned = stageCoinCount * COIN_VALUE;
+      if (next) {
+        winTitleEl.textContent = '🎉 だっしゅつ せいこう！ 🎉';
+        winTextEl.textContent = `💰 ${earned}円 ゲット！ つぎの ステージに いこう！`;
+        nextStageBtn.classList.remove('hide');
+        nextStageBtn.onclick = () => openStage(next.id);
+      } else {
+        winTitleEl.textContent = '🏆 ぜんぶ クリア！ 🏆';
+        winTextEl.textContent = `💰 ${earned}円 ゲット！ 10ステージ ぜんぶ にげきったね！`;
+        nextStageBtn.classList.add('hide');
+      }
+      winOverlay.classList.remove('hide');
+    }
+
+    function triggerLose() {
+      playing = false;
+      clearInterval(countdownTimer);
+      clearTimeout(guardTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      loseOverlay.classList.remove('hide');
+    }
+
+    function startGame() {
+      timeLeft = currentStageConf.time;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      startOverlay.classList.add('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      buildMaze();
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          triggerLose();
+        }
+      }, 1000);
+
+      clearTimeout(guardTimer);
+      guardTimer = setTimeout(tickGuard, currentStageConf.guardTick);
+    }
+
+    function retrySameStage() {
+      openStage(currentStage);
+    }
+
+    document.getElementById('btnUp').addEventListener('click', () => tryMove(-1, 0));
+    document.getElementById('btnDown').addEventListener('click', () => tryMove(1, 0));
+    document.getElementById('btnLeft').addEventListener('click', () => tryMove(0, -1));
+    document.getElementById('btnRight').addEventListener('click', () => tryMove(0, 1));
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') tryMove(-1, 0);
+      if (e.key === 'ArrowDown') tryMove(1, 0);
+      if (e.key === 'ArrowLeft') tryMove(0, -1);
+      if (e.key === 'ArrowRight') tryMove(0, 1);
+    });
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtnLose').addEventListener('click', retrySameStage);
+    document.getElementById('toSelectBtnLose').addEventListener('click', backToStageSelect);
+    document.getElementById('toSelectBtnWin').addEventListener('click', backToStageSelect);
+
+    document.getElementById('openShopBtn').addEventListener('click', () => {
+      shopMoneyEl.textContent = getBank();
+      bestSaleEl.textContent = getBestSale();
+      stageSelectOverlay.classList.add('hide');
+      shopOverlay.classList.remove('hide');
+    });
+    document.getElementById('closeShopBtn').addEventListener('click', () => {
+      shopOverlay.classList.add('hide');
+      stageSelectOverlay.classList.remove('hide');
+    });
+    document.getElementById('sellBtn').addEventListener('click', () => {
+      const amount = getBank();
+      if (amount <= 0) return;
+      if (amount > getBestSale()) setBestSale(amount);
+      setBank(0);
+      shopMoneyEl.textContent = 0;
+      bestSaleEl.textContent = getBestSale();
+      GameAudio.playClearFanfare();
+    });
+
+    updateBankDisplay();
+    renderStageSelect();
+  </script>
+</body>
+</html>

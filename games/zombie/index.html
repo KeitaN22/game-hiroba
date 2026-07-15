@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ゾンビたいじ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #C6F6D5 0%, #9AE6B4 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #BFEAC5;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .weapons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .weapon-btn {
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 10px 12px;
+    border: 4px solid transparent;
+    border-radius: 16px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    user-select: none;
+  }
+  .weapon-btn .wemoji { font-size: 1.6rem; display: block; }
+  .weapon-btn.active { border-color: #FF5D8F; background: #FFE3ED; }
+  .weapon-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .fire-row {
+    margin-top: 16px;
+  }
+
+  .fire-btn {
+    font-size: 1.6rem;
+    font-weight: bold;
+    padding: 16px 60px;
+    border: none;
+    border-radius: 999px;
+    background: #FF5D8F;
+    color: #fff;
+    box-shadow: 0 6px 0 #c73f6a;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .fire-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🧟 そうすけの ゾンビたいじ</h1>
+
+  <div class="hud">
+    <span id="hearts">❤️❤️❤️❤️❤️</span>
+    <span>スコア 🏅 <span id="score">0</span></span>
+    <span>のこり ⏱️ <span id="time">60</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="800" height="400"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🧟 そうすけの ゾンビたいじ</h2>
+      <p>
+        したの ぶきを えらんで、がめんを タッチすると こうげき！<br>
+        ちかづいてくる ゾンビを たおして いえを まもろう。<br>
+        ゾンビに 5かい ちかづかれると おしまいだよ。
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="overOverlay">
+      <h2>😱 やられた！</h2>
+      <p>たおした ゾンビ: <span id="overScore">0</span> ひき</p>
+      <button class="big-btn" id="retryBtn1">🔄 もういちど</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 まもりきった！ 🎉</h2>
+      <p>たおした ゾンビ: <span id="winScore">0</span> ひき</p>
+      <button class="big-btn" id="retryBtn2">🔄 もういちど あそぶ</button>
+    </div>
+  </div>
+
+  <div class="weapons" id="weapons"></div>
+
+  <div class="fire-row">
+    <button class="fire-btn" id="fireBtn">💥 こうげき！</button>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const heartsEl = document.getElementById('hearts');
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const startOverlay = document.getElementById('startOverlay');
+    const overOverlay = document.getElementById('overOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const weaponsEl = document.getElementById('weapons');
+
+    const W = canvas.width, H = canvas.height;
+    const GROUND_Y = 330;
+    const PLAYER_X = 90;
+    const GAME_TIME = 60;
+
+    const WEAPONS = [
+      { id: 'minigun', label: 'ミニガン', emoji: '🔫', damage: 1, cooldown: 90, melee: false, beam: false, color: '#FFD93D' },
+      { id: 'rifle', label: 'ライフル', emoji: '🔫', damage: 2, cooldown: 220, melee: false, beam: false, color: '#FF9F45' },
+      { id: 'pistol', label: 'ピストル', emoji: '🔫', damage: 4, cooldown: 500, melee: false, beam: false, color: '#4C7BF3' },
+      { id: 'beam', label: 'めだまビーム', emoji: '👀', damage: 999, cooldown: 2200, melee: false, beam: true, color: '#B266FF' },
+      { id: 'punch', label: 'パンチ', emoji: '✊', damage: 6, cooldown: 450, melee: true, range: 130, color: '#FF5D8F' },
+    ];
+
+    WEAPONS.forEach((w, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'weapon-btn' + (i === 0 ? ' active' : '');
+      btn.innerHTML = `<span class="wemoji">${w.emoji}</span>${i + 1}. ${w.label}`;
+      btn.addEventListener('click', () => selectWeapon(i));
+      weaponsEl.appendChild(btn);
+    });
+
+    let selectedWeapon = 0;
+    function selectWeapon(i) {
+      selectedWeapon = i;
+      [...weaponsEl.children].forEach((el, idx) => el.classList.toggle('active', idx === i));
+    }
+
+    let zombies, hearts, score, timeLeft, playing, lastFireTime, spawnTimer, elapsed, effects, bullets, beams, firing, lastFrameTime, countdownTimer;
+
+    function resetGame() {
+      zombies = [];
+      hearts = 5;
+      score = 0;
+      timeLeft = GAME_TIME;
+      playing = false;
+      lastFireTime = 0;
+      spawnTimer = 800;
+      elapsed = 0;
+      effects = [];
+      bullets = [];
+      beams = [];
+      firing = false;
+      lastFrameTime = performance.now();
+      updateHUD();
+      startOverlay.classList.remove('hide');
+      overOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      if (countdownTimer) clearInterval(countdownTimer);
+    }
+
+    function updateHUD() {
+      heartsEl.textContent = '❤️'.repeat(hearts) + '🖤'.repeat(5 - hearts);
+      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+    }
+
+    function spawnZombie() {
+      const hp = Math.floor(Math.random() * 4) + 2;
+      zombies.push({
+        x: W - 20,
+        y: GROUND_Y,
+        hp, maxHp: hp,
+        speed: 35 + Math.random() * 25 + elapsed * 0.4,
+        flash: 0,
+        size: 46,
+      });
+    }
+
+    function currentSpawnInterval() {
+      return Math.max(650, 1800 - elapsed * 20);
+    }
+
+    function addEffect(x, y, text, color) {
+      effects.push({ x, y, text, color, life: 800, vy: -30 });
+    }
+
+    function findNearestZombie() {
+      let best = null, bestDist = Infinity;
+      zombies.forEach(z => {
+        const d = z.x - PLAYER_X;
+        if (d < bestDist) { bestDist = d; best = z; }
+      });
+      return best;
+    }
+
+    function killZombie(z) {
+      zombies.splice(zombies.indexOf(z), 1);
+      score++;
+      addEffect(z.x, z.y - 60, '★やった！', '#2e9e2e');
+    }
+
+    function attack() {
+      if (!playing) return;
+      const w = WEAPONS[selectedWeapon];
+      const now = performance.now();
+      if (now - lastFireTime < w.cooldown) return;
+
+      if (w.melee) {
+        const target = zombies.find(z => (z.x - PLAYER_X) < w.range);
+        lastFireTime = now;
+        if (!target) {
+          addEffect(PLAYER_X + 60, GROUND_Y - 80, 'スカッ！', '#888');
+          return;
+        }
+        target.hp -= w.damage;
+        target.flash = 150;
+        addEffect(target.x, target.y - 70, 'ポカッ！', '#FF5D8F');
+        if (target.hp <= 0) killZombie(target);
+        return;
+      }
+
+      const target = findNearestZombie();
+      if (!target) return;
+      lastFireTime = now;
+
+      if (w.beam) {
+        target.hp -= w.damage;
+        target.flash = 150;
+        beams.push({ x1: PLAYER_X + 10, y1: GROUND_Y - 60, x2: target.x, y2: target.y - 30, life: 200, color: w.color });
+        addEffect(target.x, target.y - 80, '✨ビーム！✨', w.color);
+        if (target.hp <= 0) killZombie(target);
+        return;
+      }
+
+      GameAudio.playGunshot();
+      const bulletSize = w.id === 'minigun' ? 5 : w.id === 'rifle' ? 7 : 9;
+      bullets.push({
+        x: PLAYER_X + 46, y: GROUND_Y - 18,
+        vx: 820,
+        damage: w.damage,
+        color: w.color,
+        size: bulletSize,
+      });
+    }
+
+    function update(dt) {
+      if (!playing) return;
+      elapsed += dt / 1000;
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnZombie();
+        spawnTimer = currentSpawnInterval();
+      }
+
+      zombies.forEach(z => {
+        z.x -= z.speed * (dt / 1000);
+        if (z.flash > 0) z.flash -= dt;
+      });
+
+      for (let i = zombies.length - 1; i >= 0; i--) {
+        const z = zombies[i];
+        if (z.x - PLAYER_X <= 20) {
+          zombies.splice(i, 1);
+          hearts--;
+          addEffect(PLAYER_X, GROUND_Y - 90, '💔', '#FF3B3B');
+          updateHUD();
+          if (hearts <= 0) {
+            triggerGameOver();
+            return;
+          }
+        }
+      }
+
+      effects.forEach(e => { e.life -= dt; e.y += e.vy * (dt / 1000); });
+      effects = effects.filter(e => e.life > 0);
+
+      beams.forEach(b => { b.life -= dt; });
+      beams = beams.filter(b => b.life > 0);
+
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx * (dt / 1000);
+        let hit = false;
+        for (const z of zombies) {
+          if (Math.abs(b.x - z.x) < z.size / 2) {
+            z.hp -= b.damage;
+            z.flash = 150;
+            if (z.hp <= 0) killZombie(z);
+            hit = true;
+            break;
+          }
+        }
+        if (hit || b.x > W + 20) bullets.splice(i, 1);
+      }
+
+      if (firing) attack();
+    }
+
+    function triggerGameOver() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      document.getElementById('overScore').textContent = score;
+      overOverlay.classList.remove('hide');
+    }
+
+    function triggerWin() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      document.getElementById('winScore').textContent = score;
+      winOverlay.classList.remove('hide');
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = '#BFEAC5';
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = '36px sans-serif';
+      ctx.fillText('☁️', 120, 70);
+      ctx.fillText('☁️', 600, 50);
+      ctx.fillText('🪦', 300, GROUND_Y - 4);
+      ctx.fillText('🪦', 520, GROUND_Y - 4);
+
+      ctx.fillStyle = '#8FCB7A';
+      ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+      ctx.fillStyle = '#79B368';
+      ctx.fillRect(0, GROUND_Y, W, 8);
+    }
+
+    function drawPlayer() {
+      ctx.font = '54px sans-serif';
+      ctx.fillText('🦸', PLAYER_X - 27, GROUND_Y + 10);
+
+      const w = WEAPONS[selectedWeapon];
+      ctx.font = '26px sans-serif';
+      if (w.beam) {
+        ctx.fillText(w.emoji, PLAYER_X - 4, GROUND_Y - 36);
+      } else {
+        ctx.fillText(w.emoji, PLAYER_X + 16, GROUND_Y - 10);
+      }
+    }
+
+    function drawBullets() {
+      bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.ellipse(b.x, b.y, b.size, b.size * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = b.color;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = b.size * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(b.x - 22, b.y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    function drawBeams() {
+      beams.forEach(b => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, b.life / 200);
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(b.x1, b.y1);
+        ctx.lineTo(b.x2, b.y2);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    function drawZombies() {
+      zombies.forEach(z => {
+        ctx.save();
+        ctx.globalAlpha = z.flash > 0 ? 0.5 : 1;
+        ctx.font = `${z.size}px sans-serif`;
+        ctx.fillText('🧟', z.x - z.size / 2, z.y + 10);
+        ctx.restore();
+
+        const barW = 44;
+        ctx.fillStyle = '#444';
+        ctx.fillRect(z.x - barW / 2, z.y - z.size - 4, barW, 6);
+        ctx.fillStyle = '#5FD35F';
+        ctx.fillRect(z.x - barW / 2, z.y - z.size - 4, barW * (z.hp / z.maxHp), 6);
+      });
+    }
+
+    function drawEffects() {
+      effects.forEach(e => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, e.life / 800);
+        ctx.fillStyle = e.color;
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(e.text, e.x - 30, e.y);
+        ctx.restore();
+      });
+    }
+
+    function draw() {
+      drawBackground();
+      drawZombies();
+      drawBeams();
+      drawBullets();
+      drawPlayer();
+      drawEffects();
+    }
+
+    function loop(now) {
+      const dt = Math.min(50, now - lastFrameTime);
+      lastFrameTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // --- input ---
+    function getCanvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      return { x: (clientX - rect.left) * scaleX };
+    }
+
+    canvas.addEventListener('mousedown', () => { firing = true; attack(); });
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); firing = true; attack(); }, { passive: false });
+    window.addEventListener('mouseup', () => firing = false);
+    window.addEventListener('touchend', () => firing = false);
+
+    const fireBtn = document.getElementById('fireBtn');
+    fireBtn.addEventListener('mousedown', () => { firing = true; attack(); });
+    fireBtn.addEventListener('touchstart', (e) => { e.preventDefault(); firing = true; attack(); }, { passive: false });
+    fireBtn.addEventListener('mouseup', () => firing = false);
+    fireBtn.addEventListener('mouseleave', () => firing = false);
+    fireBtn.addEventListener('touchend', (e) => { e.preventDefault(); firing = false; }, { passive: false });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      startOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      lastFrameTime = performance.now();
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        updateHUD();
+        if (timeLeft <= 0) triggerWin();
+      }, 1000);
+    });
+    document.getElementById('retryBtn1').addEventListener('click', resetGame);
+    document.getElementById('retryBtn2').addEventListener('click', resetGame);
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

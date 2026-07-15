@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ステージクエスト</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #8EC5FC 0%, #E0C3FC 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 14px;
+    width: 100%;
+    max-width: 560px;
+    margin: 10px 0 20px;
+  }
+  .stage-card {
+    border: none;
+    border-radius: 18px;
+    padding: 16px 8px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .stage-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .stage-card .semoji { font-size: 2.2rem; }
+  .stage-card .sname { font-size: 0.95rem; font-weight: bold; }
+  .stage-card.locked { background: #999; color: #eee; cursor: default; opacity: 0.7; }
+  .stage-card.soon { background: #cbb; color: #543; cursor: default; opacity: 0.85; }
+
+  .puzzle-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 480px;
+    background: linear-gradient(135deg, #FFF6B7 0%, #F6416C 30%, #7EC8E3 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .puzzle-board {
+    position: absolute;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    gap: 10px;
+  }
+  .puzzle-slot {
+    width: 90px; height: 90px;
+    border: 4px dashed rgba(255,255,255,0.8);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.6rem;
+    opacity: 0.45;
+  }
+  .puzzle-piece {
+    position: absolute;
+    width: 90px; height: 90px;
+    border-radius: 14px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.6rem;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: left 0.25s ease, top 0.25s ease;
+  }
+  .puzzle-piece.dragging {
+    cursor: grabbing;
+    transition: none;
+    box-shadow: 0 10px 18px rgba(0,0,0,0.35);
+    transform: scale(1.08);
+    z-index: 50;
+  }
+  .puzzle-piece.placed {
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+    cursor: default;
+  }
+
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🗺️ そうすけの ステージクエスト</h1>
+
+  <div class="hud">
+    <span id="stageLabel">ステージ せんたくちゅう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="puzzle-wrap hide" id="puzzleWrap">
+      <div class="puzzle-board" id="puzzleBoard"></div>
+    </div>
+
+    <div class="overlay" id="stageSelectOverlay">
+      <h2>🗺️ そうすけの ステージクエスト</h2>
+      <p>あそびたい ステージを えらんでね！</p>
+      <div class="stage-grid" id="stageGrid"></div>
+    </div>
+
+    <div class="overlay hide" id="startOverlay">
+      <h2 id="startTitle">🗺️ そうすけの ステージクエスト</h2>
+      <p id="startText"></p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 ゴール！ よくできました！ 🎉</h2>
+      <p id="winText">おめでとう！ クリア だよ！</p>
+      <button class="big-btn" id="nextStageBtn">▶ つぎのステージへ</button>
+      <button class="big-btn" id="toSelectBtn" style="margin-top:10px;">🗺️ ステージせんたくへ</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const stageLabelEl = document.getElementById('stageLabel');
+    const stageSelectOverlay = document.getElementById('stageSelectOverlay');
+    const stageGridEl = document.getElementById('stageGrid');
+    const startOverlay = document.getElementById('startOverlay');
+    const startTitleEl = document.getElementById('startTitle');
+    const startTextEl = document.getElementById('startText');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTextEl = document.getElementById('winText');
+    const nextStageBtn = document.getElementById('nextStageBtn');
+    const puzzleWrap = document.getElementById('puzzleWrap');
+    const puzzleBoardEl = document.getElementById('puzzleBoard');
+
+    let currentStage = 1;
+
+    const CLEARED_KEY = 'soutaStageQuestClearedStages';
+    function getClearedStages() {
+      try {
+        return JSON.parse(localStorage.getItem(CLEARED_KEY) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+    function markCleared(id) {
+      const cleared = getClearedStages();
+      if (!cleared.includes(id)) {
+        cleared.push(id);
+        localStorage.setItem(CLEARED_KEY, JSON.stringify(cleared));
+      }
+    }
+    function isStageUnlocked(stage) {
+      const idx = STAGES.findIndex(s => s.id === stage.id);
+      if (idx <= 0) return true;
+      const cleared = getClearedStages();
+      return cleared.includes(STAGES[idx - 1].id);
+    }
+
+    const STAGES = [
+      {
+        id: 1, name: 'どうぶつパズル', emoji: '🧩', built: true, type: 'puzzle',
+        pieces: ['🐶', '🐱', '🐰', '🐻', '🦊', '🐼'], cols: 3,
+        instructions: `
+          どうぶつの ピースを マウスで おさえて つかむよ。<br>
+          そのまま うごかして(ドラッグして)、うえの ばんに もっていってね。<br>
+          ただしい ばしょで はなすと「ピタッ」と はまるよ。<br>
+          ちがう ばしょで はなすと、もとの ばしょに もどっちゃう。<br>
+          ぜんぶの ピースを はめたら クリア！
+        `,
+      },
+      {
+        id: 2, name: 'にやりがおパズル', emoji: '😏', built: true, type: 'puzzle',
+        imagePuzzle: true, cols: 3, rows: 2,
+        instructions: `
+          おおきな「にやり がお」の えが 6つに わかれてるよ。<br>
+          ピースを マウスで つかんで、ただしい ばしょに ドラッグしよう。<br>
+          ただしい ばしょで はなすと「ピタッ」と はまるよ。<br>
+          ちがう ばしょだと、もとの ばしょに もどっちゃう。<br>
+          ぜんぶ はめて えを かんせいさせたら クリア！
+        `,
+      },
+      {
+        id: 3, name: 'のりものパズル', emoji: '🚗', built: true, type: 'puzzle',
+        pieces: ['🚗', '🚕', '🚌', '🚓', '🚑', '🚒', '🚜', '🚲'], cols: 4,
+        instructions: `
+          どうぶつパズルと おなじ あそびかただよ。<br>
+          こんどは のりものが 8こ あるから ちょっと むずかしいよ！<br>
+          ピースを ドラッグして、ただしい ばしょに はめよう。<br>
+          ぜんぶ はめたら クリア！
+        `,
+      },
+    ];
+
+    function renderStageSelect() {
+      stageGridEl.innerHTML = '';
+      STAGES.forEach(stage => {
+        const btn = document.createElement('button');
+        const isUnlocked = isStageUnlocked(stage);
+        if (!stage.built) {
+          btn.className = 'stage-card soon';
+          btn.innerHTML = `<span class="semoji">${stage.emoji}</span><span class="sname">ステージ${stage.id}</span><span class="sname">じゅんびちゅう</span>`;
+        } else if (!isUnlocked) {
+          btn.className = 'stage-card locked';
+          btn.innerHTML = `<span class="semoji">🔒</span><span class="sname">ステージ${stage.id}</span>`;
+        } else {
+          btn.className = 'stage-card';
+          btn.innerHTML = `<span class="semoji">${stage.emoji}</span><span class="sname">ステージ${stage.id}</span><span class="sname">${stage.name}</span>`;
+          btn.addEventListener('click', () => openStage(stage.id));
+        }
+        stageGridEl.appendChild(btn);
+      });
+    }
+
+    function openStage(n) {
+      const stage = STAGES[n - 1];
+      if (!stage || !stage.built) return;
+      currentStage = n;
+      puzzleWrap.classList.add('hide');
+      stageLabelEl.textContent = `ステージ${stage.id}: ${stage.name}`;
+      stageSelectOverlay.classList.add('hide');
+      startTitleEl.textContent = `${stage.emoji} ステージ${stage.id}: ${stage.name}`;
+      startTextEl.innerHTML = stage.instructions;
+      startOverlay.classList.remove('hide');
+      winOverlay.classList.add('hide');
+    }
+
+    function backToStageSelect() {
+      GameAudio.stopBGM();
+      winOverlay.classList.add('hide');
+      startOverlay.classList.add('hide');
+      puzzleWrap.classList.add('hide');
+      renderStageSelect();
+      stageSelectOverlay.classList.remove('hide');
+      stageLabelEl.textContent = 'ステージ せんたくちゅう';
+    }
+
+    function triggerWin() {
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      markCleared(currentStage);
+
+      const nextUnbuilt = STAGES.find(s => s.id > currentStage);
+      const nextBuilt = STAGES.find(s => s.id > currentStage && s.built);
+
+      if (nextBuilt) {
+        winTextEl.textContent = 'おめでとう！ クリア だよ！';
+        nextStageBtn.classList.remove('hide');
+        nextStageBtn.textContent = '▶ つぎのステージへ';
+        nextStageBtn.onclick = () => openStage(nextBuilt.id);
+      } else if (nextUnbuilt) {
+        winTextEl.textContent = 'おめでとう！ つぎの ステージは じゅんびちゅうだよ！';
+        nextStageBtn.classList.add('hide');
+      } else {
+        winTextEl.textContent = 'おめでとう！ ぜんぶの ステージ クリア！すごい！';
+        nextStageBtn.classList.add('hide');
+      }
+      puzzleWrap.classList.add('hide');
+      winOverlay.classList.remove('hide');
+    }
+
+    // --- drag-and-drop puzzle ---
+    let puzzlePieces = [];
+    let dragPiece = null;
+    let dragOffsetX = 0, dragOffsetY = 0;
+    let placedCount = 0;
+
+    function computeTrayPositions(count, cols, trayTop) {
+      const size = 90, gap = 10;
+      const positions = [];
+      for (let i = 0; i < count; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        positions.push({ x: 30 + col * (size + gap), y: trayTop + row * (size + gap) });
+      }
+      return positions;
+    }
+
+    function makeGrinFaceImage(width, height) {
+      const c = document.createElement('canvas');
+      c.width = width; c.height = height;
+      const g = c.getContext('2d');
+      const cx = width / 2, cy = height / 2;
+
+      g.fillStyle = '#FFD54A';
+      g.beginPath();
+      g.ellipse(cx, cy, width / 2 - 6, height / 2 - 6, 0, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = '#E0A800';
+      g.lineWidth = 5;
+      g.stroke();
+
+      g.fillStyle = '#3A2E1E';
+      g.beginPath(); g.ellipse(cx - width * 0.16, cy - height * 0.08, width * 0.045, height * 0.075, 0, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(cx + width * 0.16, cy - height * 0.08, width * 0.045, height * 0.075, 0, 0, Math.PI * 2); g.fill();
+
+      g.strokeStyle = '#3A2E1E'; g.lineWidth = 6; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(cx - width * 0.26, cy - height * 0.22); g.lineTo(cx - width * 0.07, cy - height * 0.15); g.stroke();
+      g.beginPath(); g.moveTo(cx + width * 0.26, cy - height * 0.22); g.lineTo(cx + width * 0.07, cy - height * 0.15); g.stroke();
+
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.moveTo(cx - width * 0.32, cy + height * 0.06);
+      g.quadraticCurveTo(cx, cy + height * 0.42, cx + width * 0.32, cy + height * 0.06);
+      g.quadraticCurveTo(cx, cy + height * 0.22, cx - width * 0.32, cy + height * 0.06);
+      g.fill();
+      g.strokeStyle = '#3A2E1E'; g.lineWidth = 4;
+      g.stroke();
+      g.beginPath();
+      g.moveTo(cx - width * 0.29, cy + height * 0.15);
+      g.lineTo(cx + width * 0.29, cy + height * 0.15);
+      g.stroke();
+
+      return c.toDataURL();
+    }
+
+    function initPuzzle(stage) {
+      const cols = stage.cols;
+      const rows = stage.imagePuzzle ? stage.rows : Math.ceil(stage.pieces.length / cols);
+      const count = stage.imagePuzzle ? cols * rows : stage.pieces.length;
+      const boardHeight = rows * 90 + (rows - 1) * 10;
+
+      let imageURL = null;
+      if (stage.imagePuzzle) imageURL = makeGrinFaceImage(cols * 90, rows * 90);
+
+      puzzleBoardEl.style.gridTemplateColumns = `repeat(${cols}, 90px)`;
+      puzzleBoardEl.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'puzzle-slot';
+        if (stage.imagePuzzle) {
+          const col = i % cols, row = Math.floor(i / cols);
+          slot.style.backgroundImage = `url(${imageURL})`;
+          slot.style.backgroundSize = `${cols * 90}px ${rows * 90}px`;
+          slot.style.backgroundPosition = `-${col * 90}px -${row * 90}px`;
+        } else {
+          slot.textContent = stage.pieces[i];
+        }
+        puzzleBoardEl.appendChild(slot);
+      }
+
+      document.querySelectorAll('.puzzle-piece').forEach(el => el.remove());
+      placedCount = 0;
+
+      const trayTop = 20 + boardHeight + 30;
+      const trayPositions = computeTrayPositions(count, cols, trayTop);
+      const shuffledTray = [...trayPositions].sort(() => Math.random() - 0.5);
+
+      puzzlePieces = [];
+      for (let i = 0; i < count; i++) {
+        puzzlePieces.push({
+          emoji: stage.imagePuzzle ? null : stage.pieces[i],
+          correctIndex: i,
+          homeX: shuffledTray[i].x,
+          homeY: shuffledTray[i].y,
+          placed: false,
+          el: null,
+        });
+      }
+
+      puzzlePieces.forEach(piece => {
+        const el = document.createElement('div');
+        el.className = 'puzzle-piece';
+        if (stage.imagePuzzle) {
+          const col = piece.correctIndex % cols, row = Math.floor(piece.correctIndex / cols);
+          el.style.backgroundImage = `url(${imageURL})`;
+          el.style.backgroundSize = `${cols * 90}px ${rows * 90}px`;
+          el.style.backgroundPosition = `-${col * 90}px -${row * 90}px`;
+        } else {
+          el.textContent = piece.emoji;
+        }
+        el.style.left = piece.homeX + 'px';
+        el.style.top = piece.homeY + 'px';
+        el.addEventListener('pointerdown', (e) => onPieceDown(e, piece));
+        puzzleWrap.appendChild(el);
+        piece.el = el;
+      });
+    }
+
+    function getSlotPos(index) {
+      const slot = puzzleBoardEl.children[index];
+      const wrapRect = puzzleWrap.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      return {
+        x: slotRect.left - wrapRect.left,
+        y: slotRect.top - wrapRect.top,
+      };
+    }
+
+    function onPieceDown(e, piece) {
+      if (piece.placed) return;
+      dragPiece = piece;
+      const wrapRect = puzzleWrap.getBoundingClientRect();
+      const pointerX = e.clientX - wrapRect.left;
+      const pointerY = e.clientY - wrapRect.top;
+      dragOffsetX = pointerX - piece.el.offsetLeft;
+      dragOffsetY = pointerY - piece.el.offsetTop;
+      piece.el.classList.add('dragging');
+      piece.el.setPointerCapture(e.pointerId);
+    }
+
+    function onPieceMove(e) {
+      if (!dragPiece) return;
+      const wrapRect = puzzleWrap.getBoundingClientRect();
+      const pointerX = e.clientX - wrapRect.left;
+      const pointerY = e.clientY - wrapRect.top;
+      dragPiece.el.style.left = (pointerX - dragOffsetX) + 'px';
+      dragPiece.el.style.top = (pointerY - dragOffsetY) + 'px';
+    }
+
+    function onPieceUp() {
+      if (!dragPiece) return;
+      const piece = dragPiece;
+      piece.el.classList.remove('dragging');
+      dragPiece = null;
+
+      const target = getSlotPos(piece.correctIndex);
+      const curX = piece.el.offsetLeft;
+      const curY = piece.el.offsetTop;
+      const dist = Math.hypot(curX - target.x, curY - target.y);
+
+      if (dist < 45) {
+        piece.el.style.left = target.x + 'px';
+        piece.el.style.top = target.y + 'px';
+        piece.placed = true;
+        piece.el.classList.add('placed');
+        GameAudio.playClickTick();
+        placedCount++;
+        if (placedCount === puzzlePieces.length) {
+          triggerWin();
+        }
+      } else {
+        piece.el.style.left = piece.homeX + 'px';
+        piece.el.style.top = piece.homeY + 'px';
+      }
+    }
+
+    puzzleWrap.addEventListener('pointermove', onPieceMove);
+    window.addEventListener('pointerup', onPieceUp);
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      startOverlay.classList.add('hide');
+      const stage = STAGES[currentStage - 1];
+      puzzleWrap.classList.remove('hide');
+      initPuzzle(stage);
+      GameAudio.playBGM();
+    });
+    document.getElementById('toSelectBtn').addEventListener('click', backToStageSelect);
+
+    renderStageSelect();
+  </script>
+</body>
+</html>

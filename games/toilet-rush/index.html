@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの トイレまでダッシュ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #A6F3B7 0%, #6EE7F9 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span { color: #FF3B3B; }
+
+  .maze-frame {
+    position: relative;
+    background: #FFF6DA;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 10px;
+    display: inline-block;
+  }
+
+  .maze-board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, 52px);
+    grid-template-rows: repeat(7, 52px);
+    gap: 4px;
+  }
+
+  .maze-cell {
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem;
+  }
+  .maze-cell.floor { background: #FFFDF5; }
+  .maze-cell.wall { background: #A9713E; }
+
+  .player-token {
+    position: absolute;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.9rem;
+    transition: left 0.15s ease, top 0.15s ease;
+    pointer-events: none;
+  }
+
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 8px;
+    justify-content: center;
+    margin: 20px auto 0;
+  }
+  .dpad-btn {
+    font-size: 1.8rem;
+    border: none;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    width: 100%;
+    margin: 10px 0 20px;
+  }
+  .stage-card {
+    border: none;
+    border-radius: 16px;
+    padding: 12px 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-weight: bold;
+  }
+  .stage-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .stage-card .semoji { font-size: 1.8rem; }
+  .stage-card.locked { background: #999; color: #eee; cursor: default; opacity: 0.7; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🚻 そうすけの トイレまでダッシュ</h1>
+
+  <div class="hud" id="hud">
+    <span id="stageLabel">ステージ せんたくちゅう</span>
+    <span>のこり ⏱️ <span id="timeLeft">25</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="maze-frame">
+      <div class="maze-board" id="mazeBoard"></div>
+    </div>
+
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+
+    <div class="overlay" id="stageSelectOverlay">
+      <h2>🚻 トイレまでダッシュ</h2>
+      <p>あそびたい ステージを えらんでね！</p>
+      <div class="stage-grid" id="stageGrid"></div>
+    </div>
+
+    <div class="overlay hide" id="startOverlay">
+      <h2 id="startTitle">🚻 ステージ1</h2>
+      <p id="startText">
+        🧒が おなかを おさえて がまん してるよ…！<br>
+        やじるしボタンで うごいて、🚻トイレまで いそごう！<br>
+        じかんぎれに ならないように きをつけてね。
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="loseOverlay">
+      <h2>😖 まにあわなかった…</h2>
+      <p>ざんねん！ つぎは がんばろう！</p>
+      <button class="big-btn" id="retryBtnLose">🔄 もういちど</button>
+      <button class="big-btn" id="toSelectBtnLose" style="margin-top:10px;">🗺️ ステージせんたくへ</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2 id="winTitle">🎉 まにあった！ 🎉</h2>
+      <p id="winText">よかったね！ セーフ！</p>
+      <button class="big-btn" id="nextStageBtn">▶ つぎのステージへ</button>
+      <button class="big-btn" id="toSelectBtnWin" style="margin-top:10px;">🗺️ ステージせんたくへ</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    // 0 = floor, 1 = wall. START is always (0,0), GOAL is always (6,6).
+    const STAGES = [
+      { id: 1, time: 25, maze: [
+        [0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+      ]},
+      { id: 2, time: 25, maze: [
+        [0,0,0,0,0,1,1],
+        [1,1,1,1,0,1,1],
+        [1,1,1,1,0,1,1],
+        [1,1,1,1,0,1,1],
+        [1,1,1,1,0,1,1],
+        [1,1,1,1,0,1,1],
+        [1,1,1,1,0,0,0],
+      ]},
+      { id: 3, time: 22, maze: [
+        [0,0,0,0,1,1,1],
+        [1,1,1,0,1,1,1],
+        [1,1,1,0,1,1,1],
+        [1,1,1,0,0,0,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+      ]},
+      { id: 4, time: 22, maze: [
+        [0,0,0,1,1,1,1],
+        [1,1,0,1,1,1,1],
+        [1,1,0,1,1,1,1],
+        [1,1,0,0,0,0,1],
+        [1,1,1,1,1,0,1],
+        [1,1,1,1,1,0,1],
+        [1,1,1,1,1,0,0],
+      ]},
+      { id: 5, time: 20, maze: [
+        [0,0,0,0,1,1,1],
+        [1,1,1,0,0,0,1],
+        [1,1,1,1,1,0,1],
+        [1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,0],
+      ]},
+      { id: 6, time: 20, maze: [
+        [0,0,0,1,1,1,1],
+        [1,1,0,1,1,1,1],
+        [1,1,0,0,1,1,1],
+        [1,1,1,0,1,1,1],
+        [1,1,1,0,0,0,1],
+        [1,1,1,1,1,0,1],
+        [1,1,1,1,1,0,0],
+      ]},
+      { id: 7, time: 18, maze: [
+        [0,0,0,1,1,1,1],
+        [1,1,0,1,1,1,1],
+        [1,1,0,0,0,1,1],
+        [1,1,1,1,0,0,1],
+        [1,1,1,1,1,0,1],
+        [1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,0],
+      ]},
+      { id: 8, time: 18, maze: [
+        [0,0,0,1,1,1,1],
+        [1,1,0,1,1,1,1],
+        [1,1,0,0,1,1,1],
+        [1,1,1,0,1,1,1],
+        [1,1,1,0,0,1,1],
+        [1,1,1,1,0,0,1],
+        [1,1,1,1,1,0,0],
+      ]},
+      { id: 9, time: 16, maze: [
+        [0,0,0,1,1,1,1],
+        [1,1,0,1,1,1,1],
+        [1,1,0,0,1,1,1],
+        [1,1,1,0,0,1,1],
+        [1,1,1,1,0,0,1],
+        [1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,0],
+      ]},
+      { id: 10, time: 16, maze: [
+        [0,0,1,1,1,1,1],
+        [1,0,0,1,1,1,1],
+        [1,1,0,0,1,1,1],
+        [1,1,1,0,0,1,1],
+        [1,1,1,1,0,0,1],
+        [1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,0],
+      ]},
+    ];
+
+    const START = { row: 0, col: 0 };
+    const GOAL = { row: 6, col: 6 };
+    const CELL = 56; // 52px cell + 4px gap
+
+    const mazeBoardEl = document.getElementById('mazeBoard');
+    const hudEl = document.getElementById('hud');
+    const stageLabelEl = document.getElementById('stageLabel');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const stageSelectOverlay = document.getElementById('stageSelectOverlay');
+    const stageGridEl = document.getElementById('stageGrid');
+    const startOverlay = document.getElementById('startOverlay');
+    const startTitleEl = document.getElementById('startTitle');
+    const startTextEl = document.getElementById('startText');
+    const loseOverlay = document.getElementById('loseOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTitleEl = document.getElementById('winTitle');
+    const winTextEl = document.getElementById('winText');
+    const nextStageBtn = document.getElementById('nextStageBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    let currentStage = 1;
+    let currentMaze = STAGES[0].maze;
+    let currentTime = STAGES[0].time;
+    let playerPos = { ...START };
+    let playerToken = null;
+    let timeLeft = 25;
+    let playing = false;
+    let countdownTimer = null;
+
+    const CLEARED_KEY = 'soutaToiletRushCleared';
+    function getCleared() {
+      try {
+        return JSON.parse(localStorage.getItem(CLEARED_KEY) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+    function markCleared(id) {
+      const cleared = getCleared();
+      if (!cleared.includes(id)) {
+        cleared.push(id);
+        localStorage.setItem(CLEARED_KEY, JSON.stringify(cleared));
+      }
+    }
+    function isUnlocked(id) {
+      if (id <= 1) return true;
+      return getCleared().includes(id - 1);
+    }
+
+    function renderStageSelect() {
+      stageGridEl.innerHTML = '';
+      STAGES.forEach(stage => {
+        const btn = document.createElement('button');
+        if (isUnlocked(stage.id)) {
+          btn.className = 'stage-card';
+          btn.innerHTML = `<span class="semoji">🚻</span><span>${stage.id}</span>`;
+          btn.addEventListener('click', () => openStage(stage.id));
+        } else {
+          btn.className = 'stage-card locked';
+          btn.innerHTML = `<span class="semoji">🔒</span><span>${stage.id}</span>`;
+        }
+        stageGridEl.appendChild(btn);
+      });
+    }
+
+    function openStage(n) {
+      const stage = STAGES[n - 1];
+      if (!stage) return;
+      currentStage = n;
+      currentMaze = stage.maze;
+      currentTime = stage.time;
+      stageLabelEl.textContent = `ステージ${stage.id}`;
+      stageSelectOverlay.classList.add('hide');
+      startTitleEl.textContent = `🚻 ステージ${stage.id}`;
+      startTextEl.innerHTML = `
+        🧒が おなかを おさえて がまん してるよ…！<br>
+        やじるしボタンで うごいて、🚻トイレまで いそごう！<br>
+        せいげんじかんは ${stage.time}びょうだよ。
+      `;
+      startOverlay.classList.remove('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      buildMaze();
+    }
+
+    function backToStageSelect() {
+      GameAudio.stopBGM();
+      startOverlay.classList.add('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      renderStageSelect();
+      stageSelectOverlay.classList.remove('hide');
+      stageLabelEl.textContent = 'ステージ せんたくちゅう';
+    }
+
+    function buildMaze() {
+      mazeBoardEl.innerHTML = '';
+      for (let r = 0; r < currentMaze.length; r++) {
+        for (let c = 0; c < currentMaze[r].length; c++) {
+          const cell = document.createElement('div');
+          const isWall = currentMaze[r][c] === 1;
+          cell.className = 'maze-cell ' + (isWall ? 'wall' : 'floor');
+          if (!isWall && r === GOAL.row && c === GOAL.col) {
+            cell.textContent = '🚻';
+          }
+          mazeBoardEl.appendChild(cell);
+        }
+      }
+      playerPos = { ...START };
+      playerToken = document.createElement('div');
+      playerToken.className = 'player-token';
+      playerToken.textContent = '🧒';
+      mazeBoardEl.appendChild(playerToken);
+      updatePlayerPosition(false);
+    }
+
+    function updatePlayerPosition(animate) {
+      if (!animate) playerToken.style.transition = 'none';
+      playerToken.style.left = (playerPos.col * CELL) + 'px';
+      playerToken.style.top = (playerPos.row * CELL) + 'px';
+      if (!animate) {
+        void playerToken.offsetWidth;
+        playerToken.style.transition = '';
+      }
+    }
+
+    function tryMove(dRow, dCol) {
+      if (!playing) return;
+      const newRow = playerPos.row + dRow;
+      const newCol = playerPos.col + dCol;
+      if (newRow < 0 || newRow >= currentMaze.length || newCol < 0 || newCol >= currentMaze[0].length) return;
+      if (currentMaze[newRow][newCol] === 1) return;
+      playerPos = { row: newRow, col: newCol };
+      updatePlayerPosition(true);
+      if (playerPos.row === GOAL.row && playerPos.col === GOAL.col) {
+        triggerWin();
+      }
+    }
+
+    function triggerWin() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      markCleared(currentStage);
+      const next = STAGES[currentStage];
+      if (next) {
+        winTitleEl.textContent = '🎉 まにあった！ 🎉';
+        winTextEl.textContent = 'よかったね！ つぎの ステージに いこう！';
+        nextStageBtn.classList.remove('hide');
+        nextStageBtn.onclick = () => openStage(next.id);
+      } else {
+        winTitleEl.textContent = '🏆 ぜんぶ クリア！ 🏆';
+        winTextEl.textContent = '10ステージ ぜんぶ まにあったね！ すごい！';
+        nextStageBtn.classList.add('hide');
+      }
+      winOverlay.classList.remove('hide');
+    }
+
+    function triggerLose() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      loseOverlay.classList.remove('hide');
+    }
+
+    function startGame() {
+      timeLeft = currentTime;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      startOverlay.classList.add('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      buildMaze();
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          triggerLose();
+        }
+      }, 1000);
+    }
+
+    function retrySameStage() {
+      openStage(currentStage);
+    }
+
+    document.getElementById('btnUp').addEventListener('click', () => tryMove(-1, 0));
+    document.getElementById('btnDown').addEventListener('click', () => tryMove(1, 0));
+    document.getElementById('btnLeft').addEventListener('click', () => tryMove(0, -1));
+    document.getElementById('btnRight').addEventListener('click', () => tryMove(0, 1));
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') tryMove(-1, 0);
+      if (e.key === 'ArrowDown') tryMove(1, 0);
+      if (e.key === 'ArrowLeft') tryMove(0, -1);
+      if (e.key === 'ArrowRight') tryMove(0, 1);
+    });
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtnLose').addEventListener('click', retrySameStage);
+    document.getElementById('toSelectBtnLose').addEventListener('click', backToStageSelect);
+    document.getElementById('toSelectBtnWin').addEventListener('click', backToStageSelect);
+
+    renderStageSelect();
+  </script>
+</body>
+</html>

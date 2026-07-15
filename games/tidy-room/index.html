@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの おかたづけゲーム</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+  }
+
+  .room {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    background: linear-gradient(180deg, #FFF3D6 0%, #FFE0AE 70%, #E8B978 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+
+  .toybox {
+    position: absolute;
+    right: 16px; bottom: 16px;
+    width: 90px; height: 80px;
+    font-size: 3rem;
+    display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25));
+  }
+
+  .mess-item {
+    position: absolute;
+    font-size: 2.6rem;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: transform 0.4s ease, opacity 0.4s ease, left 0.4s ease, top 0.4s ease;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.2));
+  }
+  .mess-item.dragging {
+    cursor: grabbing;
+    transition: none;
+    z-index: 50;
+    transform: scale(1.15);
+  }
+  .mess-item.cleaned {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🧹 そうすけの おかたづけゲーム</h1>
+
+  <div class="hud">
+    <span>のこり ⏱️ <span id="timeLeft">30</span> びょう</span>
+    <span>のこりの もの 🧸 <span id="itemsLeft">13</span> こ</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="room" id="room">
+      <div class="toybox" id="toybox">📦</div>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🧹 おかたづけゲーム</h2>
+      <p>
+        おへやに ちらかってる もの 13こを、30びょういないに<br>
+        ぜんぶ 📦ダンボールに いれて かたづけよう！<br>
+        ものを ながおし して、ダンボールまで うごかして はなしてね。<br>
+        まにあわないと ママに おこられちゃうよ…<br>
+        ぜんぶ かたづけたら「えらいね！」って ほめてもらえるよ！
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="loseOverlay">
+      <h2>😳 じかんぎれ！</h2>
+      <p>ママ：「もう！おかたづけ してなかったの！？」<br>もういちど チャレンジしてみよう。</p>
+      <button class="big-btn" id="retryBtnLose">🔄 もういちど</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 ぜんぶ かたづいた！ 🎉</h2>
+      <p>ママ：「わぁ、えらいね！」</p>
+      <button class="big-btn" id="retryBtnWin">🔄 もういちど あそぶ</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const roomEl = document.getElementById('room');
+    const toyboxEl = document.getElementById('toybox');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const itemsLeftEl = document.getElementById('itemsLeft');
+    const startOverlay = document.getElementById('startOverlay');
+    const loseOverlay = document.getElementById('loseOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+
+    const ITEM_EMOJIS = ['🧸', '🚗', '📚', '👕', '🧦', '⚽', '🖍️', '🧩', '🪀', '🎲', '👟', '🎨', '🪁'];
+    const GAME_TIME = 30;
+
+    let timeLeft = GAME_TIME;
+    let itemsLeft = ITEM_EMOJIS.length;
+    let playing = false;
+    let countdownTimer = null;
+    let itemEls = [];
+    let dragItem = null;
+    let dragOffsetX = 0, dragOffsetY = 0;
+    const DROP_THRESHOLD = 70;
+
+    function randomPos() {
+      const roomW = roomEl.clientWidth || 700;
+      const roomH = roomEl.clientHeight || 420;
+      return {
+        x: 10 + Math.random() * (roomW - 90),
+        y: 10 + Math.random() * (roomH - 90),
+      };
+    }
+
+    function spawnItems() {
+      itemEls.forEach(el => el.remove());
+      itemEls = [];
+      ITEM_EMOJIS.forEach(emoji => {
+        const el = document.createElement('div');
+        el.className = 'mess-item';
+        el.textContent = emoji;
+        const pos = randomPos();
+        el.style.left = pos.x + 'px';
+        el.style.top = pos.y + 'px';
+        el.addEventListener('pointerdown', (e) => onItemDown(e, el));
+        roomEl.appendChild(el);
+        itemEls.push(el);
+      });
+    }
+
+    function getToyboxPos() {
+      const roomRect = roomEl.getBoundingClientRect();
+      const boxRect = toyboxEl.getBoundingClientRect();
+      return {
+        x: boxRect.left - roomRect.left + boxRect.width / 2 - 20,
+        y: boxRect.top - roomRect.top + boxRect.height / 2 - 20,
+      };
+    }
+
+    function onItemDown(e, el) {
+      if (!playing || el.classList.contains('cleaned')) return;
+      dragItem = el;
+      const roomRect = roomEl.getBoundingClientRect();
+      const pointerX = e.clientX - roomRect.left;
+      const pointerY = e.clientY - roomRect.top;
+      dragOffsetX = pointerX - el.offsetLeft;
+      dragOffsetY = pointerY - el.offsetTop;
+      el.classList.add('dragging');
+      el.setPointerCapture(e.pointerId);
+    }
+
+    function onItemMove(e) {
+      if (!dragItem) return;
+      const roomRect = roomEl.getBoundingClientRect();
+      const pointerX = e.clientX - roomRect.left;
+      const pointerY = e.clientY - roomRect.top;
+      dragItem.style.left = (pointerX - dragOffsetX) + 'px';
+      dragItem.style.top = (pointerY - dragOffsetY) + 'px';
+    }
+
+    function onItemUp() {
+      if (!dragItem) return;
+      const el = dragItem;
+      dragItem = null;
+      el.classList.remove('dragging');
+
+      const boxPos = getToyboxPos();
+      const dist = Math.hypot(el.offsetLeft - boxPos.x, el.offsetTop - boxPos.y);
+
+      if (dist < DROP_THRESHOLD) {
+        el.style.left = boxPos.x + 'px';
+        el.style.top = boxPos.y + 'px';
+        el.classList.add('cleaned');
+        GameAudio.playClickTick();
+        itemsLeft--;
+        itemsLeftEl.textContent = itemsLeft;
+        if (itemsLeft <= 0) {
+          triggerWin();
+        }
+      }
+    }
+
+    roomEl.addEventListener('pointermove', onItemMove);
+    window.addEventListener('pointerup', onItemUp);
+
+    function triggerWin() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      winOverlay.classList.remove('hide');
+    }
+
+    function triggerLose() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      loseOverlay.classList.remove('hide');
+    }
+
+    function startGame() {
+      timeLeft = GAME_TIME;
+      itemsLeft = ITEM_EMOJIS.length;
+      timeLeftEl.textContent = timeLeft;
+      itemsLeftEl.textContent = itemsLeft;
+      startOverlay.classList.add('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      spawnItems();
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          triggerLose();
+        }
+      }, 1000);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtnLose').addEventListener('click', startGame);
+    document.getElementById('retryBtnWin').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

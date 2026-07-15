@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの じゃんけんゲーム</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FF9A9E 0%, #FAD0C4 100%); background-attachment: fixed; }
+  .hands { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin: 20px 0; }
+  .hand-btn {
+    font-size: 4rem;
+    background: #fff;
+    border: none;
+    border-radius: 24px;
+    width: 120px; height: 120px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+    transition: transform 0.1s ease;
+  }
+  .hand-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .battle { display: flex; align-items: center; justify-content: center; gap: 40px; font-size: 5rem; margin: 20px 0; min-height: 120px; }
+  .vs { font-size: 2rem; font-weight: bold; }
+  .result {
+    font-size: 2.2rem;
+    font-weight: bold;
+    min-height: 60px;
+    margin: 10px 0;
+  }
+  .win { color: #FF5D8F; }
+  .lose { color: #4C7BF3; }
+  .draw { color: #888; }
+  .score {
+    display: flex; gap: 24px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.8); border-radius: 16px; padding: 10px 24px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">✂️ そうすけの じゃんけんゲーム</h1>
+  <p>だす てを えらんでね！</p>
+
+  <div class="hands">
+    <button class="hand-btn" data-hand="rock">✊</button>
+    <button class="hand-btn" data-hand="scissors">✌️</button>
+    <button class="hand-btn" data-hand="paper">✋</button>
+  </div>
+
+  <div class="battle" id="battle">
+    <span id="playerHand">❓</span>
+    <span class="vs">VS</span>
+    <span id="cpuHand">❓</span>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="score">
+    <span>かち 🏆 <span id="winCount">0</span></span>
+    <span>まけ 😢 <span id="loseCount">0</span></span>
+    <span>あいこ 🤝 <span id="drawCount">0</span></span>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+    let bgmStarted = false;
+
+    const emojiMap = { rock: '✊', scissors: '✌️', paper: '✋' };
+    const buttons = document.querySelectorAll('.hand-btn');
+    const playerHandEl = document.getElementById('playerHand');
+    const cpuHandEl = document.getElementById('cpuHand');
+    const resultEl = document.getElementById('result');
+    const winCountEl = document.getElementById('winCount');
+    const loseCountEl = document.getElementById('loseCount');
+    const drawCountEl = document.getElementById('drawCount');
+
+    let win = 0, lose = 0, draw = 0;
+    let locked = false;
+
+    function judge(player, cpu) {
+      if (player === cpu) return 'draw';
+      if (
+        (player === 'rock' && cpu === 'scissors') ||
+        (player === 'scissors' && cpu === 'paper') ||
+        (player === 'paper' && cpu === 'rock')
+      ) return 'win';
+      return 'lose';
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (locked) return;
+        locked = true;
+
+        if (!bgmStarted) {
+          bgmStarted = true;
+          GameAudio.playBGM();
+        }
+
+        const player = btn.dataset.hand;
+        const hands = ['rock', 'scissors', 'paper'];
+        const cpu = hands[Math.floor(Math.random() * 3)];
+
+        resultEl.textContent = '';
+        resultEl.className = 'result';
+        playerHandEl.textContent = '✊';
+        cpuHandEl.textContent = '✊';
+
+        GameAudio.speak('さいしょは、グー。じゃんけん、ポン！');
+
+        resultEl.textContent = 'さいしょは グー…';
+        await wait(700);
+        resultEl.textContent = 'じゃんけん…';
+        await wait(700);
+
+        // both hands reveal at the same moment
+        resultEl.textContent = 'ポン！';
+        playerHandEl.textContent = emojiMap[player];
+        cpuHandEl.textContent = emojiMap[cpu];
+
+        await wait(500);
+        const outcome = judge(player, cpu);
+
+        if (outcome === 'win') {
+          resultEl.textContent = '🎉 かった！ 🎉';
+          resultEl.classList.add('win');
+          GameAudio.playClearFanfare();
+          win++;
+          winCountEl.textContent = win;
+        } else if (outcome === 'lose') {
+          resultEl.textContent = 'まけた… もういっかい！';
+          resultEl.classList.add('lose');
+          GameAudio.playFailBuzz();
+          lose++;
+          loseCountEl.textContent = lose;
+        } else {
+          resultEl.textContent = 'あいこ！';
+          resultEl.classList.add('draw');
+          GameAudio.playClickTick();
+          draw++;
+          drawCountEl.textContent = draw;
+        }
+        locked = false;
+      });
+    });
+  </script>
+</body>
+</html>

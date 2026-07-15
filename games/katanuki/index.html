@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの かたぬき</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFD3A5 0%, #FD6E6A 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #6B4A2F;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+  }
+
+  .shape-pick {
+    display: flex; gap: 16px; justify-content: center; margin-top: 10px;
+  }
+  .shape-btn {
+    font-size: 2.6rem;
+    background: #fff;
+    border: none;
+    border-radius: 20px;
+    width: 90px; height: 90px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+  }
+  .shape-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🍬 そうすけの かたぬき</h1>
+
+  <div class="hud">
+    <span>できあがり 📏 <span id="progressPct">0</span>%</span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="360" height="360"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🍬 かたぬき</h2>
+      <p>
+        まる・さんかく・しかくの どれかを えらんでね。<br>
+        せんの まわりを ながおし しながら なぞって、けずろう！<br>
+        まんなかを おしすぎると われちゃうから きをつけて！<br>
+        うまく ぜんぶ けずれたら せいこう！
+      </p>
+      <div class="shape-pick">
+        <button class="shape-btn" data-shape="circle">⚪</button>
+        <button class="shape-btn" data-shape="triangle">🔺</button>
+        <button class="shape-btn" data-shape="square">🟦</button>
+      </div>
+    </div>
+
+    <div class="overlay hide" id="loseOverlay">
+      <h2>💥 われちゃった！</h2>
+      <p>まんなかを おしすぎたね。もういちど チャレンジしてみよう。</p>
+      <button class="big-btn" id="retryBtnLose">🔄 もういちど</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 せいこう！ 🎉</h2>
+      <p>きれいに ぬけたね！ すごいよ！</p>
+      <button class="big-btn" id="retryBtnWin">🔄 もういちど あそぶ</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const progressPctEl = document.getElementById('progressPct');
+    const startOverlay = document.getElementById('startOverlay');
+    const loseOverlay = document.getElementById('loseOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const shapeButtons = document.querySelectorAll('.shape-btn');
+
+    const W = canvas.width, H = canvas.height;
+    const CX = W / 2, CY = H / 2;
+
+    const ERASE_RADIUS = 24;
+    const DANGER_MARGIN = 20;
+    const WIN_THRESHOLD = 0.9;
+
+    // offscreen candy layer that we cut holes into as the player scrapes
+    const candyCanvas = document.createElement('canvas');
+    candyCanvas.width = W;
+    candyCanvas.height = H;
+    const candyCtx = candyCanvas.getContext('2d');
+
+    function pointInPolygon(x, y, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i][0], yi = poly[i][1];
+        const xj = poly[j][0], yj = poly[j][1];
+        const intersect = ((yi > y) !== (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    function distToSegment(px, py, ax, ay, bx, by) {
+      const dx = bx - ax, dy = by - ay;
+      const lenSq = dx * dx + dy * dy;
+      let t = lenSq === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const cx2 = ax + t * dx, cy2 = ay + t * dy;
+      return Math.hypot(px - cx2, py - cy2);
+    }
+
+    function minDistToPolygonEdges(x, y, poly) {
+      let min = Infinity;
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i], b = poly[(i + 1) % poly.length];
+        min = Math.min(min, distToSegment(x, y, a[0], a[1], b[0], b[1]));
+      }
+      return min;
+    }
+
+    function buildPolygonOutline(poly, totalPoints) {
+      const perim = poly.reduce((sum, p, i) => {
+        const q = poly[(i + 1) % poly.length];
+        return sum + Math.hypot(q[0] - p[0], q[1] - p[1]);
+      }, 0);
+      const outline = [];
+      poly.forEach((p, i) => {
+        const q = poly[(i + 1) % poly.length];
+        const edgeLen = Math.hypot(q[0] - p[0], q[1] - p[1]);
+        const count = Math.max(1, Math.round(totalPoints * edgeLen / perim));
+        for (let k = 0; k < count; k++) {
+          const t = k / count;
+          outline.push({ x: p[0] + (q[0] - p[0]) * t, y: p[1] + (q[1] - p[1]) * t });
+        }
+      });
+      return outline;
+    }
+
+    function buildCircleOutline(cx, cy, r, totalPoints) {
+      const outline = [];
+      for (let i = 0; i < totalPoints; i++) {
+        const a = (Math.PI * 2 * i) / totalPoints;
+        outline.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+      }
+      return outline;
+    }
+
+    const SHAPES = {
+      circle: {
+        type: 'circle', cx: CX, cy: CY, r: 110,
+        isInside(x, y) { return Math.hypot(x - this.cx, y - this.cy) <= this.r; },
+        distToEdge(x, y) { return this.r - Math.hypot(x - this.cx, y - this.cy); },
+        outline: buildCircleOutline(CX, CY, 110, 96),
+        drawPath(c) { c.beginPath(); c.arc(CX, CY, 110, 0, Math.PI * 2); },
+      },
+      triangle: {
+        type: 'polygon',
+        poly: [[CX, CY - 130], [CX + 112.6, CY + 65], [CX - 112.6, CY + 65]],
+        isInside(x, y) { return pointInPolygon(x, y, this.poly); },
+        distToEdge(x, y) { return minDistToPolygonEdges(x, y, this.poly); },
+        outline: buildPolygonOutline([[CX, CY - 130], [CX + 112.6, CY + 65], [CX - 112.6, CY + 65]], 90),
+        drawPath(c) {
+          c.beginPath();
+          this.poly.forEach((p, i) => i === 0 ? c.moveTo(p[0], p[1]) : c.lineTo(p[0], p[1]));
+          c.closePath();
+        },
+      },
+      square: {
+        type: 'polygon',
+        poly: [[CX - 95, CY - 95], [CX + 95, CY - 95], [CX + 95, CY + 95], [CX - 95, CY + 95]],
+        isInside(x, y) { return pointInPolygon(x, y, this.poly); },
+        distToEdge(x, y) { return minDistToPolygonEdges(x, y, this.poly); },
+        outline: buildPolygonOutline([[CX - 95, CY - 95], [CX + 95, CY - 95], [CX + 95, CY + 95], [CX - 95, CY + 95]], 92),
+        drawPath(c) {
+          c.beginPath();
+          this.poly.forEach((p, i) => i === 0 ? c.moveTo(p[0], p[1]) : c.lineTo(p[0], p[1]));
+          c.closePath();
+        },
+      },
+    };
+
+    let shape = null;
+    let erasedFlags = [];
+    let phase = 'idle'; // idle, playing, over, won
+    let isDown = false;
+    let breakPoint = null;
+    let lastTickTime = 0;
+
+    function resetCandyLayer() {
+      candyCtx.clearRect(0, 0, W, H);
+      candyCtx.fillStyle = '#FDF3D8';
+      candyCtx.fillRect(0, 0, W, H);
+    }
+
+    function startGame(shapeKey) {
+      shape = SHAPES[shapeKey];
+      erasedFlags = shape.outline.map(() => false);
+      phase = 'playing';
+      breakPoint = null;
+      progressPctEl.textContent = 0;
+      resetCandyLayer();
+      startOverlay.classList.add('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      GameAudio.playBGM();
+    }
+
+    function updateProgress() {
+      const erasedCount = erasedFlags.filter(Boolean).length;
+      const pct = erasedCount / erasedFlags.length;
+      progressPctEl.textContent = Math.round(pct * 100);
+      return pct;
+    }
+
+    function triggerCrack(x, y) {
+      phase = 'over';
+      breakPoint = { x, y };
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      loseOverlay.classList.remove('hide');
+    }
+
+    function triggerWin() {
+      phase = 'won';
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      winOverlay.classList.remove('hide');
+    }
+
+    function handleScrape(x, y) {
+      if (phase !== 'playing') return;
+
+      candyCtx.save();
+      candyCtx.globalCompositeOperation = 'destination-out';
+      candyCtx.beginPath();
+      candyCtx.arc(x, y, ERASE_RADIUS, 0, Math.PI * 2);
+      candyCtx.fill();
+      candyCtx.restore();
+
+      const now = performance.now();
+      if (now - lastTickTime > 140) {
+        lastTickTime = now;
+        GameAudio.playClickTick();
+      }
+
+      let changed = false;
+      shape.outline.forEach((p, i) => {
+        if (!erasedFlags[i] && Math.hypot(x - p.x, y - p.y) < ERASE_RADIUS) {
+          erasedFlags[i] = true;
+          changed = true;
+        }
+      });
+      if (changed) {
+        const pct = updateProgress();
+        if (pct >= WIN_THRESHOLD) {
+          triggerWin();
+          return;
+        }
+      }
+
+      if (shape.isInside(x, y) && shape.distToEdge(x, y) > DANGER_MARGIN) {
+        triggerCrack(x, y);
+      }
+    }
+
+    function getCanvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const scaleY = H / rect.height;
+      return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (phase !== 'playing') return;
+      isDown = true;
+      canvas.setPointerCapture(e.pointerId);
+      const pos = getCanvasPos(e);
+      handleScrape(pos.x, pos.y);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isDown) return;
+      const pos = getCanvasPos(e);
+      handleScrape(pos.x, pos.y);
+    });
+    canvas.addEventListener('pointerup', () => { isDown = false; });
+    canvas.addEventListener('pointercancel', () => { isDown = false; });
+
+    function drawCrackLines(x, y) {
+      ctx.strokeStyle = '#B23A2E';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6 + Math.random() * 0.4;
+        const len = 40 + Math.random() * 50;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+        ctx.stroke();
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#6B4A2F';
+      ctx.fillRect(0, 0, W, H);
+
+      if (shape) {
+        ctx.drawImage(candyCanvas, 0, 0);
+
+        ctx.save();
+        ctx.setLineDash([8, 6]);
+        ctx.strokeStyle = '#C9A063';
+        ctx.lineWidth = 4;
+        shape.drawPath(ctx);
+        ctx.stroke();
+        ctx.restore();
+
+        if (phase === 'over' && breakPoint) {
+          drawCrackLines(breakPoint.x, breakPoint.y);
+        }
+      }
+    }
+
+    function loop() {
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    shapeButtons.forEach(btn => {
+      btn.addEventListener('click', () => startGame(btn.dataset.shape));
+    });
+    document.getElementById('retryBtnLose').addEventListener('click', () => startGame(getShapeKey(shape)));
+    document.getElementById('retryBtnWin').addEventListener('click', () => startGame(getShapeKey(shape)));
+
+    function getShapeKey(s) {
+      return Object.keys(SHAPES).find(k => SHAPES[k] === s);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

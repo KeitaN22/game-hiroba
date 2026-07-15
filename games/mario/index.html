@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スーパーそうすけラン</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #8EC5FC 0%, #E0C3FC 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #7EC8E3;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+  }
+
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 18px;
+  }
+
+  .dpad { display: flex; gap: 12px; }
+
+  .ctrl-btn {
+    font-size: 2.2rem;
+    width: 68px;
+    height: 68px;
+    border: none;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .ctrl-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .jump-btn {
+    font-size: 1.6rem;
+    font-weight: bold;
+    width: 100px;
+    height: 68px;
+    border: none;
+    border-radius: 18px;
+    background: #FF5D8F;
+    color: #fff;
+    box-shadow: 0 6px 0 #c73f6a;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .jump-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+
+  .throw-btn {
+    font-size: 1.4rem;
+    font-weight: bold;
+    width: 90px;
+    height: 68px;
+    border: none;
+    border-radius: 18px;
+    background: #D9432E;
+    color: #fff;
+    box-shadow: 0 6px 0 #9c2e1e;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    margin-left: 10px;
+  }
+  .throw-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #9c2e1e; }
+
+  .action-btns { display: flex; }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🧒 スーパーそうすけラン</h1>
+
+  <div class="hud">
+    <span>からだ: <span id="sizeState">ちいさい</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="800" height="400"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🧒 スーパーそうすけラン</h2>
+      <p>
+        ← → で うごく、⬆️（スペース）で ジャンプ！<br>
+        ？ブロックを したから たたくと 🍄が でてくるよ。<br>
+        🍄を とると おおきくなる。てきに あたると… ちいさく なっちゃう！<br>
+        クリボーの あたまを ふむと ぺっちゃんこに できる！<br>
+        🔴ボタンで あかこうらを なげて クリボーを たおそう。<br>
+        ジャンプの よこの 🍌ボタンで バナナを おける。クリボーが ふむと すべって たおれるよ。<br>
+        🚩まで たどりつけたら クリア！
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="overOverlay">
+      <h2>😢 やられた！</h2>
+      <p>もういちど ちょうせん してみよう！</p>
+      <button class="big-btn" id="retryBtn1">🔄 もういちど</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 ゴール！ よくできました！ 🎉</h2>
+      <p>おめでとう！ クリア だよ！</p>
+      <button class="big-btn" id="retryBtn2">🔄 もういちど あそぶ</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="dpad">
+      <button class="ctrl-btn" id="leftBtn">⬅️</button>
+      <button class="ctrl-btn" id="rightBtn">➡️</button>
+    </div>
+    <div class="action-btns">
+      <button class="jump-btn" id="jumpBtn">⬆️ ジャンプ</button>
+      <button class="throw-btn" id="bananaBtn">🍌 おく</button>
+      <button class="throw-btn" id="throwBtn">🔴 なげる</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const sizeStateEl = document.getElementById('sizeState');
+    const startOverlay = document.getElementById('startOverlay');
+    const overOverlay = document.getElementById('overOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+
+    const W = canvas.width, H = canvas.height;
+    const GROUND_Y = 340;
+    const GRAVITY = 0.7;
+    const JUMP_V = -14;
+    const MOVE_SPEED = 4.5;
+    const LEVEL_WIDTH = 3400;
+    const GOAL_X = LEVEL_WIDTH - 120;
+
+    const SMALL_H = 40, BIG_H = 60;
+
+    let player, enemies, blocks, poppedMushrooms, scenery, bananas, shells, speedItems, camera, input, playing, gameOver, win;
+
+    function makeEnemy(baseX, range, speed) {
+      return { baseX, x: baseX, y: GROUND_Y - 38, w: 38, h: 38, range, speed, dir: 1, alive: true, squished: false, squishTimer: 0 };
+    }
+
+    const BLOCK_SIZE = 44;
+    const BLOCK_Y = GROUND_Y - 150;
+
+    function makeBlockRow(startX, pattern) {
+      // pattern: array of 'q' (はてな) or 'b' (おーく/れんが)
+      return pattern.map((type, i) => ({
+        x: startX + i * BLOCK_SIZE, y: BLOCK_Y, w: BLOCK_SIZE, h: BLOCK_SIZE,
+        type, used: false, bumpAnim: 0,
+      }));
+    }
+
+    function resetGame() {
+      player = {
+        x: 40, y: GROUND_Y - SMALL_H, w: 30, h: SMALL_H,
+        vx: 0, vy: 0, onGround: true, big: false,
+        invincible: false, invincibleTimer: 0, facing: 1,
+        speedTimer: 0, throwCooldown: 0, bananaCooldown: 0,
+      };
+      enemies = [
+        makeEnemy(600, 90, 1.4),
+        makeEnemy(1150, 100, 1.6),
+        makeEnemy(1700, 90, 1.8),
+        makeEnemy(2250, 110, 1.8),
+        makeEnemy(2800, 100, 2.0),
+        makeEnemy(3150, 80, 2.0),
+      ];
+      blocks = [
+        ...makeBlockRow(900, ['b', 'q', 'b']),
+        ...makeBlockRow(2350, ['b', 'q', 'b', 'q', 'b']),
+      ];
+      poppedMushrooms = [];
+      scenery = [
+        { x: 300, type: 'tree' }, { x: 480, type: 'bench' }, { x: 780, type: 'tree' },
+        { x: 1080, type: 'tree' }, { x: 1400, type: 'bench' }, { x: 1600, type: 'tree' },
+        { x: 2000, type: 'tree' }, { x: 2150, type: 'bench' }, { x: 2620, type: 'tree' },
+        { x: 2900, type: 'bench' }, { x: 3050, type: 'tree' },
+      ];
+      bananas = [
+        { x: 650, y: GROUND_Y - 10, w: 32, h: 12, used: false },
+        { x: 1750, y: GROUND_Y - 10, w: 32, h: 12, used: false },
+        { x: 2850, y: GROUND_Y - 10, w: 32, h: 12, used: false },
+      ];
+      shells = [];
+      speedItems = [
+        { x: 1250, y: GROUND_Y - 30, w: 28, h: 28, taken: false },
+        { x: 2600, y: GROUND_Y - 30, w: 28, h: 28, taken: false },
+      ];
+      camera = { x: 0 };
+      input = { left: false, right: false };
+      playing = false;
+      gameOver = false;
+      win = false;
+      sizeStateEl.textContent = 'ちいさい';
+      startOverlay.classList.remove('hide');
+      overOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+    }
+
+    function squishEnemy(e) {
+      e.squished = true;
+      e.squishTimer = 40;
+    }
+
+    function placeBanana() {
+      if (!playing || player.bananaCooldown > 0) return;
+      player.bananaCooldown = 60;
+      bananas.push({
+        x: player.x + player.facing * 24,
+        y: GROUND_Y - 10, w: 32, h: 12, used: false,
+      });
+    }
+
+    function throwShell() {
+      if (!playing || player.throwCooldown > 0) return;
+      player.throwCooldown = 45;
+      shells.push({
+        x: player.facing > 0 ? player.x + player.w : player.x - 26,
+        y: GROUND_Y - 24,
+        w: 26, h: 22,
+        vx: player.facing * 7,
+      });
+    }
+
+    function bumpBlock(block) {
+      block.bumpAnim = 10;
+      if (block.type === 'q' && !block.used) {
+        block.used = true;
+        poppedMushrooms.push({ x: block.x + block.w / 2 - 15, y: block.y - 34, w: 30, h: 30, taken: false });
+      }
+    }
+
+    function jump() {
+      if (playing && player.onGround) {
+        player.vy = JUMP_V;
+        player.onGround = false;
+      }
+    }
+
+    function growPlayer() {
+      const delta = SMALL_H - BIG_H;
+      player.y += delta;
+      player.h = BIG_H;
+      player.w = 44;
+      player.big = true;
+      sizeStateEl.textContent = 'おおきい';
+    }
+
+    function shrinkPlayer() {
+      const delta = BIG_H - SMALL_H;
+      player.y += delta;
+      player.h = SMALL_H;
+      player.w = 30;
+      player.big = false;
+      sizeStateEl.textContent = 'ちいさい';
+    }
+
+    function rectsOverlap(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    }
+
+    function triggerGameOver() {
+      playing = false;
+      gameOver = true;
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      overOverlay.classList.remove('hide');
+    }
+
+    function triggerWin() {
+      playing = false;
+      win = true;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      winOverlay.classList.remove('hide');
+    }
+
+    function update() {
+      if (!playing) return;
+
+      if (player.speedTimer > 0) player.speedTimer--;
+      if (player.throwCooldown > 0) player.throwCooldown--;
+      if (player.bananaCooldown > 0) player.bananaCooldown--;
+      const effectiveSpeed = player.speedTimer > 0 ? MOVE_SPEED * 1.6 : MOVE_SPEED;
+
+      if (input.left) { player.vx = -effectiveSpeed; player.facing = -1; }
+      else if (input.right) { player.vx = effectiveSpeed; player.facing = 1; }
+      else { player.vx = 0; }
+
+      player.x += player.vx;
+      player.x = Math.max(0, Math.min(player.x, LEVEL_WIDTH - player.w));
+
+      const prevY = player.y;
+      const prevBottom = prevY + player.h;
+
+      player.vy += GRAVITY;
+      player.y += player.vy;
+
+      let onBlock = false;
+      blocks.forEach(block => {
+        const overlapX = player.x < block.x + block.w && player.x + player.w > block.x;
+        if (!overlapX) return;
+        const blockTop = block.y;
+        const blockBottom = block.y + block.h;
+        const newBottom = player.y + player.h;
+
+        if (player.vy >= 0 && prevBottom <= blockTop + 1 && newBottom >= blockTop) {
+          player.y = blockTop - player.h;
+          player.vy = 0;
+          onBlock = true;
+        } else if (player.vy < 0 && prevY >= blockBottom - 1 && player.y <= blockBottom) {
+          player.y = blockBottom;
+          player.vy = 2;
+          bumpBlock(block);
+        }
+      });
+
+      if (player.y + player.h >= GROUND_Y) {
+        player.y = GROUND_Y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      } else {
+        player.onGround = onBlock;
+      }
+
+      blocks.forEach(b => { if (b.bumpAnim > 0) b.bumpAnim--; });
+
+      camera.x = Math.max(0, Math.min(player.x - W / 2, LEVEL_WIDTH - W));
+
+      enemies.forEach(e => {
+        if (!e.alive || e.squished) return;
+        e.x += e.speed * e.dir;
+        if (Math.abs(e.x - e.baseX) > e.range) e.dir *= -1;
+      });
+
+      bananas.forEach(banana => {
+        if (banana.used) return;
+        for (const e of enemies) {
+          if (e.squished) continue;
+          if (rectsOverlap(e, banana)) {
+            banana.used = true;
+            squishEnemy(e);
+            break;
+          }
+        }
+      });
+
+      shells.forEach(s => { s.x += s.vx; });
+      shells = shells.filter(s => {
+        if (s.x < camera.x - 60 || s.x > camera.x + W + 60) return false;
+        for (const e of enemies) {
+          if (e.squished) continue;
+          if (rectsOverlap(s, e)) {
+            squishEnemy(e);
+          }
+        }
+        return true;
+      });
+
+      enemies.forEach(e => {
+        if (e.squished) {
+          e.squishTimer--;
+        }
+      });
+      enemies = enemies.filter(e => !(e.squished && e.squishTimer <= 0));
+
+      poppedMushrooms.forEach(m => {
+        if (m.taken) return;
+        if (rectsOverlap(player, m)) {
+          m.taken = true;
+          if (!player.big) growPlayer();
+        }
+      });
+
+      speedItems.forEach(s => {
+        if (s.taken) return;
+        if (rectsOverlap(player, s)) {
+          s.taken = true;
+          player.speedTimer = 300;
+        }
+      });
+
+      if (player.invincible) {
+        player.invincibleTimer -= 16;
+        if (player.invincibleTimer <= 0) player.invincible = false;
+      }
+
+      if (!player.invincible) {
+        for (const e of enemies) {
+          if (!e.alive || e.squished) continue;
+          if (rectsOverlap(player, e)) {
+            const isStomp = player.vy > 0 && prevBottom <= e.y + 8;
+            if (isStomp) {
+              squishEnemy(e);
+              player.vy = -9;
+            } else if (player.big) {
+              shrinkPlayer();
+              player.invincible = true;
+              player.invincibleTimer = 1400;
+              player.vy = -8;
+              player.vx = -player.facing * 3;
+            } else {
+              triggerGameOver();
+            }
+            break;
+          }
+        }
+      }
+
+      if (player.x + player.w >= GOAL_X) {
+        triggerWin();
+      }
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = '#7EC8E3';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.font = '46px sans-serif';
+      const cloudPositions = [200, 900, 1700, 2400, 3000];
+      cloudPositions.forEach(cx => {
+        const sx = cx - camera.x * 0.5;
+        if (sx > -80 && sx < W + 80) ctx.fillText('☁️', sx, 80);
+      });
+
+      ctx.fillStyle = '#7CC576';
+      ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+      ctx.fillStyle = '#5FA85A';
+      ctx.fillRect(0, GROUND_Y, W, 10);
+    }
+
+    function drawTree(sx, groundY) {
+      ctx.fillStyle = '#7A4A22';
+      ctx.fillRect(sx - 6, groundY - 50, 12, 50);
+      ctx.fillStyle = '#4CAF50';
+      ctx.beginPath(); ctx.arc(sx, groundY - 72, 26, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx - 18, groundY - 56, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx + 18, groundY - 56, 20, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawBench(sx, groundY) {
+      ctx.fillStyle = '#8B5A2B';
+      ctx.fillRect(sx - 24, groundY - 40, 48, 6);
+      ctx.fillRect(sx - 24, groundY - 26, 48, 8);
+      ctx.fillRect(sx - 20, groundY - 18, 4, 18);
+      ctx.fillRect(sx + 16, groundY - 18, 4, 18);
+    }
+
+    function drawScenery() {
+      scenery.forEach(item => {
+        const sx = item.x - camera.x;
+        if (sx < -60 || sx > W + 60) return;
+        if (item.type === 'tree') drawTree(sx, GROUND_Y);
+        else drawBench(sx, GROUND_Y);
+      });
+    }
+
+    function drawBananas() {
+      bananas.forEach(b => {
+        if (b.used) return;
+        const sx = b.x - camera.x;
+        if (sx < -40 || sx > W + 40) return;
+        ctx.font = '26px sans-serif';
+        ctx.fillText('🍌', sx, b.y + b.h);
+      });
+    }
+
+    function drawSpeedItems() {
+      speedItems.forEach(s => {
+        if (s.taken) return;
+        const sx = s.x - camera.x;
+        if (sx < -40 || sx > W + 40) return;
+        ctx.font = '26px sans-serif';
+        ctx.fillText('👟', sx, s.y + s.h);
+      });
+    }
+
+    function drawShells() {
+      shells.forEach(s => {
+        const sx = s.x - camera.x;
+        if (sx < -40 || sx > W + 40) return;
+        ctx.fillStyle = '#D9432E';
+        ctx.beginPath();
+        ctx.ellipse(sx + s.w / 2, s.y + s.h / 2, s.w / 2, s.h / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFE3C2';
+        ctx.beginPath();
+        ctx.ellipse(sx + s.w / 2, s.y + s.h * 0.65, s.w * 0.3, s.h * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawGoal() {
+      const sx = GOAL_X - camera.x;
+      if (sx > -60 && sx < W + 60) {
+        ctx.fillStyle = '#ccc';
+        ctx.fillRect(sx, GROUND_Y - 160, 6, 160);
+        ctx.font = '48px sans-serif';
+        ctx.fillText('🚩', sx - 6, GROUND_Y - 130);
+      }
+    }
+
+    function drawPoppedMushrooms() {
+      ctx.font = '30px sans-serif';
+      poppedMushrooms.forEach(m => {
+        if (m.taken) return;
+        const sx = m.x - camera.x;
+        if (sx > -40 && sx < W + 40) ctx.fillText('🍄', sx, m.y + m.h);
+      });
+    }
+
+    function drawBlocks() {
+      blocks.forEach(block => {
+        const sx = block.x - camera.x;
+        if (sx < -60 || sx > W + 60) return;
+        const by = block.y - block.bumpAnim * 1.4;
+
+        if (block.type === 'q' && !block.used) {
+          ctx.fillStyle = '#F5A623';
+          ctx.fillRect(sx, by, block.w, block.h);
+          ctx.strokeStyle = '#C97D0E';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(sx + 2, by + 2, block.w - 4, block.h - 4);
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('?', sx + block.w / 2, by + block.h * 0.7);
+          ctx.textAlign = 'left';
+        } else if (block.type === 'q' && block.used) {
+          ctx.fillStyle = '#9C7A54';
+          ctx.fillRect(sx, by, block.w, block.h);
+          ctx.strokeStyle = '#7A5C3E';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(sx + 2, by + 2, block.w - 4, block.h - 4);
+        } else {
+          ctx.fillStyle = '#B5651D';
+          ctx.fillRect(sx, by, block.w, block.h);
+          ctx.strokeStyle = '#7A4416';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(sx + 1, by + 1, block.w - 2, block.h - 2);
+          ctx.beginPath();
+          ctx.moveTo(sx, by + block.h / 2); ctx.lineTo(sx + block.w, by + block.h / 2);
+          ctx.moveTo(sx + block.w / 2, by); ctx.lineTo(sx + block.w / 2, by + block.h / 2);
+          ctx.moveTo(sx + block.w / 4, by + block.h / 2); ctx.lineTo(sx + block.w / 4, by + block.h);
+          ctx.moveTo(sx + block.w * 3 / 4, by + block.h / 2); ctx.lineTo(sx + block.w * 3 / 4, by + block.h);
+          ctx.stroke();
+        }
+      });
+    }
+
+    function drawGoomba(ex, ey, ew, eh, squished) {
+      if (squished) {
+        ctx.fillStyle = '#8B5A2B';
+        ctx.beginPath();
+        ctx.ellipse(ex + ew / 2, ey + eh - 6, ew * 0.55, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ex + ew * 0.32, ey + eh - 9); ctx.lineTo(ex + ew * 0.42, ey + eh - 5);
+        ctx.moveTo(ex + ew * 0.42, ey + eh - 9); ctx.lineTo(ex + ew * 0.32, ey + eh - 5);
+        ctx.moveTo(ex + ew * 0.58, ey + eh - 9); ctx.lineTo(ex + ew * 0.68, ey + eh - 5);
+        ctx.moveTo(ex + ew * 0.68, ey + eh - 9); ctx.lineTo(ex + ew * 0.58, ey + eh - 5);
+        ctx.stroke();
+        return;
+      }
+      ctx.fillStyle = '#8B5A2B';
+      ctx.beginPath();
+      ctx.ellipse(ex + ew / 2, ey + eh * 0.4, ew * 0.5, eh * 0.4, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(ex + ew * 0.04, ey + eh * 0.38, ew * 0.92, eh * 0.42);
+
+      ctx.fillStyle = '#4A2E12';
+      ctx.beginPath(); ctx.ellipse(ex + ew * 0.28, ey + eh * 0.9, ew * 0.24, eh * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(ex + ew * 0.72, ey + eh * 0.9, ew * 0.24, eh * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(ex + ew * 0.32, ey + eh * 0.55, ew * 0.15, eh * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(ex + ew * 0.68, ey + eh * 0.55, ew * 0.15, eh * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.ellipse(ex + ew * 0.36, ey + eh * 0.58, ew * 0.06, eh * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(ex + ew * 0.64, ey + eh * 0.58, ew * 0.06, eh * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = eh * 0.06;
+      ctx.beginPath(); ctx.moveTo(ex + ew * 0.18, ey + eh * 0.36); ctx.lineTo(ex + ew * 0.40, ey + eh * 0.44); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ex + ew * 0.82, ey + eh * 0.36); ctx.lineTo(ex + ew * 0.60, ey + eh * 0.44); ctx.stroke();
+    }
+
+    function drawEnemies() {
+      enemies.forEach(e => {
+        const sx = e.x - camera.x;
+        if (sx > -40 && sx < W + 40) drawGoomba(sx, e.y, e.w, e.h, e.squished);
+      });
+    }
+
+    function drawMario(px, py, pw, ph, big) {
+      const capH = ph * 0.24;
+      const faceH = ph * 0.20;
+      const bodyH = ph - capH - faceH;
+
+      ctx.fillStyle = '#E62B2B';
+      ctx.fillRect(px, py, pw, capH * 0.55);
+      ctx.fillRect(px - pw * 0.18, py + capH * 0.35, pw * 1.36, capH * 0.4);
+
+      ctx.fillStyle = '#F5C08A';
+      ctx.fillRect(px + pw * 0.06, py + capH * 0.7, pw * 0.88, faceH * 1.2);
+
+      ctx.fillStyle = '#5A3A1A';
+      ctx.fillRect(px + pw * 0.02, py + capH * 0.7 + faceH * 0.8, pw * 0.96, faceH * 0.5);
+
+      ctx.fillStyle = '#2255CC';
+      ctx.fillRect(px, py + capH + faceH, pw, bodyH * 0.78);
+
+      ctx.fillStyle = '#E62B2B';
+      ctx.fillRect(px - pw * 0.12, py + capH + faceH, pw * 0.24, bodyH * 0.46);
+      ctx.fillRect(px + pw * 0.88, py + capH + faceH, pw * 0.24, bodyH * 0.46);
+
+      ctx.fillStyle = '#FFD84D';
+      ctx.beginPath(); ctx.arc(px + pw * 0.32, py + capH + faceH + bodyH * 0.25, pw * 0.07, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px + pw * 0.68, py + capH + faceH + bodyH * 0.25, pw * 0.07, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#5A3A1A';
+      ctx.fillRect(px - pw * 0.05, py + ph - bodyH * 0.22, pw * 0.5, bodyH * 0.22);
+      ctx.fillRect(px + pw * 0.55, py + ph - bodyH * 0.22, pw * 0.5, bodyH * 0.22);
+    }
+
+    function drawPlayer() {
+      const sx = player.x - camera.x;
+      const flash = player.invincible && Math.floor(performance.now() / 100) % 2 === 0;
+      ctx.globalAlpha = flash ? 0.3 : 1;
+      ctx.save();
+      if (player.facing < 0) {
+        ctx.translate(sx + player.w, player.y);
+        ctx.scale(-1, 1);
+        drawMario(0, 0, player.w, player.h, player.big);
+      } else {
+        drawMario(sx, player.y, player.w, player.h, player.big);
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      drawBackground();
+      drawScenery();
+      drawGoal();
+      drawBlocks();
+      drawBananas();
+      drawSpeedItems();
+      drawPoppedMushrooms();
+      drawShells();
+      drawEnemies();
+      drawPlayer();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // --- keyboard controls ---
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowLeft', 'a', 'A'].includes(e.key)) input.left = true;
+      if (['ArrowRight', 'd', 'D'].includes(e.key)) input.right = true;
+      if (['ArrowUp', 'w', 'W', ' '].includes(e.key)) { jump(); e.preventDefault(); }
+      if (['e', 'E', 'Shift'].includes(e.key)) { throwShell(); }
+      if (['q', 'Q'].includes(e.key)) { placeBanana(); }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (['ArrowLeft', 'a', 'A'].includes(e.key)) input.left = false;
+      if (['ArrowRight', 'd', 'D'].includes(e.key)) input.right = false;
+    });
+
+    // --- touch / mouse controls ---
+    function bindHold(el, onDown, onUp) {
+      el.addEventListener('mousedown', onDown);
+      el.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); }, { passive: false });
+      el.addEventListener('mouseup', onUp);
+      el.addEventListener('mouseleave', onUp);
+      el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
+    }
+    bindHold(document.getElementById('leftBtn'), () => input.left = true, () => input.left = false);
+    bindHold(document.getElementById('rightBtn'), () => input.right = true, () => input.right = false);
+    document.getElementById('jumpBtn').addEventListener('click', jump);
+    document.getElementById('jumpBtn').addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, { passive: false });
+    document.getElementById('throwBtn').addEventListener('click', throwShell);
+    document.getElementById('throwBtn').addEventListener('touchstart', (e) => { e.preventDefault(); throwShell(); }, { passive: false });
+    document.getElementById('bananaBtn').addEventListener('click', placeBanana);
+    document.getElementById('bananaBtn').addEventListener('touchstart', (e) => { e.preventDefault(); placeBanana(); }, { passive: false });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      startOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+    });
+    document.getElementById('retryBtn1').addEventListener('click', () => { resetGame(); });
+    document.getElementById('retryBtn2').addEventListener('click', () => { resetGame(); });
+
+    resetGame();
+    loop();
+  </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+// ここに あたらしい ゲームを ついかしていくよ！
+// 1. games フォルダの なかに あたらしい フォルダを つくる（例: games/atarashii-game）
+// 2. そのなかに index.html を つくる（トップページに もどる リンクを わすれずに）
+// 3. したの リストに 1こう ついかする
+
+const GAMES = [
+  {
+    id: 'mario',
+    title: 'スーパーそうすけラン',
+    emoji: '🧒',
+    color: '#4C7BF3',
+    path: 'games/mario/index.html',
+    desc: 'すすんで、とんで、てきを よけよう！',
+  },
+  {
+    id: 'zombie',
+    title: 'そうすけの ゾンビたいじ',
+    emoji: '🧟',
+    color: '#5DBB63',
+    path: 'games/zombie/index.html',
+    desc: '5つの ぶきで ゾンビから いえを まもろう！',
+  },
+  {
+    id: 'stage-quest',
+    title: 'そうすけの ステージクエスト',
+    emoji: '🗺️',
+    color: '#F5A623',
+    path: 'games/stage-quest/index.html',
+    desc: '3つの ステージを クリアしよう！パズルが いっぱい あるよ。',
+  },
+  {
+    id: 'tictactoe',
+    title: 'そうすけの ○×ゲーム',
+    emoji: '⭕',
+    color: '#6FCF97',
+    path: 'games/tictactoe/index.html',
+    desc: 'コンピューターと まるばつゲームで しょうぶしよう！',
+  },
+  {
+    id: 'janken',
+    title: 'そうすけの じゃんけんゲーム',
+    emoji: '✂️',
+    color: '#FF6B6B',
+    path: 'games/janken/index.html',
+    desc: 'コンピューターと じゃんけん しょうぶ！',
+  },
+  {
+    id: 'marble-cup',
+    title: 'そうすけの くるくるビーだま',
+    emoji: '🥤',
+    color: '#7EC8E3',
+    path: 'games/marble-cup/index.html',
+    desc: 'かみコップの ビーだまを まわしつづけよう！タイムアタック！',
+  },
+  {
+    id: 'tidy-room',
+    title: 'そうすけの おかたづけゲーム',
+    emoji: '🧹',
+    color: '#FFC1E3',
+    path: 'games/tidy-room/index.html',
+    desc: '30びょういないに 13この ものを かたづけよう！',
+  },
+  {
+    id: 'toilet-rush',
+    title: 'そうすけの トイレまでダッシュ',
+    emoji: '🚻',
+    color: '#6EE7F9',
+    path: 'games/toilet-rush/index.html',
+    desc: 'めいろを すすんで、じかんないに トイレに いこう！',
+  },
+  {
+    id: 'bowling',
+    title: 'そうすけの ボウリング',
+    emoji: '🎳',
+    color: '#FF9A9E',
+    path: 'games/bowling/index.html',
+    desc: 'ねらいと ちからを きめて、10ぽん ぜんぶ たおそう！',
+  },
+  {
+    id: 'katanuki',
+    title: 'そうすけの かたぬき',
+    emoji: '🍬',
+    color: '#FD6E6A',
+    path: 'games/katanuki/index.html',
+    desc: 'せんの まわりを なぞって、われないように けずろう！',
+  },
+  {
+    id: 'heist',
+    title: 'そうすけの おたからどろぼう',
+    emoji: '🥷',
+    color: '#4A6572',
+    path: 'games/heist/index.html',
+    desc: 'けいびに みつからずに おかねを あつめて、おみせで うろう！10ステージ！',
+  },
+];

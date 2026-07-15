@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの くるくるビーだま</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #A6F3B7 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #EAF6FF;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .hud {
+    display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+  }
+
+  .spin-btn {
+    font-size: 1.6rem;
+    font-weight: bold;
+    padding: 18px 60px;
+    border: none;
+    border-radius: 999px;
+    background: #FF5D8F;
+    color: #fff;
+    box-shadow: 0 6px 0 #c73f6a;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    margin-top: 20px;
+  }
+  .spin-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🥤 そうすけの くるくるビーだま</h1>
+
+  <div class="hud">
+    <span>じかん ⏱️ <span id="timeNow">0.0</span> びょう</span>
+    <span>さいこう 🏆 <span id="timeBest">0.0</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="400" height="400"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🥤 くるくるビーだま</h2>
+      <p>
+        かみコップの なかの ビーだまを まわすよ！<br>
+        コップや ボタンを どんどん タッチして、まわす スピードを あげよう。<br>
+        タッチを やめると だんだん ゆっくりに なって、とまっちゃう。<br>
+        どれだけ ながく まわしつづけられるか チャレンジ！
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="overOverlay">
+      <h2>🛑 とまっちゃった！</h2>
+      <p id="overText">まわしてた じかん: 0.0 びょう</p>
+      <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+    </div>
+  </div>
+
+  <button class="spin-btn" id="spinBtn">🌀 まわす！</button>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+    let spinWhir = null;
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const timeNowEl = document.getElementById('timeNow');
+    const timeBestEl = document.getElementById('timeBest');
+    const startOverlay = document.getElementById('startOverlay');
+    const overOverlay = document.getElementById('overOverlay');
+    const overText = document.getElementById('overText');
+    const spinBtn = document.getElementById('spinBtn');
+
+    const W = canvas.width, H = canvas.height;
+    const CX = W / 2, CY = H / 2;
+    const RIM_RADIUS = 160;
+    const MIN_ORBIT = 18;
+
+    const BOOST = 0.16;
+    const MAX_SPEED = 0.5;
+    const FRICTION = 0.0016;
+    const STOP_THRESHOLD = 0.002;
+    const SHRINK_MAX = 95;
+
+    let currentRadius = RIM_RADIUS;
+
+    const BEST_KEY = 'soutaMarbleCupBest';
+    function getBest() {
+      return parseFloat(localStorage.getItem(BEST_KEY) || '0');
+    }
+    function setBest(v) {
+      localStorage.setItem(BEST_KEY, String(v));
+    }
+
+    let speed = 0;
+    let angle = 0;
+    let playing = false;
+    let started = false;
+    let startTime = 0;
+    let elapsed = 0;
+    let lastFrame = performance.now();
+
+    function resetGame() {
+      speed = 0;
+      angle = 0;
+      currentRadius = RIM_RADIUS;
+      playing = false;
+      started = false;
+      elapsed = 0;
+      timeNowEl.textContent = '0.0';
+      timeBestEl.textContent = getBest().toFixed(1);
+      startOverlay.classList.remove('hide');
+      overOverlay.classList.add('hide');
+    }
+
+    function boost() {
+      if (!playing) return;
+      speed = Math.min(MAX_SPEED, speed + BOOST);
+      if (!started) {
+        started = true;
+        startTime = performance.now();
+      }
+      if (!spinWhir) {
+        spinWhir = GameAudio.startSpinWhir();
+      }
+    }
+
+    function triggerGameOver() {
+      playing = false;
+      if (spinWhir) {
+        spinWhir.stop();
+        spinWhir = null;
+      }
+      const best = getBest();
+      if (elapsed > best) {
+        setBest(elapsed);
+        overText.textContent = `まわしてた じかん: ${elapsed.toFixed(1)} びょう 🎉 しんきろく！`;
+        GameAudio.playClearFanfare();
+      } else {
+        overText.textContent = `まわしてた じかん: ${elapsed.toFixed(1)} びょう`;
+        GameAudio.playFailBuzz();
+      }
+      timeBestEl.textContent = getBest().toFixed(1);
+      overOverlay.classList.remove('hide');
+    }
+
+    function update(dt) {
+      if (!playing) return;
+
+      if (started) {
+        speed = Math.max(0, speed - FRICTION * (dt / 16.7));
+        const speedRatio = speed / MAX_SPEED;
+        const visualBoost = 1 + 2.5 * speedRatio * speedRatio;
+        angle += speed * visualBoost * (dt / 16.7);
+        currentRadius = RIM_RADIUS - SHRINK_MAX * speedRatio;
+        elapsed = (performance.now() - startTime) / 1000;
+        timeNowEl.textContent = elapsed.toFixed(1);
+        if (spinWhir) spinWhir.update(speedRatio);
+
+        if (speed <= STOP_THRESHOLD && elapsed > 0.3) {
+          triggerGameOver();
+        }
+      }
+    }
+
+    function drawCup() {
+      const r = currentRadius;
+
+      // outer rim
+      const grad = ctx.createRadialGradient(CX, CY, r * 0.5, CX, CY, r + 20);
+      grad.addColorStop(0, '#FFFFFF');
+      grad.addColorStop(1, '#D8E9F5');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(CX, CY, r + 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#B8D4E8';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(CX, CY, r + 17, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // decorative stripes that spin with the cup
+      ctx.save();
+      ctx.translate(CX, CY);
+      ctx.rotate(angle * 0.3);
+      ctx.strokeStyle = '#F6416C';
+      ctx.lineWidth = 8;
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * (r - 4), Math.sin(a) * (r - 4));
+        ctx.lineTo(Math.cos(a) * (r + 10), Math.sin(a) * (r + 10));
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // inner well (shadow)
+      const innerGrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, r);
+      innerGrad.addColorStop(0, '#F5FAFF');
+      innerGrad.addColorStop(1, '#C7DCEC');
+      ctx.fillStyle = innerGrad;
+      ctx.beginPath();
+      ctx.arc(CX, CY, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawMarble() {
+      const t = Math.min(1, speed / (MAX_SPEED * 0.7));
+      const orbit = MIN_ORBIT + (currentRadius - 30 - MIN_ORBIT) * t;
+      const mx = CX + Math.cos(angle) * orbit;
+      const my = CY + Math.sin(angle) * orbit;
+
+      const grad = ctx.createRadialGradient(mx - 6, my - 6, 2, mx, my, 16);
+      grad.addColorStop(0, '#FFFFFF');
+      grad.addColorStop(0.4, '#7EC8E3');
+      grad.addColorStop(1, '#2C6E9B');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(mx, my, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      drawCup();
+      drawMarble();
+    }
+
+    function loop(now) {
+      const dt = Math.min(50, now - lastFrame);
+      lastFrame = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    canvas.addEventListener('mousedown', boost);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); boost(); }, { passive: false });
+    spinBtn.addEventListener('mousedown', boost);
+    spinBtn.addEventListener('touchstart', (e) => { e.preventDefault(); boost(); }, { passive: false });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      startOverlay.classList.add('hide');
+      playing = true;
+      lastFrame = performance.now();
+    });
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      speed = 0;
+      angle = 0;
+      currentRadius = RIM_RADIUS;
+      started = false;
+      elapsed = 0;
+      timeNowEl.textContent = '0.0';
+      overOverlay.classList.add('hide');
+      playing = true;
+      lastFrame = performance.now();
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

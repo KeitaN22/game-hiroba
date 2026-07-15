@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ソウスケゲーム広場</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hero">
+    <h1>🎮 ソウスケゲーム広場 🎮</h1>
+    <p>あそびたい ゲームを えらんでね！</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <script src="games.js"></script>
+  <script>
+    const grid = document.getElementById('grid');
+
+    if (GAMES.length === 0) {
+      grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';
+    } else {
+      GAMES.forEach((game, index) => {
+        const a = document.createElement('a');
+        a.className = 'card';
+        a.href = game.path;
+        a.style.background = game.color;
+        a.innerHTML = `
+          <div class="number-badge">${index + 1}</div>
+          <div class="emoji">${game.emoji}</div>
+          <div class="title">${game.title}</div>
+          <div class="desc">${game.desc}</div>
+          <div class="play-btn">あそぶ ▶</div>
+        `;
+        grid.appendChild(a);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ○×ゲーム</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #A8E6CF 0%, #E0C3FC 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .ttt-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 480px;
+    background: linear-gradient(135deg, #A8E6CF 0%, #6FCF97 50%, #56CCF2 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 24px;
+    padding: 20px;
+  }
+  .ttt-status {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #fff;
+    background: rgba(255,255,255,0.25);
+    padding: 10px 26px;
+    border-radius: 14px;
+  }
+  .ttt-board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 10px;
+  }
+  .ttt-cell {
+    width: 100px; height: 100px;
+    background: #fff;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3.4rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    user-select: none;
+  }
+  .ttt-cell:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .ttt-cell.o { color: #4C7BF3; }
+  .ttt-cell.x { color: #FF5D8F; }
+  .ttt-cell.win { background: #FFE58A; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">⭕ そうすけの ○×ゲーム</h1>
+
+  <div class="stage-wrap">
+    <div class="ttt-wrap">
+      <div class="ttt-status" id="tttStatus">あなたの ばん (○)</div>
+      <div class="ttt-board" id="tttBoard"></div>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <h2>⭕ そうすけの ○×ゲーム</h2>
+      <p>
+        マスを タッチして ○を おくよ。<br>
+        コンピューターと こうごに ○と ×を おいていくよ。<br>
+        たて・よこ・ななめに 3つ ならべたら かち！<br>
+        まけても なんかいでも ちょうせん できるよ。
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2 id="winTitle">🎉 かったね！ 🎉</h2>
+      <p id="winText">すごい！ また あそぼう！</p>
+      <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const tttBoardEl = document.getElementById('tttBoard');
+    const tttStatusEl = document.getElementById('tttStatus');
+    const startOverlay = document.getElementById('startOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTitleEl = document.getElementById('winTitle');
+    const winTextEl = document.getElementById('winText');
+
+    const TTT_LINES = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
+    ];
+    let tttBoard = [];
+    let tttCellEls = [];
+    let tttOver = false;
+    let tttPlayerTurn = true;
+
+    function initTicTacToe() {
+      tttBoard = Array(9).fill(null);
+      tttOver = false;
+      tttPlayerTurn = true;
+      tttStatusEl.textContent = 'あなたの ばん (○)';
+      tttBoardEl.innerHTML = '';
+      tttCellEls = [];
+      winOverlay.classList.add('hide');
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'ttt-cell';
+        cell.addEventListener('click', () => onTttCellClick(i));
+        tttBoardEl.appendChild(cell);
+        tttCellEls.push(cell);
+      }
+    }
+
+    function renderTttCell(i) {
+      const cell = tttCellEls[i];
+      cell.textContent = tttBoard[i] === 'o' ? '○' : tttBoard[i] === 'x' ? '×' : '';
+      cell.classList.toggle('o', tttBoard[i] === 'o');
+      cell.classList.toggle('x', tttBoard[i] === 'x');
+    }
+
+    function checkTttResult(board) {
+      for (const line of TTT_LINES) {
+        const [a, b, c] = line;
+        if (board[a] && board[a] === board[b] && board[b] === board[c]) {
+          return { winner: board[a], line };
+        }
+      }
+      if (board.every(cell => cell)) return { winner: 'draw' };
+      return null;
+    }
+
+    function pickComputerMove(board) {
+      for (const line of TTT_LINES) {
+        const cells = line.map(i => board[i]);
+        if (cells.filter(c => c === 'x').length === 2 && cells.includes(null)) {
+          return line[cells.indexOf(null)];
+        }
+      }
+      for (const line of TTT_LINES) {
+        const cells = line.map(i => board[i]);
+        if (cells.filter(c => c === 'o').length === 2 && cells.includes(null)) {
+          return line[cells.indexOf(null)];
+        }
+      }
+      if (!board[4]) return 4;
+      const empty = board.map((c, i) => (c ? null : i)).filter(i => i !== null);
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function finishTtt(result) {
+      tttOver = true;
+      if (result.line) {
+        result.line.forEach(i => tttCellEls[i].classList.add('win'));
+      }
+      GameAudio.stopBGM();
+      if (result.winner === 'o') {
+        tttStatusEl.textContent = '🎉 かったね！';
+        winTitleEl.textContent = '🎉 かったね！ 🎉';
+        winTextEl.textContent = 'すごい！ また あそぼう！';
+        setTimeout(() => { GameAudio.playClearFanfare(); winOverlay.classList.remove('hide'); }, 700);
+      } else if (result.winner === 'draw') {
+        tttStatusEl.textContent = '🤝 ひきわけ！';
+        winTitleEl.textContent = '🤝 ひきわけ！';
+        winTextEl.textContent = 'いい しょうぶ だったね！';
+        setTimeout(() => { GameAudio.playClearFanfare(); winOverlay.classList.remove('hide'); }, 700);
+      } else {
+        tttStatusEl.textContent = '😢 まけちゃった…';
+        winTitleEl.textContent = '😢 まけちゃった…';
+        winTextEl.textContent = 'もういちど ちょうせん してみよう！';
+        setTimeout(() => { GameAudio.playFailBuzz(); winOverlay.classList.remove('hide'); }, 700);
+      }
+    }
+
+    function computerMove() {
+      if (tttOver) return;
+      const i = pickComputerMove(tttBoard);
+      tttBoard[i] = 'x';
+      renderTttCell(i);
+      const result = checkTttResult(tttBoard);
+      if (result) { finishTtt(result); return; }
+      tttStatusEl.textContent = 'あなたの ばん (○)';
+      tttPlayerTurn = true;
+    }
+
+    function onTttCellClick(i) {
+      if (tttOver || !tttPlayerTurn || tttBoard[i]) return;
+      tttBoard[i] = 'o';
+      tttPlayerTurn = false;
+      renderTttCell(i);
+      const result = checkTttResult(tttBoard);
+      if (result) { finishTtt(result); return; }
+      tttStatusEl.textContent = 'コンピューターの ばん…';
+      setTimeout(computerMove, 500);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      startOverlay.classList.add('hide');
+      initTicTacToe();
+      GameAudio.playBGM();
+    });
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      initTicTacToe();
+      GameAudio.playBGM();
+    });
+  </script>
+</body>
+</html>
