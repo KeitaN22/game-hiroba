@@ -30,12 +30,6 @@
     display: inline-block;
   }
 
-  @media (max-width: 420px) {
-    .maze-frame { transform: scale(0.82); transform-origin: top center; margin-bottom: -70px; }
-  }
-  @media (max-width: 340px) {
-    .maze-frame { transform: scale(0.68); margin-bottom: -125px; }
-  }
 
   .maze-board {
     position: relative;
@@ -274,7 +268,13 @@
 
     const START = { row: 0, col: 0 };
     const GOAL = { row: 6, col: 6 };
-    const CELL = 56; // 52px cell + 4px gap
+    let CELL = 56; // cellPx + 4px gap, recomputed responsively in buildMaze()
+
+    function computeCellPx() {
+      const available = Math.min(window.innerWidth - 60, 420);
+      const raw = Math.floor((available - 6 * 4) / 7);
+      return Math.max(30, Math.min(52, raw));
+    }
 
     const mazeBoardEl = document.getElementById('mazeBoard');
     const hudEl = document.getElementById('hud');
@@ -372,12 +372,17 @@
     }
 
     function buildMaze() {
+      const cellPx = computeCellPx();
+      CELL = cellPx + 4;
+      mazeBoardEl.style.gridTemplateColumns = `repeat(${currentMaze[0].length}, ${cellPx}px)`;
+      mazeBoardEl.style.gridTemplateRows = `repeat(${currentMaze.length}, ${cellPx}px)`;
       mazeBoardEl.innerHTML = '';
       for (let r = 0; r < currentMaze.length; r++) {
         for (let c = 0; c < currentMaze[r].length; c++) {
           const cell = document.createElement('div');
           const isWall = currentMaze[r][c] === 1;
           cell.className = 'maze-cell ' + (isWall ? 'wall' : 'floor');
+          cell.style.fontSize = Math.max(12, Math.round(cellPx * 0.5)) + 'px';
           if (!isWall && r === GOAL.row && c === GOAL.col) {
             cell.textContent = '🚻';
           }
@@ -387,6 +392,9 @@
       playerPos = { ...START };
       playerToken = document.createElement('div');
       playerToken.className = 'player-token';
+      playerToken.style.width = cellPx + 'px';
+      playerToken.style.height = cellPx + 'px';
+      playerToken.style.fontSize = Math.max(12, Math.round(cellPx * 0.55)) + 'px';
       playerToken.textContent = '🧒';
       mazeBoardEl.appendChild(playerToken);
       updatePlayerPosition(false);

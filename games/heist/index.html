@@ -30,13 +30,6 @@
     display: inline-block;
   }
 
-  @media (max-width: 420px) {
-    .maze-frame { transform: scale(0.7); transform-origin: top center; margin-bottom: -90px; }
-  }
-  @media (max-width: 340px) {
-    .maze-frame { transform: scale(0.58); margin-bottom: -140px; }
-  }
-
   .maze-board {
     position: relative;
     display: grid;
@@ -374,6 +367,7 @@
     let currentStage = 1;
     let currentMaze = null;
     let currentStageConf = STAGES[0];
+    let currentCellPx = 52;
     let currentPath = [];
     let currentPatrolLo = 0;
     let currentPatrolHi = 0;
@@ -453,11 +447,15 @@
       if (!stage) return;
       currentStage = n;
       currentStageConf = stage;
-      CELL = stage.cellPx + 4;
 
       const rng = mulberry32(stage.seed);
       const { grid, gridH, gridW } = generateMaze(stage.rooms.r, stage.rooms.c, rng);
       currentMaze = grid;
+
+      const available = Math.min(window.innerWidth - 60, 420);
+      const fitPx = Math.floor((available - (gridW - 1) * 4) / gridW);
+      currentCellPx = Math.max(14, Math.min(stage.cellPx, fitPx));
+      CELL = currentCellPx + 4;
       START = { row: 0, col: 0 };
       GOAL = { row: gridH - 1, col: gridW - 1 };
       currentPath = bfsPath(grid, START, GOAL);
@@ -498,14 +496,14 @@
     }
 
     function sizeToken(el) {
-      const px = currentStageConf.cellPx;
+      const px = currentCellPx;
       el.style.width = px + 'px';
       el.style.height = px + 'px';
       el.style.fontSize = Math.max(12, Math.round(px * 0.55)) + 'px';
     }
 
     function buildMaze() {
-      const px = currentStageConf.cellPx;
+      const px = currentCellPx;
       mazeBoardEl.style.gridTemplateColumns = `repeat(${currentMaze[0].length}, ${px}px)`;
       mazeBoardEl.style.gridTemplateRows = `repeat(${currentMaze.length}, ${px}px)`;
       mazeBoardEl.innerHTML = '';
