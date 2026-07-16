@@ -116,4 +116,12 @@ const GAMES = [
     path: 'games/car-fix/index.html',
     desc: 'タイヤを つけて、よごれを ふいて、まどと ドアを なおそう！',
   },
+  {
+    id: 'my-phone',
+    title: 'そうすけの マイケータイ',
+    emoji: '📱',
+    color: '#7DE07D',
+    path: 'games/my-phone/index.html',
+    desc: 'じぶんの ケータイで メッセージを おくったり、でんたくや おんがくで あそぼう！',
+  },
 ];
