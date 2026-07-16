@@ -42,6 +42,28 @@
   .hide { display: none !important; }
   .overlay h2 { font-size: 2rem; margin: 6px 0; }
   .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    width: 100%;
+    margin: 10px 0 20px;
+  }
+  .stage-card {
+    border: none;
+    border-radius: 16px;
+    padding: 12px 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-weight: bold;
+  }
+  .stage-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .stage-card .semoji { font-size: 1.8rem; }
+  .stage-card.locked { background: #999; color: #eee; cursor: default; opacity: 0.7; }
 </style>
 </head>
 <body class="game-body">
@@ -49,29 +71,32 @@
   <button class="mute-btn" id="muteBtn">🔊</button>
   <h1 class="game-title">🚗 そうすけの くるまピカピカ</h1>
 
-  <div class="hud">
+  <div class="hud" id="hud">
+    <span id="stageLabel">ステージ せんたくちゅう</span>
     <span>なおった 🔧 <span id="doneCount">0</span>/<span id="totalCount">7</span></span>
     <span>じかん ⏱️ <span id="timeNow">0.0</span> びょう</span>
   </div>
 
   <div class="stage-wrap">
-    <canvas id="stage" width="420" height="320"></canvas>
+    <canvas id="stage" width="460" height="350"></canvas>
 
-    <div class="overlay" id="startOverlay">
+    <div class="overlay" id="stageSelectOverlay">
       <h2>🚗 くるまピカピカ</h2>
-      <p>
-        タイヤが はずれてるよ！ タイヤを ながおし して、あいてる ところまで はこぼう。<br>
-        よごれた ところは タッチして 🧽きれいに しよう（3かい タッチ）。<br>
-        こわれた まどと ドアも タッチして なおそう！<br>
-        ぜんぶ なおしたら クリア！
-      </p>
+      <p>あそびたい ステージを えらんでね！ ステージが すすむほど くるまが おおきく なるよ。</p>
+      <div class="stage-grid" id="stageGrid"></div>
+    </div>
+
+    <div class="overlay hide" id="startOverlay">
+      <h2 id="startTitle">🚗 ステージ1</h2>
+      <p id="startText"></p>
       <button class="big-btn" id="startBtn">▶ スタート</button>
     </div>
 
     <div class="overlay hide" id="winOverlay">
-      <h2>🎉 ピカピカに なった！ 🎉</h2>
+      <h2 id="winTitle">🎉 ピカピカに なった！ 🎉</h2>
       <p id="winText"></p>
-      <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      <button class="big-btn" id="nextStageBtn">▶ つぎのステージへ</button>
+      <button class="big-btn" id="toSelectBtnWin" style="margin-top:10px;">🗺️ ステージせんたくへ</button>
     </div>
   </div>
 
@@ -87,35 +112,155 @@
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
+    const hudEl = document.getElementById('hud');
+    const stageLabelEl = document.getElementById('stageLabel');
     const doneCountEl = document.getElementById('doneCount');
     const totalCountEl = document.getElementById('totalCount');
     const timeNowEl = document.getElementById('timeNow');
+    const stageSelectOverlay = document.getElementById('stageSelectOverlay');
+    const stageGridEl = document.getElementById('stageGrid');
     const startOverlay = document.getElementById('startOverlay');
+    const startTitleEl = document.getElementById('startTitle');
+    const startTextEl = document.getElementById('startText');
     const winOverlay = document.getElementById('winOverlay');
+    const winTitleEl = document.getElementById('winTitle');
     const winTextEl = document.getElementById('winText');
+    const nextStageBtn = document.getElementById('nextStageBtn');
 
-    const WHEEL_R = 26;
-    const TAPS_NEEDED = 3;
-
-    const WELLS = [
-      { x: 150, y: 235 },
-      { x: 310, y: 235 },
+    const STAGES = [
+      { id: 1, carScale: 0.75, dirtCount: 2, tapsNeeded: 2 },
+      { id: 2, carScale: 0.82, dirtCount: 2, tapsNeeded: 3 },
+      { id: 3, carScale: 0.89, dirtCount: 3, tapsNeeded: 3 },
+      { id: 4, carScale: 0.96, dirtCount: 3, tapsNeeded: 3 },
+      { id: 5, carScale: 1.03, dirtCount: 4, tapsNeeded: 4 },
+      { id: 6, carScale: 1.10, dirtCount: 4, tapsNeeded: 4 },
+      { id: 7, carScale: 1.16, dirtCount: 5, tapsNeeded: 4 },
+      { id: 8, carScale: 1.22, dirtCount: 5, tapsNeeded: 5 },
+      { id: 9, carScale: 1.28, dirtCount: 6, tapsNeeded: 5 },
+      { id: 10, carScale: 1.35, dirtCount: 7, tapsNeeded: 5 },
     ];
 
-    const WINDOW_RECT = { x: 155, y: 100, w: 70, h: 45 };
-    const DOOR_RECT = { x: 235, y: 150, w: 90, h: 85 };
-    const DIRT_SPOTS = [
-      { x: 110, y: 205, r: 20 },
-      { x: 355, y: 205, r: 18 },
-      { x: 285, y: 100, r: 16 },
+    const ORIGIN = { x: 230, y: 258 };
+    const BASE_WHEEL_R = 26;
+
+    // local (unscaled, origin-relative) geometry for the car
+    const BODY_LOCAL = [
+      [-145, 0], [-145, -45], /*Q*/[-145, -70], [-120, -75],
+      [-75, -90], [-75, -135], /*Q*/[-75, -150], [-60, -150],
+      [30, -150], /*Q*/[45, -150], [45, -135],
+      [45, -90], [115, -75], /*Q*/[140, -70], [140, -45],
+      [140, 0],
     ];
+    const WINDOW2_LOCAL = [[30, -135], [30, -90], [110, -77], [45, -135]];
+    const WINDOW_RECT_LOCAL = { x: -70, y: -135, w: 70, h: 45 };
+    const DOOR_RECT_LOCAL = { x: 10, y: -85, w: 90, h: 85 };
+    const WELLS_LOCAL = [[-75, 0], [85, 0]];
+    const DIRT_POOL_LOCAL = [
+      [-115, -30, 20], [130, -30, 18], [60, -135, 14], [-40, -20, 16],
+      [100, -10, 14], [-100, -100, 14], [0, -30, 16],
+    ];
+
+    let layoutScale = 1;
+    function P(lx, ly) { return { x: ORIGIN.x + lx * layoutScale, y: ORIGIN.y + ly * layoutScale }; }
+    function S(v) { return v * layoutScale; }
+
+    let currentStage = 1;
+    let currentStageConf = STAGES[0];
+    let WHEEL_R, WELLS, WINDOW_RECT, DOOR_RECT, DIRT_SPOTS, TIRE_HOMES;
+
+    function buildLayout(stage) {
+      layoutScale = stage.carScale;
+      WHEEL_R = S(BASE_WHEEL_R);
+      WELLS = WELLS_LOCAL.map(([lx, ly]) => P(lx, ly));
+      TIRE_HOMES = [
+        { x: WHEEL_R + 12, y: H - 32 },
+        { x: W - WHEEL_R - 12, y: H - 32 },
+      ];
+      const wr = P(WINDOW_RECT_LOCAL.x, WINDOW_RECT_LOCAL.y);
+      WINDOW_RECT = { x: wr.x, y: wr.y, w: S(WINDOW_RECT_LOCAL.w), h: S(WINDOW_RECT_LOCAL.h) };
+      const dr = P(DOOR_RECT_LOCAL.x, DOOR_RECT_LOCAL.y);
+      DOOR_RECT = { x: dr.x, y: dr.y, w: S(DOOR_RECT_LOCAL.w), h: S(DOOR_RECT_LOCAL.h) };
+      DIRT_SPOTS = DIRT_POOL_LOCAL.slice(0, stage.dirtCount).map(([lx, ly, r]) => {
+        const p = P(lx, ly);
+        return { x: p.x, y: p.y, r: S(r) };
+      });
+    }
 
     let tires, windowState, doorState, dirtState, playing, elapsed, lastFrame, dragTire;
 
+    const CLEARED_KEY = 'soutaCarFixCleared';
+    const BEST_STAGE_KEY = 'soutaCarFixBestStage';
+    function getCleared() {
+      try { return JSON.parse(localStorage.getItem(CLEARED_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+    function markCleared(id) {
+      const cleared = getCleared();
+      if (!cleared.includes(id)) {
+        cleared.push(id);
+        localStorage.setItem(CLEARED_KEY, JSON.stringify(cleared));
+      }
+    }
+    function isUnlocked(id) {
+      if (id <= 1) return true;
+      return getCleared().includes(id - 1);
+    }
+    function getBestStage() { return parseInt(localStorage.getItem(BEST_STAGE_KEY) || '0', 10); }
+    function setBestStage(v) { localStorage.setItem(BEST_STAGE_KEY, String(v)); }
+
+    function renderStageSelect() {
+      stageGridEl.innerHTML = '';
+      STAGES.forEach(stage => {
+        const btn = document.createElement('button');
+        if (isUnlocked(stage.id)) {
+          btn.className = 'stage-card';
+          btn.innerHTML = `<span class="semoji">🚗</span><span>${stage.id}</span>`;
+          btn.addEventListener('click', () => openStage(stage.id));
+        } else {
+          btn.className = 'stage-card locked';
+          btn.innerHTML = `<span class="semoji">🔒</span><span>${stage.id}</span>`;
+        }
+        stageGridEl.appendChild(btn);
+      });
+    }
+
+    function openStage(n) {
+      const stage = STAGES[n - 1];
+      if (!stage) return;
+      currentStage = n;
+      currentStageConf = stage;
+      buildLayout(stage);
+      stageLabelEl.textContent = `ステージ${stage.id}`;
+      stageSelectOverlay.classList.add('hide');
+      startTitleEl.textContent = `🚗 ステージ${stage.id}`;
+      startTextEl.innerHTML = `
+        タイヤが はずれてるよ！ ながおし して あいてる ところまで はこぼう。<br>
+        よごれた ところは タッチして 🧽きれいに（${stage.tapsNeeded}かい タッチ）。<br>
+        こわれた まどと ドアも タッチして なおそう！<br>
+        ぜんぶ なおしたら クリア！
+      `;
+      startOverlay.classList.remove('hide');
+      winOverlay.classList.add('hide');
+      resetGame();
+    }
+
+    function backToStageSelect() {
+      GameAudio.stopBGM();
+      startOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      renderStageSelect();
+      stageSelectOverlay.classList.remove('hide');
+      stageLabelEl.textContent = 'ステージ せんたくちゅう';
+    }
+
+    function totalTasks() {
+      return 2 + currentStageConf.dirtCount + 2; // 2 wheels + dirt + window + door
+    }
+
     function resetGame() {
       tires = [
-        { home: { x: 60, y: 280 }, x: 60, y: 280, fixed: false, wellIndex: -1 },
-        { home: { x: 380, y: 280 }, x: 380, y: 280, fixed: false, wellIndex: -1 },
+        { home: TIRE_HOMES[0], x: TIRE_HOMES[0].x, y: TIRE_HOMES[0].y, fixed: false, wellIndex: -1 },
+        { home: TIRE_HOMES[1], x: TIRE_HOMES[1].x, y: TIRE_HOMES[1].y, fixed: false, wellIndex: -1 },
       ];
       windowState = { taps: 0, fixed: false };
       doorState = { taps: 0, fixed: false };
@@ -123,9 +268,8 @@
       playing = false;
       elapsed = 0;
       dragTire = null;
+      totalCountEl.textContent = totalTasks();
       updateHud();
-      startOverlay.classList.remove('hide');
-      winOverlay.classList.add('hide');
     }
 
     function updateHud() {
@@ -139,7 +283,7 @@
 
     function checkWin() {
       const done = updateHud();
-      if (done >= 7 && playing) {
+      if (done >= totalTasks() && playing) {
         triggerWin();
       }
     }
@@ -149,9 +293,24 @@
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
       const finalTime = Math.round(elapsed * 10) / 10;
-      winTextEl.textContent = `${finalTime}びょうで ぜんぶ なおせたね！ すごい めいこうだ！`;
+      const priorBest = getBestStage();
+      markCleared(currentStage);
+      if (currentStage > priorBest) {
+        setBestStage(currentStage);
+        Leaderboard.showRankFlow({ gameId: 'car-fix', score: currentStage, higherIsBetter: true, unit: 'ステージ', title: '🚗 すすんだ ステージ ランキング' });
+      }
+      const next = STAGES[currentStage];
+      if (next) {
+        winTitleEl.textContent = '🎉 ピカピカに なった！ 🎉';
+        winTextEl.textContent = `${finalTime}びょうで なおせたね！ つぎの もっと おおきい くるまへ！`;
+        nextStageBtn.classList.remove('hide');
+        nextStageBtn.onclick = () => openStage(next.id);
+      } else {
+        winTitleEl.textContent = '🏆 ぜんぶ ピカピカ！ 🏆';
+        winTextEl.textContent = `${finalTime}びょうで なおせたね！ 10だいめの おおきな くるまも かんぺき！`;
+        nextStageBtn.classList.add('hide');
+      }
       winOverlay.classList.remove('hide');
-      Leaderboard.showRankFlow({ gameId: 'car-fix', score: finalTime, higherIsBetter: false, unit: 'びょう', title: '🚗 なおした はやさ ランキング' });
     }
 
     function startGame() {
@@ -162,6 +321,10 @@
       GameAudio.playBGM();
     }
 
+    function retrySameStage() {
+      openStage(currentStage);
+    }
+
     function getCanvasPos(evt) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = W / rect.width, scaleY = H / rect.height;
@@ -170,12 +333,13 @@
 
     function tapAt(x, y) {
       if (!playing) return;
+      const tapsNeeded = currentStageConf.tapsNeeded;
 
       if (!windowState.fixed && x >= WINDOW_RECT.x && x <= WINDOW_RECT.x + WINDOW_RECT.w &&
           y >= WINDOW_RECT.y && y <= WINDOW_RECT.y + WINDOW_RECT.h) {
         windowState.taps++;
         GameAudio.playClickTick();
-        if (windowState.taps >= TAPS_NEEDED) windowState.fixed = true;
+        if (windowState.taps >= tapsNeeded) windowState.fixed = true;
         checkWin();
         return;
       }
@@ -184,7 +348,7 @@
           y >= DOOR_RECT.y && y <= DOOR_RECT.y + DOOR_RECT.h) {
         doorState.taps++;
         GameAudio.playClickTick();
-        if (doorState.taps >= TAPS_NEEDED) doorState.fixed = true;
+        if (doorState.taps >= tapsNeeded) doorState.fixed = true;
         checkWin();
         return;
       }
@@ -196,7 +360,7 @@
         if (Math.hypot(x - spot.x, y - spot.y) <= spot.r) {
           st.taps++;
           GameAudio.playClickTick();
-          if (st.taps >= TAPS_NEEDED) st.clean = true;
+          if (st.taps >= tapsNeeded) st.clean = true;
           checkWin();
           return;
         }
@@ -224,8 +388,9 @@
 
     canvas.addEventListener('pointerup', () => {
       if (!dragTire) return;
+      const snapRange = Math.max(30, WHEEL_R * 1.7);
       const emptyWell = WELLS.find((w, i) => !tires.some(t => t.fixed && t.wellIndex === i) &&
-        Math.hypot(dragTire.x - w.x, dragTire.y - w.y) < 45);
+        Math.hypot(dragTire.x - w.x, dragTire.y - w.y) < snapRange);
       if (emptyWell) {
         dragTire.x = emptyWell.x;
         dragTire.y = emptyWell.y;
@@ -243,7 +408,7 @@
     function drawWheelWell(x, y) {
       ctx.fillStyle = '#333333';
       ctx.beginPath();
-      ctx.arc(x, y, WHEEL_R + 4, Math.PI, Math.PI * 2);
+      ctx.arc(x, y, WHEEL_R + S(4), Math.PI, Math.PI * 2);
       ctx.fill();
     }
 
@@ -265,41 +430,44 @@
       ctx.fillStyle = '#CFE8CF';
       ctx.fillRect(0, H - 30, W, 30);
 
-      // wheel wells (drawn first so wheels/tires sit in front)
+      if (!WELLS) return;
+
       WELLS.forEach(w => drawWheelWell(w.x, w.y));
 
       // body
       ctx.fillStyle = '#FF6B6B';
       ctx.beginPath();
-      ctx.moveTo(80, 235);
-      ctx.lineTo(80, 190);
-      ctx.quadraticCurveTo(80, 165, 105, 160);
-      ctx.lineTo(150, 100 + 45);
-      ctx.lineTo(150, 100);
-      ctx.quadraticCurveTo(150, 85, 165, 85);
-      ctx.lineTo(255, 85);
-      ctx.quadraticCurveTo(270, 85, 270, 100);
-      ctx.lineTo(270, 145);
-      ctx.lineTo(340, 160);
-      ctx.quadraticCurveTo(365, 165, 365, 190);
-      ctx.lineTo(365, 235);
+      const b = BODY_LOCAL.map(([lx, ly]) => P(lx, ly));
+      ctx.moveTo(b[0].x, b[0].y);
+      ctx.lineTo(b[1].x, b[1].y);
+      ctx.quadraticCurveTo(b[2].x, b[2].y, b[3].x, b[3].y);
+      ctx.lineTo(b[4].x, b[4].y);
+      ctx.lineTo(b[5].x, b[5].y);
+      ctx.quadraticCurveTo(b[6].x, b[6].y, b[7].x, b[7].y);
+      ctx.lineTo(b[8].x, b[8].y);
+      ctx.quadraticCurveTo(b[9].x, b[9].y, b[10].x, b[10].y);
+      ctx.lineTo(b[11].x, b[11].y);
+      ctx.lineTo(b[12].x, b[12].y);
+      ctx.quadraticCurveTo(b[13].x, b[13].y, b[14].x, b[14].y);
+      ctx.lineTo(b[15].x, b[15].y);
       ctx.closePath();
       ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = Math.max(2, S(3));
       ctx.stroke();
 
-      // second window (always clean, for visual completeness)
+      // second window (always clean, decorative)
       ctx.fillStyle = '#BEE3F8';
       ctx.beginPath();
-      ctx.moveTo(255, 100);
-      ctx.lineTo(255, 145);
-      ctx.lineTo(335, 158);
-      ctx.lineTo(270, 100);
+      const w2 = WINDOW2_LOCAL.map(([lx, ly]) => P(lx, ly));
+      ctx.moveTo(w2[0].x, w2[0].y);
+      w2.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
       ctx.closePath();
       ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.2)';
       ctx.stroke();
+
+      const tapsNeeded = currentStageConf.tapsNeeded;
 
       // window (repairable)
       if (windowState.fixed) {
@@ -313,15 +481,15 @@
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(WINDOW_RECT.x + 5, WINDOW_RECT.y + 5);
-        ctx.lineTo(WINDOW_RECT.x + 35, WINDOW_RECT.y + 25);
-        ctx.lineTo(WINDOW_RECT.x + 20, WINDOW_RECT.y + 40);
-        ctx.lineTo(WINDOW_RECT.x + 60, WINDOW_RECT.y + 10);
+        ctx.moveTo(WINDOW_RECT.x + S(5), WINDOW_RECT.y + S(5));
+        ctx.lineTo(WINDOW_RECT.x + S(35), WINDOW_RECT.y + S(25));
+        ctx.lineTo(WINDOW_RECT.x + S(20), WINDOW_RECT.y + S(40));
+        ctx.lineTo(WINDOW_RECT.x + S(60), WINDOW_RECT.y + S(10));
         ctx.stroke();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = `bold ${Math.max(11, Math.round(S(14)))}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(`👆${TAPS_NEEDED - windowState.taps}`, WINDOW_RECT.x + WINDOW_RECT.w / 2, WINDOW_RECT.y + WINDOW_RECT.h / 2 + 5);
+        ctx.fillText(`👆${tapsNeeded - windowState.taps}`, WINDOW_RECT.x + WINDOW_RECT.w / 2, WINDOW_RECT.y + WINDOW_RECT.h / 2 + 5);
       }
 
       // door (repairable)
@@ -331,7 +499,7 @@
         ctx.strokeStyle = 'rgba(0,0,0,0.3)';
         ctx.strokeRect(DOOR_RECT.x, DOOR_RECT.y, DOOR_RECT.w, DOOR_RECT.h);
         ctx.fillStyle = '#333';
-        ctx.fillRect(DOOR_RECT.x + DOOR_RECT.w - 16, DOOR_RECT.y + DOOR_RECT.h / 2 - 4, 10, 8);
+        ctx.fillRect(DOOR_RECT.x + DOOR_RECT.w - S(16), DOOR_RECT.y + DOOR_RECT.h / 2 - S(4), S(10), S(8));
       } else {
         ctx.save();
         ctx.translate(DOOR_RECT.x + DOOR_RECT.w / 2, DOOR_RECT.y + DOOR_RECT.h / 2);
@@ -343,24 +511,22 @@
         ctx.strokeRect(-DOOR_RECT.w / 2, -DOOR_RECT.h / 2, DOOR_RECT.w, DOOR_RECT.h);
         ctx.restore();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = `bold ${Math.max(11, Math.round(S(14)))}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(`🔧${TAPS_NEEDED - doorState.taps}`, DOOR_RECT.x + DOOR_RECT.w / 2, DOOR_RECT.y + DOOR_RECT.h / 2 + 5);
+        ctx.fillText(`🔧${tapsNeeded - doorState.taps}`, DOOR_RECT.x + DOOR_RECT.w / 2, DOOR_RECT.y + DOOR_RECT.h / 2 + 5);
       }
 
       // dirt spots
       DIRT_SPOTS.forEach((spot, i) => {
         const st = dirtState[i];
         if (st.clean) return;
-        ctx.fillStyle = `rgba(120,80,40,${0.85 - st.taps * 0.2})`;
+        ctx.fillStyle = `rgba(120,80,40,${Math.max(0.15, 0.85 - st.taps * (0.7 / tapsNeeded))})`;
         ctx.beginPath();
         ctx.arc(spot.x, spot.y, spot.r, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // wheels already placed
       tires.forEach(t => { if (t.fixed) drawWheel(t.x, t.y); });
-      // loose tires being dragged / waiting
       tires.forEach(t => { if (!t.fixed) drawWheel(t.x, t.y); });
     }
 
@@ -375,10 +541,9 @@
     }
 
     document.getElementById('startBtn').addEventListener('click', startGame);
-    document.getElementById('retryBtn').addEventListener('click', startGame);
+    document.getElementById('toSelectBtnWin').addEventListener('click', backToStageSelect);
 
-    totalCountEl.textContent = 7;
-    resetGame();
+    renderStageSelect();
     lastFrame = performance.now();
     requestAnimationFrame(loop);
   </script>
