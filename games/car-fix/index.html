@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの くるまピカピカ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #A8E6CF 0%, #DCEDC1 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #EAF6FF;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🚗 そうすけの くるまピカピカ</h1>
+
+  <div class="hud">
+    <span>なおった 🔧 <span id="doneCount">0</span>/<span id="totalCount">7</span></span>
+    <span>じかん ⏱️ <span id="timeNow">0.0</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="420" height="320"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🚗 くるまピカピカ</h2>
+      <p>
+        タイヤが はずれてるよ！ タイヤを ながおし して、あいてる ところまで はこぼう。<br>
+        よごれた ところは タッチして 🧽きれいに しよう（3かい タッチ）。<br>
+        こわれた まどと ドアも タッチして なおそう！<br>
+        ぜんぶ なおしたら クリア！
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 ピカピカに なった！ 🎉</h2>
+      <p id="winText"></p>
+      <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const doneCountEl = document.getElementById('doneCount');
+    const totalCountEl = document.getElementById('totalCount');
+    const timeNowEl = document.getElementById('timeNow');
+    const startOverlay = document.getElementById('startOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTextEl = document.getElementById('winText');
+
+    const WHEEL_R = 26;
+    const TAPS_NEEDED = 3;
+
+    const WELLS = [
+      { x: 150, y: 235 },
+      { x: 310, y: 235 },
+    ];
+
+    const WINDOW_RECT = { x: 155, y: 100, w: 70, h: 45 };
+    const DOOR_RECT = { x: 235, y: 150, w: 90, h: 85 };
+    const DIRT_SPOTS = [
+      { x: 110, y: 205, r: 20 },
+      { x: 355, y: 205, r: 18 },
+      { x: 285, y: 100, r: 16 },
+    ];
+
+    let tires, windowState, doorState, dirtState, playing, elapsed, lastFrame, dragTire;
+
+    function resetGame() {
+      tires = [
+        { home: { x: 60, y: 280 }, x: 60, y: 280, fixed: false, wellIndex: -1 },
+        { home: { x: 380, y: 280 }, x: 380, y: 280, fixed: false, wellIndex: -1 },
+      ];
+      windowState = { taps: 0, fixed: false };
+      doorState = { taps: 0, fixed: false };
+      dirtState = DIRT_SPOTS.map(() => ({ taps: 0, clean: false }));
+      playing = false;
+      elapsed = 0;
+      dragTire = null;
+      updateHud();
+      startOverlay.classList.remove('hide');
+      winOverlay.classList.add('hide');
+    }
+
+    function updateHud() {
+      const fixedWheels = tires.filter(t => t.fixed).length;
+      const cleanDirt = dirtState.filter(d => d.clean).length;
+      const done = fixedWheels + cleanDirt + (windowState.fixed ? 1 : 0) + (doorState.fixed ? 1 : 0);
+      doneCountEl.textContent = done;
+      timeNowEl.textContent = elapsed.toFixed(1);
+      return done;
+    }
+
+    function checkWin() {
+      const done = updateHud();
+      if (done >= 7 && playing) {
+        triggerWin();
+      }
+    }
+
+    function triggerWin() {
+      playing = false;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      const finalTime = Math.round(elapsed * 10) / 10;
+      winTextEl.textContent = `${finalTime}びょうで ぜんぶ なおせたね！ すごい めいこうだ！`;
+      winOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'car-fix', score: finalTime, higherIsBetter: false, unit: 'びょう', title: '🚗 なおした はやさ ランキング' });
+    }
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      playing = true;
+      lastFrame = performance.now();
+      GameAudio.playBGM();
+    }
+
+    function getCanvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width, scaleY = H / rect.height;
+      return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
+    }
+
+    function tapAt(x, y) {
+      if (!playing) return;
+
+      if (!windowState.fixed && x >= WINDOW_RECT.x && x <= WINDOW_RECT.x + WINDOW_RECT.w &&
+          y >= WINDOW_RECT.y && y <= WINDOW_RECT.y + WINDOW_RECT.h) {
+        windowState.taps++;
+        GameAudio.playClickTick();
+        if (windowState.taps >= TAPS_NEEDED) windowState.fixed = true;
+        checkWin();
+        return;
+      }
+
+      if (!doorState.fixed && x >= DOOR_RECT.x && x <= DOOR_RECT.x + DOOR_RECT.w &&
+          y >= DOOR_RECT.y && y <= DOOR_RECT.y + DOOR_RECT.h) {
+        doorState.taps++;
+        GameAudio.playClickTick();
+        if (doorState.taps >= TAPS_NEEDED) doorState.fixed = true;
+        checkWin();
+        return;
+      }
+
+      for (let i = 0; i < DIRT_SPOTS.length; i++) {
+        const spot = DIRT_SPOTS[i];
+        const st = dirtState[i];
+        if (st.clean) continue;
+        if (Math.hypot(x - spot.x, y - spot.y) <= spot.r) {
+          st.taps++;
+          GameAudio.playClickTick();
+          if (st.taps >= TAPS_NEEDED) st.clean = true;
+          checkWin();
+          return;
+        }
+      }
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!playing) return;
+      const pos = getCanvasPos(e);
+      const hitTire = tires.find(t => !t.fixed && Math.hypot(pos.x - t.x, pos.y - t.y) <= WHEEL_R);
+      if (hitTire) {
+        dragTire = hitTire;
+        canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+      tapAt(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!dragTire) return;
+      const pos = getCanvasPos(e);
+      dragTire.x = pos.x;
+      dragTire.y = pos.y;
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      if (!dragTire) return;
+      const emptyWell = WELLS.find((w, i) => !tires.some(t => t.fixed && t.wellIndex === i) &&
+        Math.hypot(dragTire.x - w.x, dragTire.y - w.y) < 45);
+      if (emptyWell) {
+        dragTire.x = emptyWell.x;
+        dragTire.y = emptyWell.y;
+        dragTire.fixed = true;
+        dragTire.wellIndex = WELLS.indexOf(emptyWell);
+        GameAudio.playClickTick();
+        checkWin();
+      } else {
+        dragTire.x = dragTire.home.x;
+        dragTire.y = dragTire.home.y;
+      }
+      dragTire = null;
+    });
+
+    function drawWheelWell(x, y) {
+      ctx.fillStyle = '#333333';
+      ctx.beginPath();
+      ctx.arc(x, y, WHEEL_R + 4, Math.PI, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawWheel(x, y) {
+      ctx.fillStyle = '#333333';
+      ctx.beginPath();
+      ctx.arc(x, y, WHEEL_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#CCCCCC';
+      ctx.beginPath();
+      ctx.arc(x, y, WHEEL_R * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#EAF6FF';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#CFE8CF';
+      ctx.fillRect(0, H - 30, W, 30);
+
+      // wheel wells (drawn first so wheels/tires sit in front)
+      WELLS.forEach(w => drawWheelWell(w.x, w.y));
+
+      // body
+      ctx.fillStyle = '#FF6B6B';
+      ctx.beginPath();
+      ctx.moveTo(80, 235);
+      ctx.lineTo(80, 190);
+      ctx.quadraticCurveTo(80, 165, 105, 160);
+      ctx.lineTo(150, 100 + 45);
+      ctx.lineTo(150, 100);
+      ctx.quadraticCurveTo(150, 85, 165, 85);
+      ctx.lineTo(255, 85);
+      ctx.quadraticCurveTo(270, 85, 270, 100);
+      ctx.lineTo(270, 145);
+      ctx.lineTo(340, 160);
+      ctx.quadraticCurveTo(365, 165, 365, 190);
+      ctx.lineTo(365, 235);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // second window (always clean, for visual completeness)
+      ctx.fillStyle = '#BEE3F8';
+      ctx.beginPath();
+      ctx.moveTo(255, 100);
+      ctx.lineTo(255, 145);
+      ctx.lineTo(335, 158);
+      ctx.lineTo(270, 100);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.stroke();
+
+      // window (repairable)
+      if (windowState.fixed) {
+        ctx.fillStyle = '#BEE3F8';
+        ctx.fillRect(WINDOW_RECT.x, WINDOW_RECT.y, WINDOW_RECT.w, WINDOW_RECT.h);
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.strokeRect(WINDOW_RECT.x, WINDOW_RECT.y, WINDOW_RECT.w, WINDOW_RECT.h);
+      } else {
+        ctx.fillStyle = '#8892A0';
+        ctx.fillRect(WINDOW_RECT.x, WINDOW_RECT.y, WINDOW_RECT.w, WINDOW_RECT.h);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(WINDOW_RECT.x + 5, WINDOW_RECT.y + 5);
+        ctx.lineTo(WINDOW_RECT.x + 35, WINDOW_RECT.y + 25);
+        ctx.lineTo(WINDOW_RECT.x + 20, WINDOW_RECT.y + 40);
+        ctx.lineTo(WINDOW_RECT.x + 60, WINDOW_RECT.y + 10);
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`👆${TAPS_NEEDED - windowState.taps}`, WINDOW_RECT.x + WINDOW_RECT.w / 2, WINDOW_RECT.y + WINDOW_RECT.h / 2 + 5);
+      }
+
+      // door (repairable)
+      if (doorState.fixed) {
+        ctx.fillStyle = '#FF9494';
+        ctx.fillRect(DOOR_RECT.x, DOOR_RECT.y, DOOR_RECT.w, DOOR_RECT.h);
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.strokeRect(DOOR_RECT.x, DOOR_RECT.y, DOOR_RECT.w, DOOR_RECT.h);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(DOOR_RECT.x + DOOR_RECT.w - 16, DOOR_RECT.y + DOOR_RECT.h / 2 - 4, 10, 8);
+      } else {
+        ctx.save();
+        ctx.translate(DOOR_RECT.x + DOOR_RECT.w / 2, DOOR_RECT.y + DOOR_RECT.h / 2);
+        ctx.rotate(-0.08);
+        ctx.fillStyle = '#B36B6B';
+        ctx.fillRect(-DOOR_RECT.w / 2, -DOOR_RECT.h / 2, DOOR_RECT.w, DOOR_RECT.h);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-DOOR_RECT.w / 2, -DOOR_RECT.h / 2, DOOR_RECT.w, DOOR_RECT.h);
+        ctx.restore();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🔧${TAPS_NEEDED - doorState.taps}`, DOOR_RECT.x + DOOR_RECT.w / 2, DOOR_RECT.y + DOOR_RECT.h / 2 + 5);
+      }
+
+      // dirt spots
+      DIRT_SPOTS.forEach((spot, i) => {
+        const st = dirtState[i];
+        if (st.clean) return;
+        ctx.fillStyle = `rgba(120,80,40,${0.85 - st.taps * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(spot.x, spot.y, spot.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // wheels already placed
+      tires.forEach(t => { if (t.fixed) drawWheel(t.x, t.y); });
+      // loose tires being dragged / waiting
+      tires.forEach(t => { if (!t.fixed) drawWheel(t.x, t.y); });
+    }
+
+    function loop(now) {
+      if (playing) {
+        elapsed += Math.min(0.05, (now - lastFrame) / 1000);
+        timeNowEl.textContent = elapsed.toFixed(1);
+      }
+      lastFrame = now;
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    totalCountEl.textContent = 7;
+    resetGame();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

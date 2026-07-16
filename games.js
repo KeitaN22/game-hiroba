@@ -108,4 +108,12 @@ const GAMES = [
     path: 'games/chameleon/index.html',
     desc: 'かべと おなじ いろに へんしんして、さがしやさんから かくれよう！',
   },
+  {
+    id: 'car-fix',
+    title: 'そうすけの くるまピカピカ',
+    emoji: '🚗',
+    color: '#FF6B6B',
+    path: 'games/car-fix/index.html',
+    desc: 'タイヤを つけて、よごれを ふいて、まどと ドアを なおそう！',
+  },
 ];
