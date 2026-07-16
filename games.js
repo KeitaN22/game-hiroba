@@ -100,4 +100,12 @@ const GAMES = [
     path: 'games/coloring/index.html',
     desc: 'すきな たべものを えらんで、すきな いろで ぬろう！',
   },
+  {
+    id: 'chameleon',
+    title: 'そうすけの めっちゃカメレオン',
+    emoji: '🦎',
+    color: '#4CAF50',
+    path: 'games/chameleon/index.html',
+    desc: 'かべと おなじ いろに へんしんして、さがしやさんから かくれよう！',
+  },
 ];

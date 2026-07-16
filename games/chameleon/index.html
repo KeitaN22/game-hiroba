@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの めっちゃカメレオン</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #2C3E50 0%, #4A6572 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #EAF6FF;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+  .color-chip {
+    display: inline-block; width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid #333; vertical-align: middle; margin-left: 6px;
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
+    margin-top: 16px;
+  }
+
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(3, 60px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.6rem;
+    border: none;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .paint-btn {
+    font-size: 1.3rem;
+    font-weight: bold;
+    padding: 24px 34px;
+    border: none;
+    border-radius: 20px;
+    background: #4CAF50;
+    color: #fff;
+    box-shadow: 0 6px 0 #2E7D32;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .paint-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #2E7D32; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 2rem; margin: 6px 0; }
+  .overlay p { font-size: 1.2rem; margin: 6px 0 18px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🦎 そうすけの めっちゃカメレオン</h1>
+
+  <div class="hud" id="hud">
+    <span class="time">のこり ⏱️ <span id="timeLeft">50</span> びょう</span>
+    <span>いまの いろ <span class="color-chip" id="colorChip"></span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="360" height="300"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🦎 めっちゃカメレオン</h2>
+      <p>
+        やじるしで うごいて、かべの ちかくで 🎨ぬるボタンを おすと<br>
+        その かべと おなじ いろに へんしんして かくれられるよ！<br>
+        🔦を もった さがしやさんが ちかづいてきたとき、いろが かべと<br>
+        あっていないと みつかっちゃう！ ${GAME_TIME_PLACEHOLDER}びょう にげきれたら クリア！
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="loseOverlay">
+      <h2>😲 みつかっちゃった！</h2>
+      <p>いろが かべと あってなかったね。もういちど チャレンジしよう。</p>
+      <button class="big-btn" id="retryBtnLose">🔄 もういちど</button>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2>🎉 にげきった！ 🎉</h2>
+      <p>さいごまで みつからなかったね！ すごい へんしんの わざだ！</p>
+      <button class="big-btn" id="retryBtnWin">🔄 もういちど あそぶ</button>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+    <button class="paint-btn" id="paintBtn">🎨 ぬる (Y)</button>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const timeLeftEl = document.getElementById('timeLeft');
+    const colorChipEl = document.getElementById('colorChip');
+    const hudEl = document.getElementById('hud');
+    const startOverlay = document.getElementById('startOverlay');
+    const loseOverlay = document.getElementById('loseOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+
+    const GAME_TIME = 50;
+    document.querySelector('#startOverlay p').innerHTML = document.querySelector('#startOverlay p').innerHTML.replace('${GAME_TIME_PLACEHOLDER}', GAME_TIME);
+
+    const ROOM = { x: 30, y: 30, w: 300, h: 240 };
+    const PLAYER_R = 16;
+    const PAINT_RANGE = 58;
+    const DETECT_RADIUS = 85;
+    const BASE_SEEKER_SPEED = 55; // px per second
+    const NEUTRAL_COLOR = '#8BC34A';
+
+    const PANELS = [
+      { x: ROOM.x, y: 0, w: ROOM.w / 2, h: ROOM.y, color: '#FF3B3B' },
+      { x: ROOM.x + ROOM.w / 2, y: 0, w: ROOM.w / 2, h: ROOM.y, color: '#FF8C42' },
+      { x: ROOM.x, y: ROOM.y + ROOM.h, w: ROOM.w / 2, h: H - (ROOM.y + ROOM.h), color: '#4CAF50' },
+      { x: ROOM.x + ROOM.w / 2, y: ROOM.y + ROOM.h, w: ROOM.w / 2, h: H - (ROOM.y + ROOM.h), color: '#4C7BF3' },
+      { x: 0, y: ROOM.y, w: ROOM.x, h: ROOM.h / 2, color: '#FFD93D' },
+      { x: 0, y: ROOM.y + ROOM.h / 2, w: ROOM.x, h: ROOM.h / 2, color: '#9B59B6' },
+      { x: ROOM.x + ROOM.w, y: ROOM.y, w: W - (ROOM.x + ROOM.w), h: ROOM.h / 2, color: '#FF6FA5' },
+      { x: ROOM.x + ROOM.w, y: ROOM.y + ROOM.h / 2, w: W - (ROOM.x + ROOM.w), h: ROOM.h / 2, color: '#4FC3F7' },
+    ];
+
+    let player, seeker, seekerTarget, input, playing, timeLeft, countdownTimer, lastFrame, elapsed;
+
+    function resetGame() {
+      player = { x: W / 2, y: H / 2, color: NEUTRAL_COLOR };
+      seeker = { x: ROOM.x + 20, y: ROOM.y + 20 };
+      seekerTarget = { x: W / 2, y: H / 2 };
+      input = { up: false, down: false, left: false, right: false };
+      playing = false;
+      timeLeft = GAME_TIME;
+      elapsed = 0;
+      timeLeftEl.textContent = timeLeft;
+      colorChipEl.style.background = player.color;
+      hudEl.classList.remove('urgent');
+      startOverlay.classList.remove('hide');
+      loseOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+    }
+
+    function closestPointOnRect(px, py, rect) {
+      const cx = Math.max(rect.x, Math.min(px, rect.x + rect.w));
+      const cy = Math.max(rect.y, Math.min(py, rect.y + rect.h));
+      return { x: cx, y: cy };
+    }
+
+    function getNearestPanel(px, py) {
+      let best = null, bestDist = Infinity;
+      PANELS.forEach(p => {
+        const cp = closestPointOnRect(px, py, p);
+        const d = Math.hypot(px - cp.x, py - cp.y);
+        if (d < bestDist) { bestDist = d; best = p; }
+      });
+      return best;
+    }
+
+    function paintNow() {
+      if (!playing) return;
+      const panel = getNearestPanel(player.x, player.y);
+      const cp = closestPointOnRect(player.x, player.y, panel);
+      const dist = Math.hypot(player.x - cp.x, player.y - cp.y);
+      if (dist <= PAINT_RANGE) {
+        player.color = panel.color;
+        colorChipEl.style.background = player.color;
+        GameAudio.playClickTick();
+      } else {
+        GameAudio.playFailBuzz();
+      }
+    }
+
+    function pickSeekerTarget() {
+      seekerTarget = {
+        x: ROOM.x + 20 + Math.random() * (ROOM.w - 40),
+        y: ROOM.y + 20 + Math.random() * (ROOM.h - 40),
+      };
+    }
+
+    function triggerWin() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      winOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'chameleon', score: GAME_TIME, higherIsBetter: true, unit: 'びょう', title: '🦎 にげきった じかん ランキング' });
+    }
+
+    function triggerLose() {
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      loseOverlay.classList.remove('hide');
+      const survived = Math.round(elapsed);
+      Leaderboard.showRankFlow({ gameId: 'chameleon', score: survived, higherIsBetter: true, unit: 'びょう', title: '🦎 にげきった じかん ランキング' });
+    }
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      playing = true;
+      lastFrame = performance.now();
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          triggerWin();
+        }
+      }, 1000);
+    }
+
+    function update(dt) {
+      if (!playing) return;
+      elapsed += dt;
+
+      const speed = 130; // px/sec
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      player.x = Math.max(ROOM.x + PLAYER_R, Math.min(ROOM.x + ROOM.w - PLAYER_R, player.x + dx * speed * dt));
+      player.y = Math.max(ROOM.y + PLAYER_R, Math.min(ROOM.y + ROOM.h - PLAYER_R, player.y + dy * speed * dt));
+
+      const seekerSpeed = BASE_SEEKER_SPEED + elapsed * 0.6;
+      const tdx = seekerTarget.x - seeker.x, tdy = seekerTarget.y - seeker.y;
+      const tdist = Math.hypot(tdx, tdy);
+      if (tdist < 6) {
+        pickSeekerTarget();
+      } else {
+        seeker.x += (tdx / tdist) * seekerSpeed * dt;
+        seeker.y += (tdy / tdist) * seekerSpeed * dt;
+      }
+
+      const distToPlayer = Math.hypot(seeker.x - player.x, seeker.y - player.y);
+      if (distToPlayer < DETECT_RADIUS) {
+        const nearestPanel = getNearestPanel(player.x, player.y);
+        if (player.color !== nearestPanel.color) {
+          triggerLose();
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#EAF6FF';
+      ctx.fillRect(0, 0, W, H);
+
+      PANELS.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+      });
+
+      ctx.fillStyle = '#FFFDF5';
+      ctx.fillRect(ROOM.x, ROOM.y, ROOM.w, ROOM.h);
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(ROOM.x, ROOM.y, ROOM.w, ROOM.h);
+
+      if (playing) {
+        // detection radius glow
+        const grad = ctx.createRadialGradient(seeker.x, seeker.y, 10, seeker.x, seeker.y, DETECT_RADIUS);
+        grad.addColorStop(0, 'rgba(255,215,0,0.25)');
+        grad.addColorStop(1, 'rgba(255,215,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(seeker.x, seeker.y, DETECT_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // seeker
+      ctx.font = '30px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🕵️', seeker.x, seeker.y);
+
+      // player (colored camouflage disc behind the chameleon)
+      ctx.fillStyle = player.color;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, PLAYER_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.font = '26px sans-serif';
+      ctx.fillText('🦎', player.x, player.y - 2);
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById('btnUp').addEventListener('pointerdown', () => input.up = true);
+    document.getElementById('btnDown').addEventListener('pointerdown', () => input.down = true);
+    document.getElementById('btnLeft').addEventListener('pointerdown', () => input.left = true);
+    document.getElementById('btnRight').addEventListener('pointerdown', () => input.right = true);
+    ['btnUp', 'btnDown', 'btnLeft', 'btnRight'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('pointerup', () => resetDir(id));
+      el.addEventListener('pointerleave', () => resetDir(id));
+    });
+    function resetDir(id) {
+      if (id === 'btnUp') input.up = false;
+      if (id === 'btnDown') input.down = false;
+      if (id === 'btnLeft') input.left = false;
+      if (id === 'btnRight') input.right = false;
+    }
+
+    document.getElementById('paintBtn').addEventListener('click', paintNow);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+      if (e.key === 'y' || e.key === 'Y') paintNow();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtnLose').addEventListener('click', startGame);
+    document.getElementById('retryBtnWin').addEventListener('click', startGame);
+
+    resetGame();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
