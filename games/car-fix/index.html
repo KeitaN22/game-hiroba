@@ -128,37 +128,83 @@
     const nextStageBtn = document.getElementById('nextStageBtn');
 
     const STAGES = [
-      { id: 1, carScale: 0.75, dirtCount: 2, tapsNeeded: 2 },
-      { id: 2, carScale: 0.82, dirtCount: 2, tapsNeeded: 3 },
-      { id: 3, carScale: 0.89, dirtCount: 3, tapsNeeded: 3 },
-      { id: 4, carScale: 0.96, dirtCount: 3, tapsNeeded: 3 },
-      { id: 5, carScale: 1.03, dirtCount: 4, tapsNeeded: 4 },
-      { id: 6, carScale: 1.10, dirtCount: 4, tapsNeeded: 4 },
-      { id: 7, carScale: 1.16, dirtCount: 5, tapsNeeded: 4 },
-      { id: 8, carScale: 1.22, dirtCount: 5, tapsNeeded: 5 },
-      { id: 9, carScale: 1.28, dirtCount: 6, tapsNeeded: 5 },
-      { id: 10, carScale: 1.35, dirtCount: 7, tapsNeeded: 5 },
+      { id: 1, vehicle: 'sedan', carScale: 0.75, dirtCount: 2, tapsNeeded: 2 },
+      { id: 2, vehicle: 'sedan', carScale: 0.82, dirtCount: 2, tapsNeeded: 3 },
+      { id: 3, vehicle: 'sedan', carScale: 0.90, dirtCount: 3, tapsNeeded: 3 },
+      { id: 4, vehicle: 'van', carScale: 0.80, dirtCount: 3, tapsNeeded: 3 },
+      { id: 5, vehicle: 'van', carScale: 0.87, dirtCount: 4, tapsNeeded: 4 },
+      { id: 6, vehicle: 'van', carScale: 0.94, dirtCount: 4, tapsNeeded: 4 },
+      { id: 7, vehicle: 'bus', carScale: 0.78, dirtCount: 5, tapsNeeded: 4 },
+      { id: 8, vehicle: 'bus', carScale: 0.85, dirtCount: 5, tapsNeeded: 5 },
+      { id: 9, vehicle: 'bus', carScale: 0.92, dirtCount: 6, tapsNeeded: 5 },
+      { id: 10, vehicle: 'bus', carScale: 1.00, dirtCount: 7, tapsNeeded: 5 },
     ];
 
     const ORIGIN = { x: 230, y: 258 };
     const BASE_WHEEL_R = 26;
 
     // local (unscaled, origin-relative) geometry for the car
-    const BODY_LOCAL = [
-      [-145, 0], [-145, -45], /*Q*/[-145, -70], [-120, -75],
-      [-75, -90], [-75, -135], /*Q*/[-75, -150], [-60, -150],
-      [30, -150], /*Q*/[45, -150], [45, -135],
-      [45, -90], [115, -75], /*Q*/[140, -70], [140, -45],
-      [140, 0],
-    ];
-    const WINDOW2_LOCAL = [[30, -135], [30, -90], [110, -77], [45, -135]];
-    const WINDOW_RECT_LOCAL = { x: -70, y: -135, w: 70, h: 45 };
-    const DOOR_RECT_LOCAL = { x: 10, y: -85, w: 90, h: 85 };
-    const WELLS_LOCAL = [[-75, 0], [85, 0]];
-    const DIRT_POOL_LOCAL = [
-      [-115, -30, 20], [130, -30, 18], [60, -135, 14], [-40, -20, 16],
-      [100, -10, 14], [-100, -100, 14], [0, -30, 16],
-    ];
+    // いろんな のりものの かたち（きゅうけい＝しゃたい、まど、ドア、タイヤの ばしょ）
+    const VEHICLE_TYPES = {
+      sedan: {
+        emoji: '🚗', name: 'セダン', color: '#FF6B6B', doorColor: '#FF9494', doorDentColor: '#B36B6B',
+        bodyOps: [
+          { op: 'move', p: [-145, 0] }, { op: 'line', p: [-145, -45] },
+          { op: 'quad', cp: [-145, -70], p: [-120, -75] },
+          { op: 'line', p: [-75, -90] }, { op: 'line', p: [-75, -135] },
+          { op: 'quad', cp: [-75, -150], p: [-60, -150] },
+          { op: 'line', p: [30, -150] },
+          { op: 'quad', cp: [45, -150], p: [45, -135] },
+          { op: 'line', p: [45, -90] }, { op: 'line', p: [115, -75] },
+          { op: 'quad', cp: [140, -70], p: [140, -45] },
+          { op: 'line', p: [140, 0] }, { op: 'close' },
+        ],
+        window2Ops: [[30, -135], [30, -90], [110, -77], [45, -135]],
+        windowRect: { x: -70, y: -135, w: 70, h: 45 },
+        doorRect: { x: 10, y: -85, w: 90, h: 85 },
+        wells: [[-75, 0], [85, 0]],
+        dirtPool: [
+          [-115, -30, 20], [130, -30, 18], [60, -135, 14], [-40, -20, 16],
+          [100, -10, 14], [-100, -100, 14], [0, -30, 16],
+        ],
+      },
+      van: {
+        emoji: '🚐', name: 'ワゴン', color: '#4C9AFF', doorColor: '#7FBBFF', doorDentColor: '#3A73BF',
+        bodyOps: [
+          { op: 'move', p: [-160, 0] }, { op: 'line', p: [-160, -110] },
+          { op: 'quad', cp: [-160, -140], p: [-130, -140] },
+          { op: 'line', p: [130, -140] },
+          { op: 'quad', cp: [160, -140], p: [160, -110] },
+          { op: 'line', p: [160, 0] }, { op: 'close' },
+        ],
+        window2Ops: null,
+        windowRect: { x: -110, y: -125, w: 150, h: 55 },
+        doorRect: { x: -20, y: -70, w: 90, h: 70 },
+        wells: [[-90, 0], [90, 0]],
+        dirtPool: [
+          [-140, -20, 18], [140, -20, 16], [-50, -30, 14], [60, -20, 14],
+          [-120, -90, 12], [100, -90, 12], [0, -95, 14],
+        ],
+      },
+      bus: {
+        emoji: '🚌', name: 'バス', color: '#FFC048', doorColor: '#FFD879', doorDentColor: '#C99A3E',
+        bodyOps: [
+          { op: 'move', p: [-190, 0] }, { op: 'line', p: [-190, -130] },
+          { op: 'quad', cp: [-190, -155], p: [-165, -155] },
+          { op: 'line', p: [165, -155] },
+          { op: 'quad', cp: [190, -155], p: [190, -130] },
+          { op: 'line', p: [190, 0] }, { op: 'close' },
+        ],
+        window2Ops: null,
+        windowRect: { x: -150, y: -135, w: 260, h: 50 },
+        doorRect: { x: 40, y: -75, w: 90, h: 75 },
+        wells: [[-130, 0], [130, 0]],
+        dirtPool: [
+          [-170, -20, 18], [170, -20, 16], [-80, -30, 14], [90, -30, 14],
+          [-150, -100, 12], [130, -100, 12], [0, -20, 16],
+        ],
+      },
+    };
 
     let layoutScale = 1;
     function P(lx, ly) { return { x: ORIGIN.x + lx * layoutScale, y: ORIGIN.y + ly * layoutScale }; }
@@ -166,23 +212,34 @@
 
     let currentStage = 1;
     let currentStageConf = STAGES[0];
+    let currentVehicle = VEHICLE_TYPES.sedan;
     let WHEEL_R, WELLS, WINDOW_RECT, DOOR_RECT, DIRT_SPOTS, TIRE_HOMES;
 
     function buildLayout(stage) {
       layoutScale = stage.carScale;
+      currentVehicle = VEHICLE_TYPES[stage.vehicle];
       WHEEL_R = S(BASE_WHEEL_R);
-      WELLS = WELLS_LOCAL.map(([lx, ly]) => P(lx, ly));
+      WELLS = currentVehicle.wells.map(([lx, ly]) => P(lx, ly));
       TIRE_HOMES = [
         { x: WHEEL_R + 12, y: H - 32 },
         { x: W - WHEEL_R - 12, y: H - 32 },
       ];
-      const wr = P(WINDOW_RECT_LOCAL.x, WINDOW_RECT_LOCAL.y);
-      WINDOW_RECT = { x: wr.x, y: wr.y, w: S(WINDOW_RECT_LOCAL.w), h: S(WINDOW_RECT_LOCAL.h) };
-      const dr = P(DOOR_RECT_LOCAL.x, DOOR_RECT_LOCAL.y);
-      DOOR_RECT = { x: dr.x, y: dr.y, w: S(DOOR_RECT_LOCAL.w), h: S(DOOR_RECT_LOCAL.h) };
-      DIRT_SPOTS = DIRT_POOL_LOCAL.slice(0, stage.dirtCount).map(([lx, ly, r]) => {
+      const wr = P(currentVehicle.windowRect.x, currentVehicle.windowRect.y);
+      WINDOW_RECT = { x: wr.x, y: wr.y, w: S(currentVehicle.windowRect.w), h: S(currentVehicle.windowRect.h) };
+      const dr = P(currentVehicle.doorRect.x, currentVehicle.doorRect.y);
+      DOOR_RECT = { x: dr.x, y: dr.y, w: S(currentVehicle.doorRect.w), h: S(currentVehicle.doorRect.h) };
+      DIRT_SPOTS = currentVehicle.dirtPool.slice(0, stage.dirtCount).map(([lx, ly, r]) => {
         const p = P(lx, ly);
         return { x: p.x, y: p.y, r: S(r) };
+      });
+    }
+
+    function drawShapeOps(ops) {
+      ops.forEach(o => {
+        if (o.op === 'move') { const p = P(o.p[0], o.p[1]); ctx.moveTo(p.x, p.y); }
+        else if (o.op === 'line') { const p = P(o.p[0], o.p[1]); ctx.lineTo(p.x, p.y); }
+        else if (o.op === 'quad') { const cp = P(o.cp[0], o.cp[1]); const p = P(o.p[0], o.p[1]); ctx.quadraticCurveTo(cp.x, cp.y, p.x, p.y); }
+        else if (o.op === 'close') { ctx.closePath(); }
       });
     }
 
@@ -214,7 +271,7 @@
         const btn = document.createElement('button');
         if (isUnlocked(stage.id)) {
           btn.className = 'stage-card';
-          btn.innerHTML = `<span class="semoji">🚗</span><span>${stage.id}</span>`;
+          btn.innerHTML = `<span class="semoji">${VEHICLE_TYPES[stage.vehicle].emoji}</span><span>${stage.id}</span>`;
           btn.addEventListener('click', () => openStage(stage.id));
         } else {
           btn.className = 'stage-card locked';
@@ -230,11 +287,13 @@
       currentStage = n;
       currentStageConf = stage;
       buildLayout(stage);
-      stageLabelEl.textContent = `ステージ${stage.id}`;
+      const vehicle = VEHICLE_TYPES[stage.vehicle];
+      stageLabelEl.textContent = `ステージ${stage.id}（${vehicle.name}）`;
       stageSelectOverlay.classList.add('hide');
-      startTitleEl.textContent = `🚗 ステージ${stage.id}`;
+      startTitleEl.textContent = `${vehicle.emoji} ステージ${stage.id}：${vehicle.name}`;
       startTextEl.innerHTML = `
-        タイヤが はずれてるよ！ ながおし して あいてる ところまで はこぼう。<br>
+        こんかいは ${vehicle.name}だよ！ タイヤが はずれてるよ！<br>
+        ながおし して あいてる ところまで はこぼう。<br>
         よごれた ところは タッチして 🧽きれいに（${stage.tapsNeeded}かい タッチ）。<br>
         こわれた まどと ドアも タッチして なおそう！<br>
         ぜんぶ なおしたら クリア！
@@ -435,37 +494,26 @@
       WELLS.forEach(w => drawWheelWell(w.x, w.y));
 
       // body
-      ctx.fillStyle = '#FF6B6B';
+      ctx.fillStyle = currentVehicle.color;
       ctx.beginPath();
-      const b = BODY_LOCAL.map(([lx, ly]) => P(lx, ly));
-      ctx.moveTo(b[0].x, b[0].y);
-      ctx.lineTo(b[1].x, b[1].y);
-      ctx.quadraticCurveTo(b[2].x, b[2].y, b[3].x, b[3].y);
-      ctx.lineTo(b[4].x, b[4].y);
-      ctx.lineTo(b[5].x, b[5].y);
-      ctx.quadraticCurveTo(b[6].x, b[6].y, b[7].x, b[7].y);
-      ctx.lineTo(b[8].x, b[8].y);
-      ctx.quadraticCurveTo(b[9].x, b[9].y, b[10].x, b[10].y);
-      ctx.lineTo(b[11].x, b[11].y);
-      ctx.lineTo(b[12].x, b[12].y);
-      ctx.quadraticCurveTo(b[13].x, b[13].y, b[14].x, b[14].y);
-      ctx.lineTo(b[15].x, b[15].y);
-      ctx.closePath();
+      drawShapeOps(currentVehicle.bodyOps);
       ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.2)';
       ctx.lineWidth = Math.max(2, S(3));
       ctx.stroke();
 
-      // second window (always clean, decorative)
-      ctx.fillStyle = '#BEE3F8';
-      ctx.beginPath();
-      const w2 = WINDOW2_LOCAL.map(([lx, ly]) => P(lx, ly));
-      ctx.moveTo(w2[0].x, w2[0].y);
-      w2.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-      ctx.stroke();
+      // second window (always clean, decorative — sedan only)
+      if (currentVehicle.window2Ops) {
+        ctx.fillStyle = '#BEE3F8';
+        ctx.beginPath();
+        const w2 = currentVehicle.window2Ops.map(([lx, ly]) => P(lx, ly));
+        ctx.moveTo(w2[0].x, w2[0].y);
+        w2.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.stroke();
+      }
 
       const tapsNeeded = currentStageConf.tapsNeeded;
 
@@ -494,7 +542,7 @@
 
       // door (repairable)
       if (doorState.fixed) {
-        ctx.fillStyle = '#FF9494';
+        ctx.fillStyle = currentVehicle.doorColor;
         ctx.fillRect(DOOR_RECT.x, DOOR_RECT.y, DOOR_RECT.w, DOOR_RECT.h);
         ctx.strokeStyle = 'rgba(0,0,0,0.3)';
         ctx.strokeRect(DOOR_RECT.x, DOOR_RECT.y, DOOR_RECT.w, DOOR_RECT.h);
@@ -504,7 +552,7 @@
         ctx.save();
         ctx.translate(DOOR_RECT.x + DOOR_RECT.w / 2, DOOR_RECT.y + DOOR_RECT.h / 2);
         ctx.rotate(-0.08);
-        ctx.fillStyle = '#B36B6B';
+        ctx.fillStyle = currentVehicle.doorDentColor;
         ctx.fillRect(-DOOR_RECT.w / 2, -DOOR_RECT.h / 2, DOOR_RECT.w, DOOR_RECT.h);
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 2;
