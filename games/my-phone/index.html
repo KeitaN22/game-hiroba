@@ -72,9 +72,11 @@
   /* home screen */
   .app-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px 10px;
-    padding: 18px 14px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px 8px;
+    padding: 14px 10px;
+    overflow-y: auto;
+    align-content: start;
   }
   .app-icon-btn {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -222,6 +224,136 @@
   }
   .music-btn.play { width: 54px; height: 54px; font-size: 1.6rem; background: #FF6FA5; color: #fff; }
   .music-btn:active { transform: scale(0.92); }
+
+  /* camera app */
+  .camera-body {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: #222; position: relative;
+  }
+  .camera-viewfinder {
+    width: 78%; aspect-ratio: 1;
+    border-radius: 18px;
+    background: #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem;
+    border: 3px solid #555;
+  }
+  .shutter-btn {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #fff; border: 5px solid #ccc; cursor: pointer;
+  }
+  .shutter-btn:active { transform: scale(0.9); }
+  .camera-flash {
+    position: absolute; inset: 0; background: #fff; opacity: 0;
+    pointer-events: none; transition: opacity 0.1s ease;
+  }
+  .camera-flash.on { opacity: 0.9; }
+  .camera-toast {
+    position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.9); color: #333; font-size: 0.75rem; font-weight: bold;
+    padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity 0.3s ease;
+  }
+  .camera-toast.show { opacity: 1; }
+
+  /* photos app */
+  .photos-grid {
+    flex: 1; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    padding: 10px;
+    align-content: start;
+  }
+  .photo-thumb {
+    aspect-ratio: 1; border-radius: 10px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  }
+  .photos-empty { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 0.8rem; font-weight: bold; color: #555; }
+
+  /* clock app */
+  .clock-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+  .big-clock { font-size: 2.2rem; font-weight: bold; color: #333; }
+  .stopwatch-time { font-size: 1.3rem; font-weight: bold; color: #444; background: rgba(255,255,255,0.5); padding: 6px 18px; border-radius: 14px; }
+  .clock-btn-row { display: flex; gap: 10px; }
+  .clock-btn {
+    font-size: 0.75rem; font-weight: bold; padding: 8px 14px; border: none; border-radius: 999px;
+    background: rgba(255,255,255,0.7); cursor: pointer;
+  }
+  .clock-btn:active { transform: translateY(2px); }
+
+  /* weather app */
+  .weather-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  .weather-icon { font-size: 3.4rem; }
+  .weather-temp { font-size: 1.6rem; font-weight: bold; color: #333; }
+  .weather-label { font-size: 0.85rem; font-weight: bold; color: #555; }
+  .weather-refresh {
+    margin-top: 8px; font-size: 0.75rem; font-weight: bold; padding: 8px 16px;
+    border: none; border-radius: 999px; background: rgba(255,255,255,0.7); cursor: pointer;
+  }
+
+  /* notes app */
+  .notes-textarea {
+    flex: 1; border: none; resize: none; padding: 12px; font-size: 0.85rem;
+    background: #FFFDF0; font-family: inherit;
+  }
+  .notes-clear-btn {
+    flex-shrink: 0; margin: 8px; font-size: 0.75rem; font-weight: bold; padding: 8px 0;
+    border: none; border-radius: 12px; background: #FF6B6B; color: #fff; cursor: pointer;
+  }
+
+  /* map app */
+  .map-body {
+    flex: 1; position: relative; overflow: hidden;
+    background:
+      repeating-linear-gradient(0deg, #BFE3C8 0 40px, #AEDABB 40px 80px),
+      repeating-linear-gradient(90deg, transparent 0 38px, rgba(0,0,0,0.04) 38px 40px);
+  }
+  .map-road { position: absolute; background: #F4E7B8; }
+  .map-pin { position: absolute; font-size: 2rem; transform: translate(-50%, -100%); animation: bounce 1.4s ease-in-out infinite; }
+  @keyframes bounce { 0%,100% { transform: translate(-50%,-100%); } 50% { transform: translate(-50%,-114%); } }
+  .map-label {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.85); font-size: 0.75rem; font-weight: bold; color: #333;
+    padding: 5px 14px; border-radius: 999px;
+  }
+
+  /* calendar app */
+  .calendar-body { flex: 1; padding: 10px; display: flex; flex-direction: column; }
+  .calendar-title { text-align: center; font-weight: bold; font-size: 0.9rem; color: #333; margin-bottom: 8px; }
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .calendar-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; color: #444; border-radius: 6px; }
+  .calendar-cell.today { background: #FF6FA5; color: #fff; }
+  .calendar-cell.dow { color: #888; font-size: 0.6rem; }
+
+  /* flashlight app */
+  .flash-body {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    transition: background 0.15s ease;
+  }
+  .flash-body.on { background: #fff; }
+  .flash-icon { font-size: 3rem; }
+  .flash-toggle-btn {
+    font-size: 0.85rem; font-weight: bold; padding: 12px 26px; border: none; border-radius: 999px;
+    background: #333; color: #fff; cursor: pointer;
+  }
+
+  /* timer app */
+  .timer-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  .timer-display { font-size: 2.2rem; font-weight: bold; color: #333; }
+  .timer-adjust-row { display: flex; gap: 10px; align-items: center; }
+  .timer-adjust-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(255,255,255,0.7); font-size: 1rem; font-weight: bold; cursor: pointer; }
+  .timer-btn-row { display: flex; gap: 10px; }
+  .timer-btn { font-size: 0.78rem; font-weight: bold; padding: 9px 16px; border: none; border-radius: 999px; background: #4CAF50; color: #fff; cursor: pointer; }
+  .timer-btn.reset { background: #999; }
+
+  /* drawing app */
+  .draw-canvas-wrap { flex: 1; padding: 6px; }
+  #drawCanvas { width: 100%; height: 100%; background: #fff; border-radius: 12px; touch-action: none; }
+  .draw-palette { display: flex; gap: 5px; padding: 6px 8px; flex-shrink: 0; overflow-x: auto; }
+  .draw-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.2); flex-shrink: 0; }
+  .draw-swatch.selected { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
+  .draw-clear-btn { flex-shrink: 0; font-size: 0.7rem; font-weight: bold; padding: 4px 10px; border: none; border-radius: 999px; background: #FF6B6B; color: #fff; cursor: pointer; margin-left: auto; }
 </style>
 </head>
 <body class="game-body">
@@ -291,6 +423,130 @@
               </div>
             </div>
           </div>
+
+          <div class="screen-view hide" id="view-camera">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">📷 カメラ</span>
+            </div>
+            <div class="camera-body">
+              <div class="camera-viewfinder">🙂</div>
+              <button class="shutter-btn" id="shutterBtn"></button>
+              <div class="camera-flash" id="cameraFlash"></div>
+              <div class="camera-toast" id="cameraToast">📸 とったよ！</div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-photos">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🖼️ しゃしん</span>
+            </div>
+            <div class="photos-grid hide" id="photosGrid"></div>
+            <div class="photos-empty" id="photosEmpty">まだ しゃしんが ないよ。📷カメラで とってみよう！</div>
+          </div>
+
+          <div class="screen-view hide" id="view-clock">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">⏰ とけい</span>
+            </div>
+            <div class="clock-body">
+              <div class="big-clock" id="bigClock">12:00</div>
+              <div class="stopwatch-time" id="stopwatchTime">0.0 びょう</div>
+              <div class="clock-btn-row">
+                <button class="clock-btn" id="swStartBtn">▶ スタート</button>
+                <button class="clock-btn" id="swResetBtn">🔄 リセット</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-weather">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🌤️ てんき</span>
+            </div>
+            <div class="weather-body">
+              <div class="weather-icon" id="weatherIcon">☀️</div>
+              <div class="weather-temp" id="weatherTemp">25℃</div>
+              <div class="weather-label">きょうの てんき</div>
+              <button class="weather-refresh" id="weatherRefreshBtn">🔄 こうしん</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-notes">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">📝 メモ</span>
+            </div>
+            <textarea class="notes-textarea" id="notesArea" placeholder="ここに メモが かけるよ…"></textarea>
+            <button class="notes-clear-btn" id="notesClearBtn">🗑️ ぜんぶ けす</button>
+          </div>
+
+          <div class="screen-view hide" id="view-map">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🗺️ ちず</span>
+            </div>
+            <div class="map-body">
+              <div class="map-label">📍 げんざいち：おうち</div>
+              <div class="map-road" style="left:0; right:0; top:44%; height:14px;"></div>
+              <div class="map-road" style="top:0; bottom:0; left:30%; width:14px;"></div>
+              <div class="map-pin" style="left:50%; top:50%;">📍</div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-calendar">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">📅 カレンダー</span>
+            </div>
+            <div class="calendar-body">
+              <div class="calendar-title" id="calendarTitle"></div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-flashlight">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🔦 ライト</span>
+            </div>
+            <div class="flash-body" id="flashBody">
+              <div class="flash-icon" id="flashIcon">🔦</div>
+              <button class="flash-toggle-btn" id="flashToggleBtn">つける</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-timer">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">⏱️ タイマー</span>
+            </div>
+            <div class="timer-body">
+              <div class="timer-display" id="timerDisplay">01:00</div>
+              <div class="timer-adjust-row">
+                <button class="timer-adjust-btn" id="timerMinusBtn">−10</button>
+                <span>びょう</span>
+                <button class="timer-adjust-btn" id="timerPlusBtn">+10</button>
+              </div>
+              <div class="timer-btn-row">
+                <button class="timer-btn" id="timerStartBtn">▶ スタート</button>
+                <button class="timer-btn reset" id="timerResetBtn">🔄 リセット</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-draw">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🎨 おえかき</span>
+            </div>
+            <div class="draw-canvas-wrap">
+              <canvas id="drawCanvas" width="280" height="380"></canvas>
+            </div>
+            <div class="draw-palette" id="drawPalette"></div>
+          </div>
         </div>
 
         <div class="home-indicator"></div>
@@ -320,6 +576,16 @@
       { id: 'chat', label: 'スタンプでOK', icon: '💬', color: '#7DE07D' },
       { id: 'calc', label: 'でんたく', icon: '🔢', color: '#9FB4C7' },
       { id: 'music', label: 'おんがく', icon: '🎵', color: '#FFB0CB' },
+      { id: 'camera', label: 'カメラ', icon: '📷', color: '#B0B8C1' },
+      { id: 'photos', label: 'しゃしん', icon: '🖼️', color: '#FFD59E' },
+      { id: 'clock', label: 'とけい', icon: '⏰', color: '#FFECB3' },
+      { id: 'weather', label: 'てんき', icon: '🌤️', color: '#AEE1F9' },
+      { id: 'notes', label: 'メモ', icon: '📝', color: '#FFF3B0' },
+      { id: 'map', label: 'ちず', icon: '🗺️', color: '#B7E4C7' },
+      { id: 'calendar', label: 'カレンダー', icon: '📅', color: '#F5B7C6' },
+      { id: 'flashlight', label: 'ライト', icon: '🔦', color: '#616161' },
+      { id: 'timer', label: 'タイマー', icon: '⏱️', color: '#C5CAE9' },
+      { id: 'draw', label: 'おえかき', icon: '🎨', color: '#FFAB91' },
     ];
 
     const appGridEl = document.getElementById('appGrid');
@@ -336,6 +602,16 @@
       chat: document.getElementById('view-chat'),
       calc: document.getElementById('view-calc'),
       music: document.getElementById('view-music'),
+      camera: document.getElementById('view-camera'),
+      photos: document.getElementById('view-photos'),
+      clock: document.getElementById('view-clock'),
+      weather: document.getElementById('view-weather'),
+      notes: document.getElementById('view-notes'),
+      map: document.getElementById('view-map'),
+      calendar: document.getElementById('view-calendar'),
+      flashlight: document.getElementById('view-flashlight'),
+      timer: document.getElementById('view-timer'),
+      draw: document.getElementById('view-draw'),
     };
 
     function showView(id) {
@@ -463,6 +739,246 @@
       songIndex = (songIndex - 1 + SONGS.length) % SONGS.length;
       renderSong();
     });
+
+    // --- camera + photos app ---
+    const PHOTO_STICKERS = ['🙂📸', '😄✨', '😎🌟', '🥳🎉', '😊🌈', '😆🍀'];
+    let photos = [];
+    const cameraFlash = document.getElementById('cameraFlash');
+    const cameraToast = document.getElementById('cameraToast');
+    const photosGrid = document.getElementById('photosGrid');
+    const photosEmpty = document.getElementById('photosEmpty');
+
+    function renderPhotos() {
+      if (photos.length === 0) {
+        photosGrid.classList.add('hide');
+        photosEmpty.classList.remove('hide');
+        return;
+      }
+      photosGrid.classList.remove('hide');
+      photosEmpty.classList.add('hide');
+      photosGrid.innerHTML = '';
+      photos.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'photo-thumb';
+        div.textContent = p;
+        photosGrid.appendChild(div);
+      });
+    }
+
+    document.getElementById('shutterBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      cameraFlash.classList.add('on');
+      setTimeout(() => cameraFlash.classList.remove('on'), 120);
+      cameraToast.classList.add('show');
+      setTimeout(() => cameraToast.classList.remove('show'), 900);
+      photos.push(PHOTO_STICKERS[Math.floor(Math.random() * PHOTO_STICKERS.length)]);
+      renderPhotos();
+    });
+    renderPhotos();
+
+    // --- clock + stopwatch app ---
+    const bigClockEl = document.getElementById('bigClock');
+    function updateBigClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      bigClockEl.textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateBigClock, 1000);
+    updateBigClock();
+
+    let swElapsed = 0, swRunning = false, swInterval = null;
+    const stopwatchTimeEl = document.getElementById('stopwatchTime');
+    const swStartBtn = document.getElementById('swStartBtn');
+    swStartBtn.addEventListener('click', () => {
+      GameAudio.playClickTick();
+      swRunning = !swRunning;
+      if (swRunning) {
+        swStartBtn.textContent = '⏸ ストップ';
+        swInterval = setInterval(() => {
+          swElapsed += 0.1;
+          stopwatchTimeEl.textContent = `${swElapsed.toFixed(1)} びょう`;
+        }, 100);
+      } else {
+        swStartBtn.textContent = '▶ スタート';
+        clearInterval(swInterval);
+      }
+    });
+    document.getElementById('swResetBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      swRunning = false;
+      swElapsed = 0;
+      stopwatchTimeEl.textContent = '0.0 びょう';
+      swStartBtn.textContent = '▶ スタート';
+      clearInterval(swInterval);
+    });
+
+    // --- weather app ---
+    const WEATHERS = [
+      { icon: '☀️', temp: '28℃' }, { icon: '⛅', temp: '24℃' }, { icon: '☁️', temp: '20℃' },
+      { icon: '🌧️', temp: '18℃' }, { icon: '⛄', temp: '2℃' },
+    ];
+    const weatherIconEl = document.getElementById('weatherIcon');
+    const weatherTempEl = document.getElementById('weatherTemp');
+    document.getElementById('weatherRefreshBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      const w = WEATHERS[Math.floor(Math.random() * WEATHERS.length)];
+      weatherIconEl.textContent = w.icon;
+      weatherTempEl.textContent = w.temp;
+    });
+
+    // --- notes app ---
+    const notesArea = document.getElementById('notesArea');
+    document.getElementById('notesClearBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      notesArea.value = '';
+    });
+
+    // --- calendar app ---
+    const calendarTitleEl = document.getElementById('calendarTitle');
+    const calendarGridEl = document.getElementById('calendarGrid');
+    function renderCalendar() {
+      const now = new Date();
+      const year = now.getFullYear(), month = now.getMonth();
+      calendarTitleEl.textContent = `${year}ねん ${month + 1}がつ`;
+      calendarGridEl.innerHTML = '';
+      ['にち', 'げつ', 'か', 'すい', 'もく', 'きん', 'ど'].forEach(d => {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell dow';
+        cell.textContent = d;
+        calendarGridEl.appendChild(cell);
+      });
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let i = 0; i < firstDay; i++) calendarGridEl.appendChild(document.createElement('div'));
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell' + (d === now.getDate() ? ' today' : '');
+        cell.textContent = d;
+        calendarGridEl.appendChild(cell);
+      }
+    }
+    renderCalendar();
+
+    // --- flashlight app ---
+    let flashOn = false;
+    const flashBody = document.getElementById('flashBody');
+    const flashIcon = document.getElementById('flashIcon');
+    const flashToggleBtn = document.getElementById('flashToggleBtn');
+    flashToggleBtn.addEventListener('click', () => {
+      GameAudio.playClickTick();
+      flashOn = !flashOn;
+      flashBody.classList.toggle('on', flashOn);
+      flashIcon.textContent = flashOn ? '💡' : '🔦';
+      flashToggleBtn.textContent = flashOn ? 'けす' : 'つける';
+    });
+
+    // --- timer app ---
+    let timerSeconds = 60, timerRunning = false, timerInterval = null;
+    const timerDisplayEl = document.getElementById('timerDisplay');
+    function renderTimer() {
+      const m = Math.floor(timerSeconds / 60), s = timerSeconds % 60;
+      timerDisplayEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    document.getElementById('timerMinusBtn').addEventListener('click', () => {
+      if (timerRunning) return;
+      GameAudio.playClickTick();
+      timerSeconds = Math.max(10, timerSeconds - 10);
+      renderTimer();
+    });
+    document.getElementById('timerPlusBtn').addEventListener('click', () => {
+      if (timerRunning) return;
+      GameAudio.playClickTick();
+      timerSeconds = Math.min(600, timerSeconds + 10);
+      renderTimer();
+    });
+    const timerStartBtn = document.getElementById('timerStartBtn');
+    timerStartBtn.addEventListener('click', () => {
+      GameAudio.playClickTick();
+      timerRunning = !timerRunning;
+      if (timerRunning) {
+        timerStartBtn.textContent = '⏸ ストップ';
+        timerInterval = setInterval(() => {
+          timerSeconds--;
+          renderTimer();
+          if (timerSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            timerStartBtn.textContent = '▶ スタート';
+            GameAudio.playClearFanfare();
+          }
+        }, 1000);
+      } else {
+        timerStartBtn.textContent = '▶ スタート';
+        clearInterval(timerInterval);
+      }
+    });
+    document.getElementById('timerResetBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      clearInterval(timerInterval);
+      timerRunning = false;
+      timerSeconds = 60;
+      timerStartBtn.textContent = '▶ スタート';
+      renderTimer();
+    });
+    renderTimer();
+
+    // --- drawing app ---
+    const drawCanvas = document.getElementById('drawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+    const DRAW_COLORS = ['#333333', '#FF3B3B', '#FF8C42', '#FFD93D', '#4CAF50', '#4C7BF3', '#9B59B6', '#FF6FA5'];
+    let drawColor = DRAW_COLORS[0];
+    let drawing = false, lastDrawX = 0, lastDrawY = 0;
+
+    function initDrawCanvas() {
+      drawCtx.fillStyle = '#fff';
+      drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+    initDrawCanvas();
+
+    function getDrawPos(e) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / rect.width, scaleY = drawCanvas.height / rect.height;
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+    drawCanvas.addEventListener('pointerdown', (e) => {
+      drawing = true;
+      const p = getDrawPos(e);
+      lastDrawX = p.x; lastDrawY = p.y;
+      drawCanvas.setPointerCapture(e.pointerId);
+    });
+    drawCanvas.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      const p = getDrawPos(e);
+      drawCtx.strokeStyle = drawColor;
+      drawCtx.lineWidth = 6;
+      drawCtx.lineCap = 'round';
+      drawCtx.beginPath();
+      drawCtx.moveTo(lastDrawX, lastDrawY);
+      drawCtx.lineTo(p.x, p.y);
+      drawCtx.stroke();
+      lastDrawX = p.x; lastDrawY = p.y;
+    });
+    drawCanvas.addEventListener('pointerup', () => { drawing = false; });
+
+    const drawPaletteEl = document.getElementById('drawPalette');
+    DRAW_COLORS.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'draw-swatch' + (i === 0 ? ' selected' : '');
+      btn.style.background = c;
+      btn.addEventListener('click', () => {
+        drawColor = c;
+        drawPaletteEl.querySelectorAll('.draw-swatch').forEach(s => s.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+      drawPaletteEl.appendChild(btn);
+    });
+    const drawClearBtn = document.createElement('button');
+    drawClearBtn.className = 'draw-clear-btn';
+    drawClearBtn.textContent = '🗑️ けす';
+    drawClearBtn.addEventListener('click', () => { GameAudio.playClickTick(); initDrawCanvas(); });
+    drawPaletteEl.appendChild(drawClearBtn);
 
     renderSong();
     showView('home');
