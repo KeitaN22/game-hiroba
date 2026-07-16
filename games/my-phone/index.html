@@ -82,6 +82,7 @@
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     background: none; border: none; cursor: pointer;
     font-family: inherit;
+    position: relative;
   }
   .app-icon-glyph {
     width: 100%; aspect-ratio: 1;
@@ -89,7 +90,20 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 1.5rem;
     box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+    position: relative;
   }
+  .app-badge {
+    position: absolute;
+    top: -4px; right: 8%;
+    min-width: 16px; height: 16px;
+    background: #FF3B30; color: #fff;
+    border-radius: 999px;
+    font-size: 0.6rem; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3px;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .app-badge.hide { display: none; }
   .app-icon-btn:active .app-icon-glyph { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
   .app-icon-label {
     font-size: 0.62rem; font-weight: bold; color: #333;
@@ -143,6 +157,16 @@
     background: #A0E75A;
     color: #222;
     word-break: break-word;
+  }
+  .chat-bubble.received {
+    align-self: flex-start;
+    background: #fff;
+    border: 1px solid #ddd;
+    color: #222;
+  }
+  .chat-sender-label {
+    font-size: 0.62rem; font-weight: bold; color: #888;
+    align-self: flex-start; margin: 2px 0 -3px 4px;
   }
   .chat-input-row {
     display: flex; gap: 6px; padding: 8px; background: #fff; flex-shrink: 0;
@@ -592,7 +616,8 @@
     APPS.forEach(app => {
       const btn = document.createElement('button');
       btn.className = 'app-icon-btn';
-      btn.innerHTML = `<span class="app-icon-glyph" style="background:${app.color}">${app.icon}</span><span class="app-icon-label">${app.label}</span>`;
+      const badgeHtml = app.id === 'chat' ? `<span class="app-badge hide" id="chatBadge">0</span>` : '';
+      btn.innerHTML = `<span class="app-icon-glyph" style="background:${app.color}">${app.icon}${badgeHtml}</span><span class="app-icon-label">${app.label}</span>`;
       btn.addEventListener('click', () => openApp(app.id));
       appGridEl.appendChild(btn);
     });
@@ -622,6 +647,7 @@
     function openApp(id) {
       GameAudio.playClickTick();
       showView(id);
+      if (id === 'chat' && chatUnlocked) clearChatBadge();
     }
 
     document.querySelectorAll('[data-home]').forEach(btn => {
@@ -633,12 +659,23 @@
     const chatMainBody = document.getElementById('chatMainBody');
     const chatLog = document.getElementById('chatLog');
     const chatInput = document.getElementById('chatInput');
+    const chatBadge = document.getElementById('chatBadge');
+    let chatUnread = 0;
+    let chatUnlocked = false;
 
     document.getElementById('passwordBtn').addEventListener('click', () => {
       GameAudio.playClickTick();
       chatLockBody.classList.add('hide');
       chatMainBody.classList.remove('hide');
+      chatUnlocked = true;
+      clearChatBadge();
     });
+
+    function clearChatBadge() {
+      chatUnread = 0;
+      chatBadge.classList.add('hide');
+      chatBadge.textContent = '0';
+    }
 
     function sendChatMessage(text) {
       if (!text || !text.trim()) return;
@@ -649,6 +686,41 @@
       chatLog.scrollTop = chatLog.scrollHeight;
       GameAudio.playClickTick();
     }
+
+    // --- ともだちから とどく メッセージ ---
+    const FRIEND_NAME = 'ゆうくん';
+    const INCOMING_MESSAGES = ['👍OK', 'げんき？', '❤️いいね', 'また あそぼうね！', '🎉やったね！', 'なにしてる？'];
+
+    function receiveChatMessage() {
+      const label = document.createElement('div');
+      label.className = 'chat-sender-label';
+      label.textContent = FRIEND_NAME;
+      chatLog.appendChild(label);
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble received';
+      bubble.textContent = INCOMING_MESSAGES[Math.floor(Math.random() * INCOMING_MESSAGES.length)];
+      chatLog.appendChild(bubble);
+      chatLog.scrollTop = chatLog.scrollHeight;
+
+      const chatViewOpen = !views.chat.classList.contains('hide');
+      if (chatUnlocked && chatViewOpen) {
+        GameAudio.playClickTick();
+      } else {
+        chatUnread++;
+        chatBadge.textContent = chatUnread > 9 ? '9+' : String(chatUnread);
+        chatBadge.classList.remove('hide');
+        GameAudio.playClickTick();
+      }
+    }
+
+    function scheduleIncomingMessage() {
+      const delay = 15000 + Math.random() * 20000;
+      setTimeout(() => {
+        receiveChatMessage();
+        scheduleIncomingMessage();
+      }, delay);
+    }
+    scheduleIncomingMessage();
 
     document.getElementById('chatSendBtn').addEventListener('click', () => {
       sendChatMessage(chatInput.value);
