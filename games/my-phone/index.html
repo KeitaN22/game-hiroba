@@ -319,6 +319,12 @@
   .pet-meter-track { width: 70%; height: 14px; background: rgba(0,0,0,0.15); border-radius: 999px; overflow: hidden; }
   .pet-meter-fill { height: 100%; background: #FF6FA5; transition: width 0.2s ease; }
   .pet-btn-row { display: flex; gap: 10px; }
+  .pet-shop-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 4px 10px; }
+  .pet-shop-btn {
+    font-size: 1.6rem; border: none; border-radius: 14px;
+    background: rgba(255,255,255,0.7); width: 48px; height: 48px; cursor: pointer;
+  }
+  .pet-shop-btn:active { transform: scale(0.9); }
 
   /* darts app */
   .dart-target { position: relative; width: 65%; aspect-ratio: 1; }
@@ -564,10 +570,12 @@
             <div class="pet-body">
               <div class="pet-face" id="petFace">🐶</div>
               <div class="pet-meter-track"><div class="pet-meter-fill" id="petMeterFill" style="width:50%"></div></div>
+              <div class="toy-text" id="petMsg">&nbsp;</div>
               <div class="pet-btn-row">
-                <button class="toy-btn secondary" id="petPetBtn">✋ なでる</button>
-                <button class="toy-btn secondary" id="petFeedBtn">🍖 えさ</button>
+                <button class="toy-btn secondary" id="petWalkBtn">🚶 おさんぽ</button>
+                <button class="toy-btn secondary" id="petShopBtn">🏪 ペットショップ</button>
               </div>
+              <div class="pet-shop-grid hide" id="petShopGrid"></div>
             </div>
           </div>
 
@@ -1083,27 +1091,56 @@
 
     // --- pet app ---
     let petHappiness = 50;
+    let petSpecies = '🐶';
     const petFaceEl = document.getElementById('petFace');
     const petMeterFillEl = document.getElementById('petMeterFill');
-    const PET_FACES = ['😢', '😐', '🙂', '😄', '🥳'];
-    function updatePet() {
+    const petMsgEl = document.getElementById('petMsg');
+    const petShopGrid = document.getElementById('petShopGrid');
+    const PET_SHOP_OPTIONS = ['🐶', '🐱', '🐰', '🐹', '🐦', '🐢'];
+    const WALK_MESSAGES = ['おさんぽ たのしかったね！🐾', 'いい てんきだったね！☀️', 'たくさん あるいたね！'];
+    const SHOP_MESSAGES = ['あたらしい ともだちを むかえたよ！', 'ようこそ！なかよく しようね！'];
+
+    function updatePetMeter() {
       petMeterFillEl.style.width = petHappiness + '%';
-      const idx = Math.min(PET_FACES.length - 1, Math.floor(petHappiness / 21));
-      petFaceEl.textContent = PET_FACES[idx];
+    }
+    function bouncePetFace() {
       petFaceEl.classList.add('bounce');
       setTimeout(() => petFaceEl.classList.remove('bounce'), 150);
     }
-    document.getElementById('petPetBtn').addEventListener('click', () => {
+
+    document.getElementById('petWalkBtn').addEventListener('click', () => {
       GameAudio.playClickTick();
-      petHappiness = Math.min(100, petHappiness + 8);
-      updatePet();
+      petHappiness = Math.min(100, petHappiness + 10);
+      updatePetMeter();
+      bouncePetFace();
+      petMsgEl.textContent = WALK_MESSAGES[Math.floor(Math.random() * WALK_MESSAGES.length)];
     });
-    document.getElementById('petFeedBtn').addEventListener('click', () => {
+
+    document.getElementById('petShopBtn').addEventListener('click', () => {
       GameAudio.playClickTick();
-      petHappiness = Math.min(100, petHappiness + 15);
-      updatePet();
+      petShopGrid.classList.toggle('hide');
     });
-    updatePet();
+
+    if (petShopGrid.children.length === 0) {
+      PET_SHOP_OPTIONS.forEach(animal => {
+        const btn = document.createElement('button');
+        btn.className = 'pet-shop-btn';
+        btn.textContent = animal;
+        btn.addEventListener('click', () => {
+          GameAudio.playClickTick();
+          petSpecies = animal;
+          petFaceEl.textContent = petSpecies;
+          bouncePetFace();
+          petHappiness = Math.min(100, petHappiness + 12);
+          updatePetMeter();
+          petMsgEl.textContent = SHOP_MESSAGES[Math.floor(Math.random() * SHOP_MESSAGES.length)];
+          petShopGrid.classList.add('hide');
+        });
+        petShopGrid.appendChild(btn);
+      });
+    }
+
+    updatePetMeter();
 
     // --- darts app ---
     const dartTargetEl = document.getElementById('dartTarget');
