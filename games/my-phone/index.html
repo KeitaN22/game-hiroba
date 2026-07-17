@@ -112,66 +112,6 @@
   .app-back-btn:active { background: rgba(0,0,0,0.1); }
   .app-title { font-size: 0.85rem; font-weight: bold; color: #333; }
 
-  /* chat app */
-  .lock-body {
-    flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
-  }
-  .lock-body .lock-icon { font-size: 2.4rem; }
-  .password-btn {
-    font-size: 0.85rem; font-weight: bold;
-    padding: 12px 26px;
-    border: none; border-radius: 999px;
-    background: #333; color: #fff;
-    box-shadow: 0 4px 0 #000;
-    cursor: pointer;
-  }
-  .password-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #000; }
-
-  .chat-log {
-    flex: 1; overflow-y: auto;
-    padding: 10px 10px 4px;
-    display: flex; flex-direction: column; gap: 6px;
-    background: #F5F5F0;
-  }
-  .chat-bubble {
-    max-width: 75%;
-    padding: 7px 12px;
-    border-radius: 16px;
-    font-size: 0.78rem;
-    line-height: 1.4;
-    align-self: flex-end;
-    background: #A0E75A;
-    color: #222;
-    word-break: break-word;
-  }
-  .chat-input-row {
-    display: flex; gap: 6px; padding: 8px; background: #fff; flex-shrink: 0;
-  }
-  .chat-input {
-    flex: 1; min-width: 0;
-    padding: 8px 12px;
-    border-radius: 999px; border: 1px solid #ccc;
-    font-size: 0.8rem;
-  }
-  .chat-send-btn {
-    font-size: 0.78rem; font-weight: bold;
-    padding: 8px 14px;
-    border: none; border-radius: 999px;
-    background: #4CD964; color: #fff;
-    cursor: pointer;
-  }
-  .stamp-row {
-    display: flex; gap: 6px; padding: 4px 8px; background: #fff; flex-shrink: 0; overflow-x: auto;
-  }
-  .stamp-btn {
-    font-size: 1.1rem;
-    border: none; border-radius: 12px;
-    background: #F0F0F0;
-    padding: 4px 8px;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
   /* calculator app */
   .calc-display {
     flex-shrink: 0;
@@ -354,6 +294,64 @@
   .draw-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.2); flex-shrink: 0; }
   .draw-swatch.selected { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
   .draw-clear-btn { flex-shrink: 0; font-size: 0.7rem; font-weight: bold; padding: 4px 10px; border: none; border-radius: 999px; background: #FF6B6B; color: #fff; cursor: pointer; margin-left: auto; }
+
+  /* simple centered-toy app layout (dice, fortune, cards, darts, riddle, compass) */
+  .toy-body {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    padding: 10px; text-align: center;
+  }
+  .toy-display { font-size: 3.4rem; }
+  .toy-text { font-size: 0.95rem; font-weight: bold; color: #333; max-width: 90%; line-height: 1.5; }
+  .toy-btn {
+    font-size: 0.85rem; font-weight: bold; padding: 12px 26px; border: none; border-radius: 999px;
+    background: #333; color: #fff; cursor: pointer;
+  }
+  .toy-btn:active { transform: translateY(3px); }
+  .toy-btn.secondary { background: rgba(255,255,255,0.7); color: #333; }
+
+  /* dice app */
+  .dice-face { font-size: 3.6rem; }
+
+  /* pet app */
+  .pet-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  .pet-face { font-size: 4rem; transition: transform 0.15s ease; }
+  .pet-face.bounce { transform: scale(1.15); }
+  .pet-meter-track { width: 70%; height: 14px; background: rgba(0,0,0,0.15); border-radius: 999px; overflow: hidden; }
+  .pet-meter-fill { height: 100%; background: #FF6FA5; transition: width 0.2s ease; }
+  .pet-btn-row { display: flex; gap: 10px; }
+
+  /* darts app */
+  .dart-target { position: relative; width: 65%; aspect-ratio: 1; }
+  .dart-ring { position: absolute; border-radius: 50%; }
+  .dart-mark { position: absolute; font-size: 1.2rem; transform: translate(-50%, -50%); }
+  .dart-score { font-size: 1.3rem; font-weight: bold; color: #333; }
+
+  /* radio app */
+  .radio-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  .radio-station { font-size: 1rem; font-weight: bold; color: #333; }
+  .radio-dial { display: flex; gap: 10px; align-items: center; }
+  .radio-dial-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(255,255,255,0.7); font-size: 1.1rem; cursor: pointer; }
+  .radio-power-btn {
+    font-size: 0.85rem; font-weight: bold; padding: 12px 24px; border: none; border-radius: 999px;
+    background: #FF9A56; color: #fff; cursor: pointer;
+  }
+
+  /* compass app */
+  .compass-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  .compass-dial {
+    width: 55%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, #fff 60%, #ddd 100%);
+    position: relative; box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  }
+  .compass-needle {
+    position: absolute; left: 50%; top: 50%; width: 6px; height: 40%;
+    background: linear-gradient(to bottom, #FF3B3B 0 50%, #333 50% 100%);
+    transform-origin: bottom center;
+    transform: translate(-50%, -100%) rotate(0deg);
+    transition: transform 0.6s cubic-bezier(0.34,1.56,0.64,1);
+    border-radius: 3px;
+  }
+  .compass-label { font-size: 0.85rem; font-weight: bold; color: #444; }
 </style>
 </head>
 <body class="game-body">
@@ -373,30 +371,6 @@
         <div class="screen-body">
           <div class="screen-view" id="view-home">
             <div class="app-grid" id="appGrid"></div>
-          </div>
-
-          <div class="screen-view hide" id="view-chat">
-            <div class="app-header">
-              <button class="app-back-btn" data-home>⬅</button>
-              <span class="app-title">💬 スタンプでOK</span>
-            </div>
-            <div class="lock-body" id="chatLockBody">
-              <span class="lock-icon">🔒</span>
-              <button class="password-btn" id="passwordBtn">パスワード</button>
-            </div>
-            <div class="screen-view hide" id="chatMainBody" style="position:static; flex:1;">
-              <div class="chat-log" id="chatLog"></div>
-              <div class="stamp-row">
-                <button class="stamp-btn" data-stamp="👍OK">👍OK</button>
-                <button class="stamp-btn" data-stamp="❤️いいね">❤️いいね</button>
-                <button class="stamp-btn" data-stamp="🎉やった！">🎉やった！</button>
-                <button class="stamp-btn" data-stamp="😄うんうん">😄うんうん</button>
-              </div>
-              <div class="chat-input-row">
-                <input class="chat-input" id="chatInput" placeholder="メッセージを かく…" maxlength="40">
-                <button class="chat-send-btn" id="chatSendBtn">そうしん</button>
-              </div>
-            </div>
           </div>
 
           <div class="screen-view hide" id="view-calc">
@@ -547,6 +521,118 @@
             </div>
             <div class="draw-palette" id="drawPalette"></div>
           </div>
+
+          <div class="screen-view hide" id="view-dice">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🎲 さいころ</span>
+            </div>
+            <div class="toy-body">
+              <div class="dice-face" id="diceFace">🎲</div>
+              <button class="toy-btn" id="diceRollBtn">ふる！</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-fortune">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🔮 うらない</span>
+            </div>
+            <div class="toy-body">
+              <div class="toy-display" id="fortuneIcon">🔮</div>
+              <div class="toy-text" id="fortuneText">ボタンを おして うらなおう！</div>
+              <button class="toy-btn" id="fortuneBtn">うらなう</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-cards">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🃏 トランプ</span>
+            </div>
+            <div class="toy-body">
+              <div class="toy-display" id="cardFace">🂠</div>
+              <button class="toy-btn" id="cardFlipBtn">めくる</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-pet">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🐾 ペット</span>
+            </div>
+            <div class="pet-body">
+              <div class="pet-face" id="petFace">🐶</div>
+              <div class="pet-meter-track"><div class="pet-meter-fill" id="petMeterFill" style="width:50%"></div></div>
+              <div class="pet-btn-row">
+                <button class="toy-btn secondary" id="petPetBtn">✋ なでる</button>
+                <button class="toy-btn secondary" id="petFeedBtn">🍖 えさ</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-darts">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🎯 まと</span>
+            </div>
+            <div class="toy-body">
+              <div class="dart-target" id="dartTarget">
+                <div class="dart-ring" style="inset:0; background:#4C7BF3;"></div>
+                <div class="dart-ring" style="inset:15%; background:#fff;"></div>
+                <div class="dart-ring" style="inset:30%; background:#FF3B3B;"></div>
+                <div class="dart-ring" style="inset:45%; background:#FFD93D;"></div>
+              </div>
+              <div class="dart-score" id="dartScore">スコア: 0</div>
+              <button class="toy-btn" id="dartThrowBtn">なげる！</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-riddle">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">💡 なぞなぞ</span>
+            </div>
+            <div class="toy-body">
+              <div class="toy-display">💡</div>
+              <div class="toy-text" id="riddleQuestion"></div>
+              <div class="toy-text" id="riddleAnswer" style="color:#FF6FA5; display:none;"></div>
+              <div class="pet-btn-row">
+                <button class="toy-btn secondary" id="riddleShowBtn">こたえを みる</button>
+                <button class="toy-btn" id="riddleNextBtn">つぎの もんだい</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-compass">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">🧭 らしんばん</span>
+            </div>
+            <div class="compass-body">
+              <div class="compass-dial">
+                <div class="compass-needle" id="compassNeedle"></div>
+              </div>
+              <div class="compass-label" id="compassLabel">きたを さがしてみよう</div>
+              <button class="toy-btn" id="compassSpinBtn">さがす</button>
+            </div>
+          </div>
+
+          <div class="screen-view hide" id="view-radio">
+            <div class="app-header">
+              <button class="app-back-btn" data-home>⬅</button>
+              <span class="app-title">📻 らじお</span>
+            </div>
+            <div class="radio-body">
+              <div class="toy-display">📻</div>
+              <div class="radio-station" id="radioStation">1. きらきら チャンネル</div>
+              <div class="radio-dial">
+                <button class="radio-dial-btn" id="radioPrevBtn">◀</button>
+                <button class="radio-dial-btn" id="radioNextBtn">▶</button>
+              </div>
+              <button class="radio-power-btn" id="radioPowerBtn">▶ さいせい</button>
+            </div>
+          </div>
         </div>
 
         <div class="home-indicator"></div>
@@ -573,7 +659,6 @@
     setInterval(updateClock, 10000);
 
     const APPS = [
-      { id: 'chat', label: 'スタンプでOK', icon: '💬', color: '#7DE07D' },
       { id: 'calc', label: 'でんたく', icon: '🔢', color: '#9FB4C7' },
       { id: 'music', label: 'おんがく', icon: '🎵', color: '#FFB0CB' },
       { id: 'camera', label: 'カメラ', icon: '📷', color: '#B0B8C1' },
@@ -586,6 +671,14 @@
       { id: 'flashlight', label: 'ライト', icon: '🔦', color: '#616161' },
       { id: 'timer', label: 'タイマー', icon: '⏱️', color: '#C5CAE9' },
       { id: 'draw', label: 'おえかき', icon: '🎨', color: '#FFAB91' },
+      { id: 'dice', label: 'さいころ', icon: '🎲', color: '#EF9A9A' },
+      { id: 'fortune', label: 'うらない', icon: '🔮', color: '#CE93D8' },
+      { id: 'cards', label: 'トランプ', icon: '🃏', color: '#90CAF9' },
+      { id: 'pet', label: 'ペット', icon: '🐾', color: '#FFCC80' },
+      { id: 'darts', label: 'まと', icon: '🎯', color: '#A5D6A7' },
+      { id: 'riddle', label: 'なぞなぞ', icon: '💡', color: '#FFF59D' },
+      { id: 'compass', label: 'らしんばん', icon: '🧭', color: '#B39DDB' },
+      { id: 'radio', label: 'らじお', icon: '📻', color: '#80CBC4' },
     ];
 
     const appGridEl = document.getElementById('appGrid');
@@ -599,7 +692,6 @@
 
     const views = {
       home: document.getElementById('view-home'),
-      chat: document.getElementById('view-chat'),
       calc: document.getElementById('view-calc'),
       music: document.getElementById('view-music'),
       camera: document.getElementById('view-camera'),
@@ -612,6 +704,14 @@
       flashlight: document.getElementById('view-flashlight'),
       timer: document.getElementById('view-timer'),
       draw: document.getElementById('view-draw'),
+      dice: document.getElementById('view-dice'),
+      fortune: document.getElementById('view-fortune'),
+      cards: document.getElementById('view-cards'),
+      pet: document.getElementById('view-pet'),
+      darts: document.getElementById('view-darts'),
+      riddle: document.getElementById('view-riddle'),
+      compass: document.getElementById('view-compass'),
+      radio: document.getElementById('view-radio'),
     };
 
     function showView(id) {
@@ -626,42 +726,6 @@
 
     document.querySelectorAll('[data-home]').forEach(btn => {
       btn.addEventListener('click', () => { GameAudio.playClickTick(); showView('home'); });
-    });
-
-    // --- chat app ---
-    const chatLockBody = document.getElementById('chatLockBody');
-    const chatMainBody = document.getElementById('chatMainBody');
-    const chatLog = document.getElementById('chatLog');
-    const chatInput = document.getElementById('chatInput');
-
-    document.getElementById('passwordBtn').addEventListener('click', () => {
-      GameAudio.playClickTick();
-      chatLockBody.classList.add('hide');
-      chatMainBody.classList.remove('hide');
-    });
-
-    function sendChatMessage(text) {
-      if (!text || !text.trim()) return;
-      const bubble = document.createElement('div');
-      bubble.className = 'chat-bubble';
-      bubble.textContent = text;
-      chatLog.appendChild(bubble);
-      chatLog.scrollTop = chatLog.scrollHeight;
-      GameAudio.playClickTick();
-    }
-
-    document.getElementById('chatSendBtn').addEventListener('click', () => {
-      sendChatMessage(chatInput.value);
-      chatInput.value = '';
-    });
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        sendChatMessage(chatInput.value);
-        chatInput.value = '';
-      }
-    });
-    document.querySelectorAll('.stamp-btn').forEach(btn => {
-      btn.addEventListener('click', () => sendChatMessage(btn.dataset.stamp));
     });
 
     // --- calculator app ---
@@ -979,6 +1043,160 @@
     drawClearBtn.textContent = '🗑️ けす';
     drawClearBtn.addEventListener('click', () => { GameAudio.playClickTick(); initDrawCanvas(); });
     drawPaletteEl.appendChild(drawClearBtn);
+
+    // --- dice app ---
+    const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    const diceFaceEl = document.getElementById('diceFace');
+    document.getElementById('diceRollBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      diceFaceEl.textContent = DICE_FACES[Math.floor(Math.random() * 6)];
+    });
+
+    // --- fortune app ---
+    const FORTUNES = [
+      { icon: '🌟', text: 'きょうは いいことが あるよ！' },
+      { icon: '☀️', text: 'げんきいっぱいの ひに なるよ！' },
+      { icon: '🍀', text: 'ラッキーな ことが おきそう！' },
+      { icon: '🌈', text: 'たのしい できごとが まってるよ！' },
+      { icon: '😴', text: 'すこし のんびり しよう！' },
+      { icon: '🎉', text: 'とっても いい ひ！' },
+    ];
+    const fortuneIconEl = document.getElementById('fortuneIcon');
+    const fortuneTextEl = document.getElementById('fortuneText');
+    document.getElementById('fortuneBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      const f = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+      fortuneIconEl.textContent = f.icon;
+      fortuneTextEl.textContent = f.text;
+    });
+
+    // --- cards app ---
+    const CARD_SUITS = ['♠️', '♥️', '♦️', '♣️'];
+    const CARD_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const cardFaceEl = document.getElementById('cardFace');
+    document.getElementById('cardFlipBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      const suit = CARD_SUITS[Math.floor(Math.random() * CARD_SUITS.length)];
+      const rank = CARD_RANKS[Math.floor(Math.random() * CARD_RANKS.length)];
+      cardFaceEl.textContent = `${rank}${suit}`;
+    });
+
+    // --- pet app ---
+    let petHappiness = 50;
+    const petFaceEl = document.getElementById('petFace');
+    const petMeterFillEl = document.getElementById('petMeterFill');
+    const PET_FACES = ['😢', '😐', '🙂', '😄', '🥳'];
+    function updatePet() {
+      petMeterFillEl.style.width = petHappiness + '%';
+      const idx = Math.min(PET_FACES.length - 1, Math.floor(petHappiness / 21));
+      petFaceEl.textContent = PET_FACES[idx];
+      petFaceEl.classList.add('bounce');
+      setTimeout(() => petFaceEl.classList.remove('bounce'), 150);
+    }
+    document.getElementById('petPetBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      petHappiness = Math.min(100, petHappiness + 8);
+      updatePet();
+    });
+    document.getElementById('petFeedBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      petHappiness = Math.min(100, petHappiness + 15);
+      updatePet();
+    });
+    updatePet();
+
+    // --- darts app ---
+    const dartTargetEl = document.getElementById('dartTarget');
+    const dartScoreEl = document.getElementById('dartScore');
+    let dartTotalScore = 0;
+    document.getElementById('dartThrowBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      document.querySelectorAll('.dart-mark').forEach(m => m.remove());
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 0.42;
+      const x = 50 + Math.cos(angle) * dist * 100;
+      const y = 50 + Math.sin(angle) * dist * 100;
+      const mark = document.createElement('div');
+      mark.className = 'dart-mark';
+      mark.textContent = '📍';
+      mark.style.left = x + '%';
+      mark.style.top = y + '%';
+      dartTargetEl.appendChild(mark);
+      let points = 1;
+      if (dist < 0.15) points = 10;
+      else if (dist < 0.3) points = 5;
+      else if (dist < 0.42) points = 2;
+      dartTotalScore += points;
+      dartScoreEl.textContent = `スコア: ${dartTotalScore}（+${points}）`;
+      if (points === 10) GameAudio.playClearFanfare();
+    });
+
+    // --- riddle app ---
+    const RIDDLES = [
+      { q: 'あさは 4ほん あし、ひるは 2ほん あし、よるは 3ぼん あし。なーんだ？', a: 'こたえ：ひと（あかちゃん→おとな→おじいさん）' },
+      { q: 'たまごから うまれるのに、とりじゃない どうぶつは？', a: 'こたえ：かめ（や さかな、こんちゅうなど）' },
+      { q: 'みずの なかまなのに、みずに いれると きえちゃう ものは？', a: 'こたえ：こおり（とけると みずに もどる）' },
+      { q: 'パンは パンでも たべられない パンは？', a: 'こたえ：フライパン' },
+      { q: 'そらを とんでいるのに、はねが ない ものは？', a: 'こたえ：ひこうき や たこ' },
+    ];
+    let riddleIndex = 0;
+    const riddleQuestionEl = document.getElementById('riddleQuestion');
+    const riddleAnswerEl = document.getElementById('riddleAnswer');
+    function renderRiddle() {
+      riddleQuestionEl.textContent = RIDDLES[riddleIndex].q;
+      riddleAnswerEl.textContent = RIDDLES[riddleIndex].a;
+      riddleAnswerEl.style.display = 'none';
+    }
+    document.getElementById('riddleShowBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      riddleAnswerEl.style.display = 'block';
+    });
+    document.getElementById('riddleNextBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      riddleIndex = (riddleIndex + 1) % RIDDLES.length;
+      renderRiddle();
+    });
+    renderRiddle();
+
+    // --- compass app ---
+    const compassNeedleEl = document.getElementById('compassNeedle');
+    const compassLabelEl = document.getElementById('compassLabel');
+    const COMPASS_DIRS = ['きた', 'ひがし', 'みなみ', 'にし'];
+    document.getElementById('compassSpinBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      const dirIndex = Math.floor(Math.random() * 4);
+      const angle = dirIndex * 90 + Math.floor(Math.random() * 20 - 10);
+      compassNeedleEl.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+      compassLabelEl.textContent = `${COMPASS_DIRS[dirIndex]}を みつけた！`;
+    });
+
+    // --- radio app ---
+    const RADIO_STATIONS = ['1. きらきら チャンネル', '2. どうよう ステーション', '3. おはなし ラジオ', '4. げんき ミュージック'];
+    let radioIndex = 0;
+    let radioOn = false;
+    const radioStationEl = document.getElementById('radioStation');
+    const radioPowerBtn = document.getElementById('radioPowerBtn');
+    document.getElementById('radioPrevBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      radioIndex = (radioIndex - 1 + RADIO_STATIONS.length) % RADIO_STATIONS.length;
+      radioStationEl.textContent = RADIO_STATIONS[radioIndex];
+    });
+    document.getElementById('radioNextBtn').addEventListener('click', () => {
+      GameAudio.playClickTick();
+      radioIndex = (radioIndex + 1) % RADIO_STATIONS.length;
+      radioStationEl.textContent = RADIO_STATIONS[radioIndex];
+    });
+    radioPowerBtn.addEventListener('click', () => {
+      GameAudio.playClickTick();
+      radioOn = !radioOn;
+      if (radioOn) {
+        GameAudio.playBGM();
+        radioPowerBtn.textContent = '⏸ ストップ';
+      } else {
+        GameAudio.stopBGM();
+        radioPowerBtn.textContent = '▶ さいせい';
+      }
+    });
 
     renderSong();
     showView('home');
