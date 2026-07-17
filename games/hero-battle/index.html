@@ -94,6 +94,22 @@
   .pick-card .pick-name { font-size: 0.68rem; }
   .pick-card .pick-item { font-size: 0.6rem; color: #777; }
 
+  .flying-item {
+    position: absolute;
+    font-size: 1.9rem;
+    left: 0; top: 0;
+    transform: translate(0, 0);
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.4, 1);
+    pointer-events: none;
+    z-index: 30;
+  }
+  @keyframes lungeRight { 0% { transform: translateX(0); } 45% { transform: translateX(16px) scale(1.08); } 100% { transform: translateX(0); } }
+  @keyframes lungeLeft { 0% { transform: translateX(0); } 45% { transform: translateX(-16px) scale(1.08); } 100% { transform: translateX(0); } }
+  @keyframes hitFlash { 0%, 100% { filter: none; } 50% { filter: brightness(0.4) drop-shadow(0 0 10px #FF3B3B); } }
+  .fighter-emoji.lunge-right { animation: lungeRight 0.32s ease; }
+  .fighter-emoji.lunge-left { animation: lungeLeft 0.32s ease; }
+  .fighter-emoji.hit-flash { animation: hitFlash 0.22s ease; }
+
   .overlay {
     position: absolute; inset: 0; background: rgba(0,0,0,0.65);
     border-radius: 20px;
@@ -122,9 +138,8 @@
         <div style="width:100%;">
           <div class="pick-section-title">🦸 ヒーローを えらぶ</div>
           <div class="pick-grid" id="heroGrid"></div>
-          <div class="pick-section-title">🤖 たたかう あいてを えらぶ</div>
-          <div class="pick-grid" id="botGrid"></div>
-          <button class="big-btn" id="okBtn" style="margin-top:16px; opacity:0.5;" disabled>▶ OK！たたかう</button>
+          <p style="font-size:0.85rem; color:#555; margin:10px 0 0;">たたかう あいての ボットは、おしたら ランダムで あらわれるよ！</p>
+          <button class="big-btn" id="okBtn" style="margin-top:12px; opacity:0.5;" disabled>▶ OK！たたかう</button>
         </div>
       </div>
 
@@ -166,26 +181,33 @@
     });
 
     // そうさく オリジナルの ヒーローたちだよ（じっさいの まんが・えいがの キャラクターは つかわず、にた テーマの じぶんだけの ヒーローを つくったよ）
+    // soundType: どうぐの こうげきおとの しゅるい（punch / zap / fire / blade）
     const HEROES = [
-      { id: 'thread', name: 'いとまきレンジャー', emoji: '🕷️', item: '🕸️ねばねば糸', minDmg: 8, maxDmg: 14 },
-      { id: 'iron', name: 'てっこうレンジャー', emoji: '🤖', item: '🚀ロケットパンチ', minDmg: 10, maxDmg: 16 },
-      { id: 'flame', name: 'ほのおレンジャー', emoji: '🔥', item: '🔥ファイヤーボール', minDmg: 9, maxDmg: 15 },
-      { id: 'thunder', name: 'かみなりレンジャー', emoji: '⚡', item: '⚡サンダーアロー', minDmg: 8, maxDmg: 16 },
-      { id: 'shield', name: 'たてレンジャー', emoji: '🛡️', item: '🛡️ガードカウンター', minDmg: 7, maxDmg: 13 },
-      { id: 'cape', name: 'マントレンジャー', emoji: '🦸', item: '💨とっぷうパンチ', minDmg: 9, maxDmg: 14 },
+      { id: 'thread', name: 'いとまきレンジャー', emoji: '🕷️', item: '🕸️ねばねば糸', itemEmoji: '🕸️', soundType: 'blade', minDmg: 8, maxDmg: 14 },
+      { id: 'iron', name: 'てっこうレンジャー', emoji: '🤖', item: '🚀ロケットパンチ', itemEmoji: '🚀', soundType: 'punch', minDmg: 10, maxDmg: 16 },
+      { id: 'flame', name: 'ほのおレンジャー', emoji: '🔥', item: '🔥ファイヤーボール', itemEmoji: '🔥', soundType: 'fire', minDmg: 9, maxDmg: 15 },
+      { id: 'thunder', name: 'かみなりレンジャー', emoji: '⚡', item: '⚡サンダーアロー', itemEmoji: '⚡', soundType: 'zap', minDmg: 8, maxDmg: 16 },
+      { id: 'shield', name: 'たてレンジャー', emoji: '🛡️', item: '🛡️ガードカウンター', itemEmoji: '🛡️', soundType: 'blade', minDmg: 7, maxDmg: 13 },
+      { id: 'cape', name: 'マントレンジャー', emoji: '🦸', item: '💨とっぷうパンチ', itemEmoji: '💨', soundType: 'punch', minDmg: 9, maxDmg: 14 },
     ];
 
     const BOTS = [
-      { id: 'ironbot', name: 'てつじんボット', emoji: '🤖', item: '🔨ハンマー', minDmg: 8, maxDmg: 14 },
-      { id: 'kaiju', name: 'かいじゅうボット', emoji: '👾', item: '👁️レーザービーム', minDmg: 9, maxDmg: 15 },
-      { id: 'powerarm', name: 'パワーアームボット', emoji: '🦾', item: '💥パワーこぶし', minDmg: 10, maxDmg: 16 },
-      { id: 'ufo', name: 'UFOボット', emoji: '🛸', item: '✨ビームほうしゃ', minDmg: 8, maxDmg: 15 },
-      { id: 'dragonbot', name: 'ドラゴンボット', emoji: '🐉', item: '🔥ほのおブレス', minDmg: 9, maxDmg: 16 },
-      { id: 'gearbot', name: 'ギアボット', emoji: '⚙️', item: '⚙️かいてんのこぎり', minDmg: 7, maxDmg: 13 },
+      { id: 'ironbot', name: 'てつじんボット', emoji: '🤖', item: '🔨ハンマー', itemEmoji: '🔨', soundType: 'punch', minDmg: 8, maxDmg: 14 },
+      { id: 'kaiju', name: 'かいじゅうボット', emoji: '👾', item: '👁️レーザービーム', itemEmoji: '👁️', soundType: 'zap', minDmg: 9, maxDmg: 15 },
+      { id: 'powerarm', name: 'パワーアームボット', emoji: '🦾', item: '💥パワーこぶし', itemEmoji: '💥', soundType: 'punch', minDmg: 10, maxDmg: 16 },
+      { id: 'ufo', name: 'UFOボット', emoji: '🛸', item: '✨ビームほうしゃ', itemEmoji: '✨', soundType: 'zap', minDmg: 8, maxDmg: 15 },
+      { id: 'dragonbot', name: 'ドラゴンボット', emoji: '🐉', item: '🔥ほのおブレス', itemEmoji: '🔥', soundType: 'fire', minDmg: 9, maxDmg: 16 },
+      { id: 'gearbot', name: 'ギアボット', emoji: '⚙️', item: '⚙️かいてんのこぎり', itemEmoji: '⚙️', soundType: 'blade', minDmg: 7, maxDmg: 13 },
     ];
 
+    function playItemSound(soundType) {
+      if (soundType === 'punch') GameAudio.playPunchImpact();
+      else if (soundType === 'zap') GameAudio.playEnergyZap();
+      else if (soundType === 'fire') GameAudio.playFireWhoosh();
+      else GameAudio.playBladeSwish();
+    }
+
     const heroGridEl = document.getElementById('heroGrid');
-    const botGridEl = document.getElementById('botGrid');
     const okBtn = document.getElementById('okBtn');
     const selectOverlay = document.getElementById('selectOverlay');
     const battleView = document.getElementById('battleView');
@@ -214,15 +236,17 @@
     }
 
     function updateOkBtn() {
-      const ready = selectedHero && selectedBot;
+      const ready = !!selectedHero;
       okBtn.disabled = !ready;
       okBtn.style.opacity = ready ? '1' : '0.5';
     }
 
     renderPickGrid(heroGridEl, HEROES, (item) => { selectedHero = item; });
-    renderPickGrid(botGridEl, BOTS, (item) => { selectedBot = item; });
 
     // --- battle state ---
+    const arenaEl = document.querySelector('.arena');
+    const heroCardEl = document.getElementById('heroEmoji').closest('.fighter-card');
+    const botCardEl = document.getElementById('botEmoji').closest('.fighter-card');
     const heroEmojiEl = document.getElementById('heroEmoji');
     const heroNameEl = document.getElementById('heroName');
     const heroItemEl = document.getElementById('heroItem');
@@ -238,6 +262,7 @@
     let heroHp = MAX_HP;
     let botHp = MAX_HP;
     let battling = false;
+    let actionLocked = false;
     let botTimer = null;
     let battleStart = 0;
 
@@ -252,10 +277,44 @@
       return Math.floor(fighter.minDmg + Math.random() * (fighter.maxDmg - fighter.minDmg + 1));
     }
 
+    function centerOf(el) {
+      const r = el.getBoundingClientRect();
+      const arenaRect = arenaEl.getBoundingClientRect();
+      return { x: r.left - arenaRect.left + r.width / 2, y: r.top - arenaRect.top + r.height / 2 };
+    }
+
+    // こうげきの えんしゅつ：まえに ダッシュして、どうぐが ピューっと とんでいく
+    function playAttackAnim(isHeroAttacking, item, onImpact) {
+      const attackerEmojiEl = isHeroAttacking ? heroEmojiEl : botEmojiEl;
+      const defenderEmojiEl = isHeroAttacking ? botEmojiEl : heroEmojiEl;
+      attackerEmojiEl.classList.add(isHeroAttacking ? 'lunge-right' : 'lunge-left');
+      setTimeout(() => attackerEmojiEl.classList.remove(isHeroAttacking ? 'lunge-right' : 'lunge-left'), 320);
+
+      const from = centerOf(attackerEmojiEl);
+      const to = centerOf(defenderEmojiEl);
+      const flying = document.createElement('div');
+      flying.className = 'flying-item';
+      flying.textContent = item.itemEmoji;
+      flying.style.transform = `translate(${from.x}px, ${from.y}px)`;
+      arenaEl.appendChild(flying);
+      requestAnimationFrame(() => {
+        flying.style.transform = `translate(${to.x}px, ${to.y}px) scale(1.3)`;
+      });
+      playItemSound(item.soundType);
+
+      setTimeout(() => {
+        flying.remove();
+        defenderEmojiEl.classList.add('hit-flash');
+        setTimeout(() => defenderEmojiEl.classList.remove('hit-flash'), 220);
+        onImpact();
+      }, 350);
+    }
+
     function startBattle() {
+      selectedBot = BOTS[Math.floor(Math.random() * BOTS.length)];
       selectOverlay.classList.add('hide');
       battleView.classList.remove('hide');
-      hudLabelEl.textContent = 'たたかいちゅう！';
+      hudLabelEl.textContent = `たたかいちゅう！ あいては ${selectedBot.name} だ！`;
       heroEmojiEl.textContent = selectedHero.emoji;
       heroNameEl.textContent = selectedHero.name;
       heroItemEl.textContent = selectedHero.item;
@@ -269,34 +328,42 @@
       battleLogEl.innerHTML = '';
       logLine(`${selectedHero.name} VS ${selectedBot.name}、スタート！`);
       battling = true;
+      actionLocked = false;
       attackBtn.disabled = false;
       battleStart = performance.now();
       GameAudio.playBGM();
 
       clearInterval(botTimer);
       botTimer = setInterval(() => {
-        if (!battling) return;
-        const dmg = randDmg(selectedBot);
-        heroHp = Math.max(0, heroHp - dmg);
-        heroHpFillEl.style.width = (heroHp / MAX_HP * 100) + '%';
-        logLine(`${selectedBot.name}の ${selectedBot.item}！ ${dmg}ダメージ！`);
-        GameAudio.playFailBuzz();
-        if (heroHp <= 0) endBattle(false);
-      }, 1600);
+        if (!battling || actionLocked) return;
+        actionLocked = true;
+        playAttackAnim(false, selectedBot, () => {
+          const dmg = randDmg(selectedBot);
+          heroHp = Math.max(0, heroHp - dmg);
+          heroHpFillEl.style.width = (heroHp / MAX_HP * 100) + '%';
+          logLine(`${selectedBot.name}の ${selectedBot.item}！ ${dmg}ダメージ！`);
+          actionLocked = false;
+          if (heroHp <= 0) endBattle(false);
+        });
+      }, 1700);
     }
 
     attackBtn.addEventListener('click', () => {
-      if (!battling) return;
-      const dmg = randDmg(selectedHero);
-      botHp = Math.max(0, botHp - dmg);
-      botHpFillEl.style.width = (botHp / MAX_HP * 100) + '%';
-      logLine(`${selectedHero.name}の ${selectedHero.item}！ ${dmg}ダメージ！`);
-      GameAudio.playClickTick();
-      if (botHp <= 0) endBattle(true);
+      if (!battling || actionLocked) return;
+      actionLocked = true;
+      playAttackAnim(true, selectedHero, () => {
+        const dmg = randDmg(selectedHero);
+        botHp = Math.max(0, botHp - dmg);
+        botHpFillEl.style.width = (botHp / MAX_HP * 100) + '%';
+        logLine(`${selectedHero.name}の ${selectedHero.item}！ ${dmg}ダメージ！`);
+        actionLocked = false;
+        if (botHp <= 0) endBattle(true);
+      });
     });
 
     function endBattle(won) {
       battling = false;
+      actionLocked = true;
       attackBtn.disabled = true;
       clearInterval(botTimer);
       GameAudio.stopBGM();
@@ -315,7 +382,7 @@
     }
 
     document.getElementById('okBtn').addEventListener('click', () => {
-      if (!selectedHero || !selectedBot) return;
+      if (!selectedHero) return;
       startBattle();
     });
 
@@ -327,7 +394,6 @@
       selectedHero = null;
       selectedBot = null;
       heroGridEl.querySelectorAll('.pick-card').forEach(c => c.classList.remove('selected'));
-      botGridEl.querySelectorAll('.pick-card').forEach(c => c.classList.remove('selected'));
       updateOkBtn();
     });
   </script>

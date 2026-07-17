@@ -70,6 +70,95 @@
       beep(160, now + 0.15, 0.3, 'sawtooth', 0.2);
     },
 
+    // どすん、という パンチ・うちの おと
+    playPunchImpact() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      beep(140, now, 0.14, 'square', 0.22);
+      beep(90, now + 0.02, 0.16, 'sine', 0.2);
+      const bufferSize = Math.floor(ctx.sampleRate * 0.06);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 500;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.06);
+    },
+
+    // ぴゅーん、という エネルギー・ビームの おと
+    playEnergyZap() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1400, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.22);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    },
+
+    // ぼわっ、という ほのおの おと
+    playFireWhoosh() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const bufferSize = Math.floor(ctx.sampleRate * 0.3);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(300, now);
+      filter.frequency.exponentialRampToValueAtTime(900, now + 0.3);
+      filter.Q.value = 0.8;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.3);
+    },
+
+    // しゅっ、という は・いとの すばやい おと
+    playBladeSwish() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(2200, now);
+      osc.frequency.exponentialRampToValueAtTime(700, now + 0.1);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    },
+
     playGunshot() {
       if (muted) return;
       const ctx = getCtx();
