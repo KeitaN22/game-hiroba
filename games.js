@@ -122,6 +122,14 @@ const GAMES = [
     emoji: '📱',
     color: '#7DE07D',
     path: 'games/my-phone/index.html',
-    desc: 'じぶんの ケータイで メッセージを おくったり、でんたくや おんがくで あそぼう！',
+    desc: 'じぶんの ケータイで、でんたくや おんがくなど 20この アプリで あそぼう！',
+  },
+  {
+    id: 'hero-battle',
+    title: 'そうすけの ヒーローたいけつ',
+    emoji: '🦸',
+    color: '#4C7BF3',
+    path: 'games/hero-battle/index.html',
+    desc: 'すきな ヒーローと たたかう あいてを えらんで、たいけつ しよう！',
   },
 ];

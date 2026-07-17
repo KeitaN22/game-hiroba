@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ヒーローたいけつ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #2C3E50 0%, #4C7BF3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    background: linear-gradient(180deg, #B3D9FF 0%, #E8F4FF 60%, #C9E8C9 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .fighter-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .fighter-card { flex: 1; text-align: center; }
+  .fighter-emoji { font-size: 3.6rem; display: block; }
+  .fighter-name { font-size: 0.95rem; font-weight: bold; color: #333; }
+  .fighter-item { font-size: 0.8rem; color: #555; }
+  .hp-track { width: 100%; height: 16px; background: rgba(0,0,0,0.15); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  .hp-fill { height: 100%; border-radius: 999px; transition: width 0.25s ease; }
+  .hp-fill.hero { background: #4CAF50; }
+  .hp-fill.bot { background: #FF5D5D; }
+  .vs-label { font-size: 1.6rem; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); align-self: center; }
+
+  .battle-log {
+    flex: 1; min-height: 80px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: #333;
+    overflow-y: auto;
+  }
+
+  .attack-btn {
+    font-size: 1.3rem;
+    font-weight: bold;
+    padding: 16px 0;
+    border: none;
+    border-radius: 999px;
+    background: #FF5D8F;
+    color: #fff;
+    box-shadow: 0 6px 0 #c73f6a;
+    cursor: pointer;
+  }
+  .attack-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+  .attack-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* select screens */
+  .pick-section-title { font-size: 1.1rem; font-weight: bold; margin: 10px 0 4px; }
+  .pick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+  .pick-card {
+    border: 3px solid transparent;
+    border-radius: 16px;
+    padding: 10px 4px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-weight: bold;
+  }
+  .pick-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .pick-card.selected { border-color: #FFD166; background: #FFF6D8; }
+  .pick-card .pick-emoji { font-size: 2rem; }
+  .pick-card .pick-name { font-size: 0.68rem; }
+  .pick-card .pick-item { font-size: 0.6rem; color: #777; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.8rem; margin: 6px 0; }
+  .overlay p { font-size: 1.05rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🦸 そうすけの ヒーローたいけつ</h1>
+
+  <div class="hud" id="hud">
+    <span id="hudLabel">ヒーローと てきを えらんでね</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="overlay" id="selectOverlay" style="position: static; background: none; color: #333; flex: 1;">
+        <div style="width:100%;">
+          <div class="pick-section-title">🦸 ヒーローを えらぶ</div>
+          <div class="pick-grid" id="heroGrid"></div>
+          <div class="pick-section-title">🤖 たたかう あいてを えらぶ</div>
+          <div class="pick-grid" id="botGrid"></div>
+          <button class="big-btn" id="okBtn" style="margin-top:16px; opacity:0.5;" disabled>▶ OK！たたかう</button>
+        </div>
+      </div>
+
+      <div class="hide" id="battleView" style="display:flex; flex-direction:column; gap:14px; flex:1;">
+        <div class="fighter-row">
+          <div class="fighter-card">
+            <span class="fighter-emoji" id="heroEmoji">🦸</span>
+            <div class="fighter-name" id="heroName">-</div>
+            <div class="fighter-item" id="heroItem">-</div>
+            <div class="hp-track"><div class="hp-fill hero" id="heroHpFill" style="width:100%"></div></div>
+          </div>
+          <div class="vs-label">VS</div>
+          <div class="fighter-card">
+            <span class="fighter-emoji" id="botEmoji">🤖</span>
+            <div class="fighter-name" id="botName">-</div>
+            <div class="fighter-item" id="botItem">-</div>
+            <div class="hp-track"><div class="hp-fill bot" id="botHpFill" style="width:100%"></div></div>
+          </div>
+        </div>
+        <div class="battle-log" id="battleLog"></div>
+        <button class="attack-btn" id="attackBtn">👊 こうげき！</button>
+      </div>
+    </div>
+
+    <div class="overlay hide" id="winOverlay">
+      <h2 id="winTitle">🎉 かった！ 🎉</h2>
+      <p id="winText"></p>
+      <button class="big-btn" id="retryBtn">🔄 もういちど えらぶ</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    // そうさく オリジナルの ヒーローたちだよ（じっさいの まんが・えいがの キャラクターは つかわず、にた テーマの じぶんだけの ヒーローを つくったよ）
+    const HEROES = [
+      { id: 'thread', name: 'いとまきレンジャー', emoji: '🕷️', item: '🕸️ねばねば糸', minDmg: 8, maxDmg: 14 },
+      { id: 'iron', name: 'てっこうレンジャー', emoji: '🤖', item: '🚀ロケットパンチ', minDmg: 10, maxDmg: 16 },
+      { id: 'flame', name: 'ほのおレンジャー', emoji: '🔥', item: '🔥ファイヤーボール', minDmg: 9, maxDmg: 15 },
+      { id: 'thunder', name: 'かみなりレンジャー', emoji: '⚡', item: '⚡サンダーアロー', minDmg: 8, maxDmg: 16 },
+      { id: 'shield', name: 'たてレンジャー', emoji: '🛡️', item: '🛡️ガードカウンター', minDmg: 7, maxDmg: 13 },
+      { id: 'cape', name: 'マントレンジャー', emoji: '🦸', item: '💨とっぷうパンチ', minDmg: 9, maxDmg: 14 },
+    ];
+
+    const BOTS = [
+      { id: 'ironbot', name: 'てつじんボット', emoji: '🤖', item: '🔨ハンマー', minDmg: 8, maxDmg: 14 },
+      { id: 'kaiju', name: 'かいじゅうボット', emoji: '👾', item: '👁️レーザービーム', minDmg: 9, maxDmg: 15 },
+      { id: 'powerarm', name: 'パワーアームボット', emoji: '🦾', item: '💥パワーこぶし', minDmg: 10, maxDmg: 16 },
+      { id: 'ufo', name: 'UFOボット', emoji: '🛸', item: '✨ビームほうしゃ', minDmg: 8, maxDmg: 15 },
+      { id: 'dragonbot', name: 'ドラゴンボット', emoji: '🐉', item: '🔥ほのおブレス', minDmg: 9, maxDmg: 16 },
+      { id: 'gearbot', name: 'ギアボット', emoji: '⚙️', item: '⚙️かいてんのこぎり', minDmg: 7, maxDmg: 13 },
+    ];
+
+    const heroGridEl = document.getElementById('heroGrid');
+    const botGridEl = document.getElementById('botGrid');
+    const okBtn = document.getElementById('okBtn');
+    const selectOverlay = document.getElementById('selectOverlay');
+    const battleView = document.getElementById('battleView');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTitleEl = document.getElementById('winTitle');
+    const winTextEl = document.getElementById('winText');
+    const hudLabelEl = document.getElementById('hudLabel');
+
+    let selectedHero = null;
+    let selectedBot = null;
+
+    function renderPickGrid(gridEl, list, onPick) {
+      list.forEach(item => {
+        const card = document.createElement('button');
+        card.className = 'pick-card';
+        card.innerHTML = `<span class="pick-emoji">${item.emoji}</span><span class="pick-name">${item.name}</span><span class="pick-item">${item.item}</span>`;
+        card.addEventListener('click', () => {
+          GameAudio.playClickTick();
+          gridEl.querySelectorAll('.pick-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          onPick(item);
+          updateOkBtn();
+        });
+        gridEl.appendChild(card);
+      });
+    }
+
+    function updateOkBtn() {
+      const ready = selectedHero && selectedBot;
+      okBtn.disabled = !ready;
+      okBtn.style.opacity = ready ? '1' : '0.5';
+    }
+
+    renderPickGrid(heroGridEl, HEROES, (item) => { selectedHero = item; });
+    renderPickGrid(botGridEl, BOTS, (item) => { selectedBot = item; });
+
+    // --- battle state ---
+    const heroEmojiEl = document.getElementById('heroEmoji');
+    const heroNameEl = document.getElementById('heroName');
+    const heroItemEl = document.getElementById('heroItem');
+    const heroHpFillEl = document.getElementById('heroHpFill');
+    const botEmojiEl = document.getElementById('botEmoji');
+    const botNameEl = document.getElementById('botName');
+    const botItemEl = document.getElementById('botItem');
+    const botHpFillEl = document.getElementById('botHpFill');
+    const battleLogEl = document.getElementById('battleLog');
+    const attackBtn = document.getElementById('attackBtn');
+
+    const MAX_HP = 100;
+    let heroHp = MAX_HP;
+    let botHp = MAX_HP;
+    let battling = false;
+    let botTimer = null;
+    let battleStart = 0;
+
+    function logLine(text) {
+      const p = document.createElement('div');
+      p.textContent = text;
+      battleLogEl.appendChild(p);
+      battleLogEl.scrollTop = battleLogEl.scrollHeight;
+    }
+
+    function randDmg(fighter) {
+      return Math.floor(fighter.minDmg + Math.random() * (fighter.maxDmg - fighter.minDmg + 1));
+    }
+
+    function startBattle() {
+      selectOverlay.classList.add('hide');
+      battleView.classList.remove('hide');
+      hudLabelEl.textContent = 'たたかいちゅう！';
+      heroEmojiEl.textContent = selectedHero.emoji;
+      heroNameEl.textContent = selectedHero.name;
+      heroItemEl.textContent = selectedHero.item;
+      botEmojiEl.textContent = selectedBot.emoji;
+      botNameEl.textContent = selectedBot.name;
+      botItemEl.textContent = selectedBot.item;
+      heroHp = MAX_HP;
+      botHp = MAX_HP;
+      heroHpFillEl.style.width = '100%';
+      botHpFillEl.style.width = '100%';
+      battleLogEl.innerHTML = '';
+      logLine(`${selectedHero.name} VS ${selectedBot.name}、スタート！`);
+      battling = true;
+      attackBtn.disabled = false;
+      battleStart = performance.now();
+      GameAudio.playBGM();
+
+      clearInterval(botTimer);
+      botTimer = setInterval(() => {
+        if (!battling) return;
+        const dmg = randDmg(selectedBot);
+        heroHp = Math.max(0, heroHp - dmg);
+        heroHpFillEl.style.width = (heroHp / MAX_HP * 100) + '%';
+        logLine(`${selectedBot.name}の ${selectedBot.item}！ ${dmg}ダメージ！`);
+        GameAudio.playFailBuzz();
+        if (heroHp <= 0) endBattle(false);
+      }, 1600);
+    }
+
+    attackBtn.addEventListener('click', () => {
+      if (!battling) return;
+      const dmg = randDmg(selectedHero);
+      botHp = Math.max(0, botHp - dmg);
+      botHpFillEl.style.width = (botHp / MAX_HP * 100) + '%';
+      logLine(`${selectedHero.name}の ${selectedHero.item}！ ${dmg}ダメージ！`);
+      GameAudio.playClickTick();
+      if (botHp <= 0) endBattle(true);
+    });
+
+    function endBattle(won) {
+      battling = false;
+      attackBtn.disabled = true;
+      clearInterval(botTimer);
+      GameAudio.stopBGM();
+      const elapsed = Math.round(((performance.now() - battleStart) / 1000) * 10) / 10;
+      if (won) {
+        GameAudio.playClearFanfare();
+        winTitleEl.textContent = '🎉 かった！ 🎉';
+        winTextEl.textContent = `${selectedHero.name}が ${selectedBot.name}を たおした！（${elapsed}びょう）`;
+        Leaderboard.showRankFlow({ gameId: 'hero-battle', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🦸 かった はやさ ランキング' });
+      } else {
+        GameAudio.playFailBuzz();
+        winTitleEl.textContent = '😢 まけちゃった…';
+        winTextEl.textContent = `${selectedBot.name}に まけちゃった。もういちど ちょうせん しよう！`;
+      }
+      winOverlay.classList.remove('hide');
+    }
+
+    document.getElementById('okBtn').addEventListener('click', () => {
+      if (!selectedHero || !selectedBot) return;
+      startBattle();
+    });
+
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      winOverlay.classList.add('hide');
+      battleView.classList.add('hide');
+      selectOverlay.classList.remove('hide');
+      hudLabelEl.textContent = 'ヒーローと てきを えらんでね';
+      selectedHero = null;
+      selectedBot = null;
+      heroGridEl.querySelectorAll('.pick-card').forEach(c => c.classList.remove('selected'));
+      botGridEl.querySelectorAll('.pick-card').forEach(c => c.classList.remove('selected'));
+      updateOkBtn();
+    });
+  </script>
+</body>
+</html>
