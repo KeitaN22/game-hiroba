@@ -361,7 +361,7 @@
       { x: 64, y: 76 },
     ];
     const DOOR_POS = { x: 3, y: 46 };
-    const SINK_POS = { x: 88, y: 88 };
+    const SINK_POS = { x: 88, y: 58 };
     const CHEF_HOME = { x: 50, y: 14 };
     const PROXIMITY = 50; // px
     const GRAB_HOLD_MS = 550;
@@ -793,6 +793,9 @@
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    sinkZoneEl.style.left = SINK_POS.x + '%';
+    sinkZoneEl.style.top = SINK_POS.y + '%';
 
     buildSeats();
     renderSeats();
