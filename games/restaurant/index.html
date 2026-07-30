@@ -696,9 +696,8 @@
       if (input.left) dx -= 1;
       if (input.right) dx += 1;
       if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
-      const minY = arenaEl.clientHeight * 0.24;
       chefX = Math.max(16, Math.min(arenaEl.clientWidth - 16, chefX + dx * speed * dt));
-      chefY = Math.max(minY, Math.min(arenaEl.clientHeight - 16, chefY + dy * speed * dt));
+      chefY = Math.max(16, Math.min(arenaEl.clientHeight - 16, chefY + dy * speed * dt));
       chefSpriteEl.style.left = chefX + 'px';
       chefSpriteEl.style.top = chefY + 'px';
 
