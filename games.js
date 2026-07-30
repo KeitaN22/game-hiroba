@@ -132,4 +132,12 @@ const GAMES = [
     path: 'games/hero-battle/index.html',
     desc: 'すきな ヒーローと たたかう あいてを えらんで、たいけつ しよう！',
   },
+  {
+    id: 'restaurant',
+    title: 'そうすけの レストランタイミング',
+    emoji: '🍽️',
+    color: '#FF9A56',
+    path: 'games/restaurant/index.html',
+    desc: 'ちゅうもんを うけて、りょうりを つくって サーブしよう！さいごは あらって かんりょう。',
+  },
 ];

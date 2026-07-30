@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの レストランタイミング</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 460px;
+    background: #FFF6DA;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .seats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .seat-card {
+    border: 3px solid transparent;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+    padding: 8px 2px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    min-height: 84px;
+    justify-content: center;
+    cursor: default;
+  }
+  .seat-card.tappable { cursor: pointer; border-color: #FFD166; }
+  .seat-card.active { border-color: #4C7BF3; background: #EAF1FF; }
+  .seat-num { font-size: 0.6rem; color: #999; font-weight: bold; }
+  .seat-customer { font-size: 1.6rem; }
+  .seat-order { font-size: 1.1rem; }
+  .seat-status { font-size: 0.6rem; color: #777; font-weight: bold; text-align: center; }
+
+  .kitchen-panel {
+    background: rgba(255,255,255,0.8);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .kitchen-title { font-size: 1rem; font-weight: bold; color: #333; text-align: center; }
+  .ingredient-checklist { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .ingredient-check {
+    font-size: 1.6rem; width: 42px; height: 42px; border-radius: 10px;
+    background: #eee; display: flex; align-items: center; justify-content: center;
+    opacity: 0.4;
+  }
+  .ingredient-check.got { opacity: 1; background: #C8F7C5; }
+
+  .fridge-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .fridge-item {
+    font-size: 1.6rem;
+    border: none; border-radius: 10px;
+    background: #DCEBFF;
+    padding: 8px 0;
+    cursor: pointer;
+  }
+  .fridge-item:active { transform: translateY(2px); }
+  .fridge-item.used { opacity: 0.35; }
+
+  .cook-station { display: none; flex-direction: column; gap: 8px; align-items: center; }
+  .cook-station.show { display: flex; }
+  .cook-bar-track {
+    width: 100%; height: 26px; background: #eee; border-radius: 999px; position: relative; overflow: hidden;
+  }
+  .cook-bar-zone {
+    position: absolute; top: 0; bottom: 0; background: rgba(76,175,80,0.4);
+  }
+  .cook-bar-marker {
+    position: absolute; top: 0; bottom: 0; width: 6px; background: #333;
+  }
+  .cook-btn, .finish-btn, .serve-btn, .rinse-btn {
+    font-size: 0.95rem; font-weight: bold; padding: 10px 24px; border: none; border-radius: 999px;
+    background: #FF9A56; color: #fff; cursor: pointer;
+  }
+  .cook-btn:active, .finish-btn:active, .serve-btn:active, .rinse-btn:active { transform: translateY(3px); }
+  .finish-btn { background: #4CAF50; display: none; }
+  .finish-btn.show { display: inline-block; }
+
+  .sink-panel {
+    background: rgba(255,255,255,0.8);
+    border-radius: 16px;
+    padding: 14px;
+    display: none;
+    flex-direction: column; align-items: center; gap: 10px;
+  }
+  .sink-panel.show { display: flex; }
+  .sink-icon { font-size: 2.4rem; }
+  .rinse-splash { font-size: 1.6rem; opacity: 0; transition: opacity 0.2s; }
+  .rinse-splash.on { opacity: 1; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🍽️ そうすけの レストランタイミング</h1>
+
+  <div class="hud" id="hud">
+    <span>サーブした 🍽️ <span id="servedCount">0</span></span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">90</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="seats-row" id="seatsRow"></div>
+
+      <div class="kitchen-panel hide" id="kitchenPanel">
+        <div class="kitchen-title" id="kitchenTitle">-</div>
+        <div class="ingredient-checklist" id="ingredientChecklist"></div>
+        <div class="fridge-grid" id="fridgeGrid"></div>
+        <button class="finish-btn" id="finishBtn">✅ できた！</button>
+        <div class="cook-station" id="cookStation">
+          <div class="cook-bar-track">
+            <div class="cook-bar-zone" id="cookBarZone"></div>
+            <div class="cook-bar-marker" id="cookBarMarker"></div>
+          </div>
+          <button class="cook-btn" id="cookBtn">🔥 やく！</button>
+        </div>
+      </div>
+
+      <div class="sink-panel hide" id="sinkPanel">
+        <div class="sink-icon">🚰</div>
+        <div class="rinse-splash" id="rinseSplash">💦💦💦</div>
+        <button class="rinse-btn" id="rinseBtn">ジャー！あらう</button>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🍽️ レストランタイミング</h2>
+        <p>
+          おきゃくさんが せきに すわったら タッチして ちゅうもんを うける。<br>
+          れいぞうこから ざいりょうを えらんで、フライパンや オーブンで やこう！<br>
+          （ちょうどいい ところで「やく！」ボタンを おそう）<br>
+          できたら せきに もどって サーブ！ たべおわったら 🚰で ジャーッと あらってね。
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 えいぎょう しゅうりょう！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const DISHES = {
+      sushi: { name: 'おすし', emoji: '🍣', ingredients: ['🍚', '🐟'], station: 'cold' },
+      tempura: { name: 'てんぷら', emoji: '🍤', ingredients: ['🍤', '🥕'], station: 'pan' },
+      somen: { name: 'そうめん', emoji: '🍜', ingredients: ['🍜', '🥒'], station: 'cold' },
+      curry: { name: 'カレー', emoji: '🍛', ingredients: ['🥕', '🥔', '🧅', '🥩'], station: 'oven' },
+    };
+    const DISH_KEYS = Object.keys(DISHES);
+    const FRIDGE_ITEMS = ['🍚', '🐟', '🍤', '🥕', '🍜', '🥒', '🥔', '🧅', '🥩'];
+    const CUSTOMER_EMOJIS = ['🧑', '👩', '👨', '👧', '👦', '🧓'];
+
+    const SEAT_COUNT = 5;
+    const GAME_TIME = 90;
+
+    const seatsRowEl = document.getElementById('seatsRow');
+    const kitchenPanel = document.getElementById('kitchenPanel');
+    const kitchenTitleEl = document.getElementById('kitchenTitle');
+    const ingredientChecklistEl = document.getElementById('ingredientChecklist');
+    const fridgeGridEl = document.getElementById('fridgeGrid');
+    const finishBtn = document.getElementById('finishBtn');
+    const cookStation = document.getElementById('cookStation');
+    const cookBarZone = document.getElementById('cookBarZone');
+    const cookBarMarker = document.getElementById('cookBarMarker');
+    const cookBtn = document.getElementById('cookBtn');
+    const sinkPanel = document.getElementById('sinkPanel');
+    const rinseSplash = document.getElementById('rinseSplash');
+    const rinseBtn = document.getElementById('rinseBtn');
+    const servedCountEl = document.getElementById('servedCount');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const hudEl = document.getElementById('hud');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let seats = [];
+    let seatEls = [];
+    let activeSeatId = null;
+    let activeDish = null;
+    let collectedIngredients = [];
+    let dishReady = false;
+    let sinkSeatId = null;
+    let servedCount = 0;
+    let timeLeft = GAME_TIME;
+    let playing = false;
+    let countdownTimer = null;
+    let spawnTimer = null;
+    let cookProgress = 0, cookDir = 1, cookLoopId = null;
+    let cookZoneStart = 0.4, cookZoneEnd = 0.6;
+
+    function resetGame() {
+      seats = Array.from({ length: SEAT_COUNT }, (_, i) => ({ id: i, state: 'empty', dish: null }));
+      activeSeatId = null;
+      activeDish = null;
+      collectedIngredients = [];
+      dishReady = false;
+      sinkSeatId = null;
+      servedCount = 0;
+      timeLeft = GAME_TIME;
+      servedCountEl.textContent = 0;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      kitchenPanel.classList.add('hide');
+      sinkPanel.classList.add('hide');
+    }
+
+    function buildSeats() {
+      seatsRowEl.innerHTML = '';
+      seatEls = seats.map(seat => {
+        const card = document.createElement('div');
+        card.className = 'seat-card';
+        card.addEventListener('click', () => onSeatTap(seat.id));
+        seatsRowEl.appendChild(card);
+        return card;
+      });
+    }
+
+    function renderSeats() {
+      seats.forEach(seat => {
+        const el = seatEls[seat.id];
+        el.classList.toggle('active', seat.id === activeSeatId);
+        el.classList.remove('tappable');
+        el.innerHTML = `<span class="seat-num">${seat.id + 1}</span>`;
+        if (seat.state === 'empty') {
+          el.innerHTML += `<span class="seat-customer">🪑</span><span class="seat-status">あき せき</span>`;
+        } else if (seat.state === 'waiting') {
+          const readyMark = (seat.id === activeSeatId && dishReady) ? '✅' : '';
+          el.classList.add('tappable');
+          el.innerHTML += `<span class="seat-customer">${seat.customerEmoji}</span><span class="seat-order">${DISHES[seat.dish].emoji}</span><span class="seat-status">${readyMark ? 'サーブ できる！' : 'ちゅうもんちゅう'}</span>`;
+        } else if (seat.state === 'eating') {
+          el.innerHTML += `<span class="seat-customer">${seat.customerEmoji}</span><span class="seat-order">${DISHES[seat.dish].emoji}😋</span><span class="seat-status">たべてるよ</span>`;
+        } else if (seat.state === 'dirty') {
+          el.classList.add('tappable');
+          el.innerHTML += `<span class="seat-customer">🍽️</span><span class="seat-status">あらってね</span>`;
+        }
+      });
+    }
+
+    function spawnCustomer() {
+      if (!playing) return;
+      const emptySeats = seats.filter(s => s.state === 'empty');
+      if (emptySeats.length === 0) return;
+      const seat = emptySeats[Math.floor(Math.random() * emptySeats.length)];
+      seat.state = 'waiting';
+      seat.dish = DISH_KEYS[Math.floor(Math.random() * DISH_KEYS.length)];
+      seat.customerEmoji = CUSTOMER_EMOJIS[Math.floor(Math.random() * CUSTOMER_EMOJIS.length)];
+      GameAudio.playClickTick();
+      renderSeats();
+    }
+
+    function onSeatTap(seatId) {
+      if (!playing) return;
+      const seat = seats[seatId];
+      if (seat.state === 'waiting') {
+        if (dishReady && seatId === activeSeatId) {
+          serveSeat(seatId);
+        } else if (activeSeatId === null) {
+          openKitchenFor(seatId);
+        }
+      } else if (seat.state === 'dirty') {
+        openSinkFor(seatId);
+      }
+    }
+
+    function openKitchenFor(seatId) {
+      activeSeatId = seatId;
+      activeDish = DISHES[seats[seatId].dish];
+      collectedIngredients = [];
+      dishReady = false;
+      GameAudio.playClickTick();
+      renderKitchen();
+      kitchenPanel.classList.remove('hide');
+      sinkPanel.classList.add('hide');
+      renderSeats();
+    }
+
+    function renderKitchen() {
+      kitchenTitleEl.textContent = `${activeDish.emoji} ${activeDish.name} を つくろう！`;
+      ingredientChecklistEl.innerHTML = '';
+      activeDish.ingredients.forEach(ing => {
+        const box = document.createElement('div');
+        box.className = 'ingredient-check' + (collectedIngredients.includes(ing) ? ' got' : '');
+        box.textContent = ing;
+        ingredientChecklistEl.appendChild(box);
+      });
+
+      fridgeGridEl.innerHTML = '';
+      FRIDGE_ITEMS.forEach(ing => {
+        const btn = document.createElement('button');
+        const needed = activeDish.ingredients.includes(ing);
+        const used = collectedIngredients.includes(ing);
+        btn.className = 'fridge-item' + (used ? ' used' : '');
+        btn.textContent = ing;
+        btn.addEventListener('click', () => {
+          if (!needed || used) return;
+          collectedIngredients.push(ing);
+          GameAudio.playClickTick();
+          renderKitchen();
+          checkIngredientsDone();
+        });
+        fridgeGridEl.appendChild(btn);
+      });
+
+      const allCollected = activeDish.ingredients.every(ing => collectedIngredients.includes(ing));
+      if (allCollected) {
+        if (activeDish.station === 'cold') {
+          finishBtn.classList.add('show');
+          cookStation.classList.remove('show');
+        } else {
+          finishBtn.classList.remove('show');
+          cookStation.classList.add('show');
+          startCookLoop();
+        }
+      } else {
+        finishBtn.classList.remove('show');
+        cookStation.classList.remove('show');
+        stopCookLoop();
+      }
+    }
+
+    function checkIngredientsDone() {
+      // renderKitchen() already handles revealing the cook UI
+    }
+
+    function startCookLoop() {
+      if (cookLoopId) return;
+      cookProgress = 0;
+      cookDir = 1;
+      cookBarZone.style.left = (cookZoneStart * 100) + '%';
+      cookBarZone.style.width = ((cookZoneEnd - cookZoneStart) * 100) + '%';
+      function loop() {
+        if (!cookStation.classList.contains('show')) { cookLoopId = null; return; }
+        cookProgress += cookDir * 0.018;
+        if (cookProgress >= 1) { cookProgress = 1; cookDir = -1; }
+        if (cookProgress <= 0) { cookProgress = 0; cookDir = 1; }
+        cookBarMarker.style.left = (cookProgress * 100) + '%';
+        cookLoopId = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+    function stopCookLoop() {
+      if (cookLoopId) cancelAnimationFrame(cookLoopId);
+      cookLoopId = null;
+    }
+
+    cookBtn.addEventListener('click', () => {
+      if (cookProgress >= cookZoneStart && cookProgress <= cookZoneEnd) {
+        GameAudio.playClearFanfare();
+        stopCookLoop();
+        cookStation.classList.remove('show');
+        markDishReady();
+      } else {
+        GameAudio.playFailBuzz();
+      }
+    });
+
+    finishBtn.addEventListener('click', () => {
+      GameAudio.playClickTick();
+      finishBtn.classList.remove('show');
+      markDishReady();
+    });
+
+    function markDishReady() {
+      dishReady = true;
+      kitchenPanel.classList.add('hide');
+      renderSeats();
+    }
+
+    function serveSeat(seatId) {
+      const seat = seats[seatId];
+      seat.state = 'eating';
+      GameAudio.playClickTick();
+      activeSeatId = null;
+      activeDish = null;
+      collectedIngredients = [];
+      dishReady = false;
+      renderSeats();
+      setTimeout(() => {
+        if (!playing) return;
+        seat.state = 'dirty';
+        servedCount++;
+        servedCountEl.textContent = servedCount;
+        renderSeats();
+      }, 3000 + Math.random() * 1500);
+    }
+
+    function openSinkFor(seatId) {
+      sinkSeatId = seatId;
+      sinkPanel.classList.remove('hide');
+      kitchenPanel.classList.add('hide');
+    }
+
+    rinseBtn.addEventListener('click', () => {
+      if (sinkSeatId === null) return;
+      GameAudio.playClickTick();
+      rinseSplash.classList.add('on');
+      setTimeout(() => rinseSplash.classList.remove('on'), 300);
+      const seat = seats[sinkSeatId];
+      seat.state = 'empty';
+      seat.dish = null;
+      sinkSeatId = null;
+      sinkPanel.classList.add('hide');
+      renderSeats();
+    });
+
+    function startGame() {
+      resetGame();
+      buildSeats();
+      renderSeats();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 15) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          endGame();
+        }
+      }, 1000);
+
+      clearInterval(spawnTimer);
+      spawnTimer = setInterval(spawnCustomer, 3500);
+      spawnCustomer();
+    }
+
+    function endGame() {
+      playing = false;
+      clearInterval(countdownTimer);
+      clearInterval(spawnTimer);
+      stopCookLoop();
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = `${servedCount}にんの おきゃくさんに サーブできたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'restaurant', score: servedCount, higherIsBetter: true, unit: 'にん', title: '🍽️ サーブした にんずう ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    buildSeats();
+    renderSeats();
+  </script>
+</body>
+</html>
