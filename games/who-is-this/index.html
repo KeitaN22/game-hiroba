@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの だれかな？</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #A8E6CF 0%, #E0C3FC 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .intro-grid { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .intro-card {
+    background: #FFF6D8; border-radius: 16px; padding: 12px; width: 110px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+  }
+  .intro-emoji { font-size: 2.6rem; }
+  .intro-name { font-size: 0.85rem; font-weight: bold; color: #333; text-align: center; }
+
+  .quiz-emoji { font-size: 5rem; }
+  .quiz-hint { font-size: 0.95rem; color: #666; }
+  .password-row { display: flex; gap: 8px; width: 100%; max-width: 300px; }
+  .password-input {
+    flex: 1; min-width: 0;
+    font-size: 1.1rem; padding: 12px 14px;
+    border: 2px solid #ccc; border-radius: 12px;
+    text-align: center;
+  }
+  .password-input.wrong { border-color: #FF3B3B; animation: shake 0.3s ease; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .submit-btn {
+    font-size: 1rem; font-weight: bold; padding: 12px 20px;
+    border: none; border-radius: 12px; background: #4C7BF3; color: #fff; cursor: pointer;
+  }
+  .submit-btn:active { transform: translateY(2px); }
+  .feedback-msg { font-size: 0.95rem; font-weight: bold; min-height: 24px; }
+  .feedback-msg.ok { color: #4CAF50; }
+  .feedback-msg.ng { color: #FF3B3B; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1.05rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🕵️ そうすけの だれかな？</h1>
+
+  <div class="hud">
+    <span>あたった 🎯 <span id="correctCount">0</span>/<span id="totalCount">6</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="overlay" id="startOverlay" style="position: static; background: none; color: #333;">
+        <h2>🕵️ だれかな？</h2>
+        <p>この 3にんを おぼえてね！なまえを パスワードで うちこむよ。</p>
+        <div class="intro-grid" id="introGrid"></div>
+        <button class="big-btn" id="startBtn" style="margin-top:16px;">▶ おぼえた！スタート</button>
+      </div>
+
+      <div class="hide" id="quizView" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div class="quiz-emoji" id="quizEmoji">❓</div>
+        <div class="quiz-hint">この この なまえは？パスワードで こたえてね</div>
+        <div class="password-row">
+          <input class="password-input" id="passwordInput" placeholder="パスワード" maxlength="12" autocomplete="off">
+          <button class="submit-btn" id="submitBtn">けってい</button>
+        </div>
+        <div class="feedback-msg" id="feedbackMsg">&nbsp;</div>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    // オリジナルの 3にんの キャラクターだよ
+    const CHARACTERS = [
+      { name: 'もじゃもじゃくん', emoji: '🟢', desc: 'もじゃもじゃの みどりの モンスター' },
+      { name: 'ぴかぴかちゃん', emoji: '⭐', desc: 'きらきら ひかる きいろの ほし' },
+      { name: 'のっしーくん', emoji: '🦕', desc: 'おおきくて やさしい あおの きょうりゅう' },
+    ];
+
+    const ROUND_COUNT = 6;
+
+    const introGridEl = document.getElementById('introGrid');
+    const startOverlay = document.getElementById('startOverlay');
+    const quizView = document.getElementById('quizView');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+    const quizEmojiEl = document.getElementById('quizEmoji');
+    const passwordInput = document.getElementById('passwordInput');
+    const feedbackMsgEl = document.getElementById('feedbackMsg');
+    const correctCountEl = document.getElementById('correctCount');
+    const totalCountEl = document.getElementById('totalCount');
+
+    CHARACTERS.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'intro-card';
+      card.innerHTML = `<span class="intro-emoji">${c.emoji}</span><span class="intro-name">${c.name}</span>`;
+      introGridEl.appendChild(card);
+    });
+    totalCountEl.textContent = ROUND_COUNT;
+
+    let roundIndex = 0;
+    let correctCount = 0;
+    let currentCharacter = null;
+    let playing = false;
+    let answered = false;
+
+    function pickCharacter() {
+      return CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+    }
+
+    function normalize(text) {
+      return text.trim();
+    }
+
+    function nextRound() {
+      if (roundIndex >= ROUND_COUNT) {
+        endGame();
+        return;
+      }
+      currentCharacter = pickCharacter();
+      quizEmojiEl.textContent = currentCharacter.emoji;
+      passwordInput.value = '';
+      passwordInput.classList.remove('wrong');
+      feedbackMsgEl.textContent = ' ';
+      feedbackMsgEl.className = 'feedback-msg';
+      answered = false;
+      passwordInput.focus();
+    }
+
+    function submitAnswer() {
+      if (!playing || answered) return;
+      const guess = normalize(passwordInput.value);
+      if (!guess) return;
+      if (guess === currentCharacter.name) {
+        answered = true;
+        correctCount++;
+        correctCountEl.textContent = correctCount;
+        roundIndex++;
+        GameAudio.playClearFanfare();
+        feedbackMsgEl.textContent = `せいかい！ ${currentCharacter.name} だよ！`;
+        feedbackMsgEl.classList.add('ok');
+        setTimeout(nextRound, 1000);
+      } else {
+        GameAudio.playFailBuzz();
+        passwordInput.classList.add('wrong');
+        setTimeout(() => passwordInput.classList.remove('wrong'), 300);
+        feedbackMsgEl.textContent = 'ちがうよ、もういちど！';
+        feedbackMsgEl.classList.add('ng');
+      }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitAnswer();
+    });
+
+    function startGame() {
+      roundIndex = 0;
+      correctCount = 0;
+      correctCountEl.textContent = 0;
+      playing = true;
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      quizView.classList.remove('hide');
+      GameAudio.playBGM();
+      nextRound();
+    }
+
+    function endGame() {
+      playing = false;
+      quizView.classList.add('hide');
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTitleEl.textContent = correctCount === ROUND_COUNT ? '🏆 パーフェクト！ 🏆' : '🎉 おわり！ 🎉';
+      endTextEl.textContent = `${ROUND_COUNT}もん中 ${correctCount}もん あたったね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'who-is-this', score: correctCount, higherIsBetter: true, unit: 'もん', title: '🕵️ あたった かず ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

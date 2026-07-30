@@ -140,4 +140,12 @@ const GAMES = [
     path: 'games/restaurant/index.html',
     desc: 'ちゅうもんを うけて、りょうりを つくって サーブしよう！さいごは あらって かんりょう。',
   },
+  {
+    id: 'who-is-this',
+    title: 'そうすけの だれかな？',
+    emoji: '🕵️',
+    color: '#9B59B6',
+    path: 'games/who-is-this/index.html',
+    desc: '3にんの キャラクターを おぼえて、なまえを パスワードで こたえよう！',
+  },
 ];
