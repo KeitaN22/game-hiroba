@@ -24,45 +24,115 @@
   .arena {
     position: relative;
     width: 100%;
-    min-height: 460px;
-    background: #FFF6DA;
+    height: 480px;
     border-radius: 20px;
     box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
-    padding: 16px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    overflow: hidden;
+    background:
+      linear-gradient(#EAD9B8 0 22%, transparent 22%),
+      repeating-linear-gradient(90deg, #E8C68A 0 38px, #DDB876 38px 40px);
+    background-color: #EAC68A;
   }
 
-  .seats-row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
+  /* きっちん ゾーン（うえの おびの ぶぶん） */
+  .kitchen-zone {
+    position: absolute; left: 0; right: 0; top: 0; height: 22%;
+    background: linear-gradient(180deg, #D8DEE4 0%, #C3CBD3 100%);
+    border-bottom: 4px solid #9AA5AF;
+    display: flex; align-items: flex-end; justify-content: space-around;
+    padding-bottom: 6px;
+    box-sizing: border-box;
   }
-  .seat-card {
-    border: 3px solid transparent;
-    border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
-    padding: 8px 2px;
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    min-height: 84px;
-    justify-content: center;
+  .kitchen-label {
+    position: absolute; top: 4px; left: 10px;
+    font-size: 0.62rem; font-weight: bold; color: #556;
+    background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 999px;
+  }
+  .kitchen-appliance { text-align: center; }
+  .kitchen-appliance .appl-emoji {
+    font-size: 1.6rem; display: block;
+    background: #fff; border-radius: 10px; padding: 4px 8px;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  }
+  .chef-figure { text-align: center; }
+  .chef-figure .chef-emoji { font-size: 2.1rem; display: block; animation: chefBob 1.6s ease-in-out infinite; }
+  @keyframes chefBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+  /* ドア */
+  .door {
+    position: absolute; left: 0; top: 32%; width: 22px; height: 60px;
+    background: #8B5E3C; border-radius: 0 6px 6px 0;
+    box-shadow: inset -3px 0 0 #6B4526;
+    display: flex; align-items: center; justify-content: flex-end;
+  }
+  .door::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #FFD166; margin-right: 3px; }
+  .door-label { position: absolute; left: 2px; top: 32%; transform: translateY(-16px); font-size: 0.55rem; font-weight: bold; color: #6B4526; }
+
+  /* おてあらい／シンク ゾーン */
+  .sink-zone {
+    position: absolute; right: 2%; bottom: 3%; width: 68px; height: 74px;
+    background: #DCEBEF; border: 3px solid #B7D2D8; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     cursor: default;
   }
-  .seat-card.tappable { cursor: pointer; border-color: #FFD166; }
-  .seat-card.active { border-color: #4C7BF3; background: #EAF1FF; }
-  .seat-num { font-size: 0.6rem; color: #999; font-weight: bold; }
-  .seat-customer { font-size: 1.6rem; }
-  .seat-order { font-size: 1.1rem; }
-  .seat-status { font-size: 0.6rem; color: #777; font-weight: bold; text-align: center; }
+  .sink-zone .sink-basin { font-size: 1.8rem; }
+  .sink-zone .sink-label { font-size: 0.55rem; font-weight: bold; color: #556; }
 
-  .kitchen-panel {
-    background: rgba(255,255,255,0.8);
+  /* テーブル + いす */
+  .table-unit {
+    position: absolute;
+    width: 78px;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center;
+    cursor: default;
+  }
+  .table-unit.tappable { cursor: pointer; }
+  .chair-graphic {
+    width: 34px; height: 14px; background: #C9A063; border-radius: 6px;
+    margin-bottom: -6px; box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  }
+  .table-graphic {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #E7C89A, #C9975B);
+    border: 4px solid #A97C4F;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    position: relative;
+    transition: box-shadow 0.15s ease;
+  }
+  .table-unit.tappable .table-graphic { box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 0 0 4px #FFD166; }
+  .table-unit.active .table-graphic { box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 0 0 4px #4C7BF3; }
+  .seat-num {
+    position: absolute; top: -6px; left: -6px;
+    font-size: 0.55rem; font-weight: bold; color: #fff;
+    background: #8B5E3C; border-radius: 50%; width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .seat-customer { font-size: 1.5rem; line-height: 1; }
+  .seat-order { font-size: 1rem; line-height: 1; }
+  .seat-status { font-size: 0.55rem; font-weight: bold; color: #444; text-align: center; margin-top: 3px; background: rgba(255,255,255,0.75); border-radius: 8px; padding: 1px 4px; }
+
+  .walking-customer {
+    position: absolute;
+    font-size: 1.5rem;
+    transform: translate(-50%, -50%);
+    transition: left 0.9s ease-in-out, top 0.9s ease-in-out;
+    animation: walkBob 0.3s ease-in-out infinite;
+    z-index: 5;
+  }
+  @keyframes walkBob { 0%, 100% { margin-top: 0; } 50% { margin-top: -4px; } }
+
+  /* きっちん・シンクの そうさパネル（フローティング） */
+  .float-panel {
+    position: absolute; left: 50%; bottom: 6%;
+    transform: translateX(-50%);
+    width: 92%; max-width: 380px;
+    background: rgba(255,255,255,0.95);
     border-radius: 16px;
     padding: 12px;
     display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 8;
   }
   .kitchen-title { font-size: 1rem; font-weight: bold; color: #333; text-align: center; }
   .ingredient-checklist { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
@@ -99,24 +169,17 @@
   .cook-bar-marker {
     position: absolute; top: 0; bottom: 0; width: 6px; background: #333;
   }
-  .cook-btn, .finish-btn, .serve-btn, .rinse-btn {
+  .cook-btn, .finish-btn, .serve-btn, .rinse-btn, .panel-close-btn {
     font-size: 0.95rem; font-weight: bold; padding: 10px 24px; border: none; border-radius: 999px;
     background: #FF9A56; color: #fff; cursor: pointer;
   }
-  .cook-btn:active, .finish-btn:active, .serve-btn:active, .rinse-btn:active { transform: translateY(3px); }
+  .cook-btn:active, .finish-btn:active, .serve-btn:active, .rinse-btn:active, .panel-close-btn:active { transform: translateY(3px); }
   .finish-btn { background: #4CAF50; display: none; }
   .finish-btn.show { display: inline-block; }
+  .panel-close-btn { background: #999; }
 
-  .sink-panel {
-    background: rgba(255,255,255,0.8);
-    border-radius: 16px;
-    padding: 14px;
-    display: none;
-    flex-direction: column; align-items: center; gap: 10px;
-  }
-  .sink-panel.show { display: flex; }
-  .sink-icon { font-size: 2.4rem; }
-  .rinse-splash { font-size: 1.6rem; opacity: 0; transition: opacity 0.2s; }
+  .sink-panel .sink-icon { font-size: 2.4rem; text-align: center; }
+  .rinse-splash { font-size: 1.6rem; opacity: 0; transition: opacity 0.2s; text-align: center; }
   .rinse-splash.on { opacity: 1; }
 
   .overlay {
@@ -143,10 +206,26 @@
   </div>
 
   <div class="stage-wrap">
-    <div class="arena">
-      <div class="seats-row" id="seatsRow"></div>
+    <div class="arena" id="arena">
+      <div class="kitchen-zone">
+        <span class="kitchen-label">🍳 キッチン</span>
+        <div class="kitchen-appliance"><span class="appl-emoji">🧊</span></div>
+        <div class="chef-figure"><span class="chef-emoji">👨‍🍳</span></div>
+        <div class="kitchen-appliance"><span class="appl-emoji">🔥</span></div>
+      </div>
 
-      <div class="kitchen-panel hide" id="kitchenPanel">
+      <div class="door"></div>
+      <div class="door-label">🚪 いりぐち</div>
+
+      <div class="sink-zone">
+        <span class="sink-basin">🚰</span>
+        <span class="sink-label">おてあらい</span>
+      </div>
+
+      <div id="tablesLayer"></div>
+      <div id="walkersLayer"></div>
+
+      <div class="float-panel hide" id="kitchenPanel">
         <div class="kitchen-title" id="kitchenTitle">-</div>
         <div class="ingredient-checklist" id="ingredientChecklist"></div>
         <div class="fridge-grid" id="fridgeGrid"></div>
@@ -158,9 +237,10 @@
           </div>
           <button class="cook-btn" id="cookBtn">🔥 やく！</button>
         </div>
+        <button class="panel-close-btn" id="kitchenCloseBtn">とじる</button>
       </div>
 
-      <div class="sink-panel hide" id="sinkPanel">
+      <div class="float-panel sink-panel hide" id="sinkPanel">
         <div class="sink-icon">🚰</div>
         <div class="rinse-splash" id="rinseSplash">💦💦💦</div>
         <button class="rinse-btn" id="rinseBtn">ジャー！あらう</button>
@@ -169,10 +249,10 @@
       <div class="overlay" id="startOverlay">
         <h2>🍽️ レストランタイミング</h2>
         <p>
-          おきゃくさんが せきに すわったら タッチして ちゅうもんを うける。<br>
+          おきゃくさんが ドアから きて せきに すわるよ。すわってる せきを タッチして ちゅうもんを うける。<br>
           れいぞうこから ざいりょうを えらんで、フライパンや オーブンで やこう！<br>
           （ちょうどいい ところで「やく！」ボタンを おそう）<br>
-          できたら せきに もどって サーブ！ たべおわったら 🚰で ジャーッと あらってね。
+          できたら せきに もどって サーブ！ たべおわったら 🚰おてあらいで ジャーッと あらってね。
         </p>
         <button class="big-btn" id="startBtn">▶ スタート</button>
       </div>
@@ -207,7 +287,19 @@
     const SEAT_COUNT = 5;
     const GAME_TIME = 90;
 
-    const seatsRowEl = document.getElementById('seatsRow');
+    // ゆか の どこに テーブルが あるか（%ざひょう）
+    const TABLE_POS = [
+      { x: 24, y: 46 },
+      { x: 50, y: 40 },
+      { x: 76, y: 46 },
+      { x: 36, y: 76 },
+      { x: 64, y: 76 },
+    ];
+    const DOOR_POS = { x: 3, y: 46 };
+
+    const arenaEl = document.getElementById('arena');
+    const tablesLayerEl = document.getElementById('tablesLayer');
+    const walkersLayerEl = document.getElementById('walkersLayer');
     const kitchenPanel = document.getElementById('kitchenPanel');
     const kitchenTitleEl = document.getElementById('kitchenTitle');
     const ingredientChecklistEl = document.getElementById('ingredientChecklist');
@@ -217,6 +309,7 @@
     const cookBarZone = document.getElementById('cookBarZone');
     const cookBarMarker = document.getElementById('cookBarMarker');
     const cookBtn = document.getElementById('cookBtn');
+    const kitchenCloseBtn = document.getElementById('kitchenCloseBtn');
     const sinkPanel = document.getElementById('sinkPanel');
     const rinseSplash = document.getElementById('rinseSplash');
     const rinseBtn = document.getElementById('rinseBtn');
@@ -256,16 +349,19 @@
       hudEl.classList.remove('urgent');
       kitchenPanel.classList.add('hide');
       sinkPanel.classList.add('hide');
+      walkersLayerEl.innerHTML = '';
     }
 
     function buildSeats() {
-      seatsRowEl.innerHTML = '';
+      tablesLayerEl.innerHTML = '';
       seatEls = seats.map(seat => {
-        const card = document.createElement('div');
-        card.className = 'seat-card';
-        card.addEventListener('click', () => onSeatTap(seat.id));
-        seatsRowEl.appendChild(card);
-        return card;
+        const unit = document.createElement('div');
+        unit.className = 'table-unit';
+        unit.style.left = TABLE_POS[seat.id].x + '%';
+        unit.style.top = TABLE_POS[seat.id].y + '%';
+        unit.addEventListener('click', () => onSeatTap(seat.id));
+        tablesLayerEl.appendChild(unit);
+        return unit;
       });
     }
 
@@ -274,19 +370,22 @@
         const el = seatEls[seat.id];
         el.classList.toggle('active', seat.id === activeSeatId);
         el.classList.remove('tappable');
-        el.innerHTML = `<span class="seat-num">${seat.id + 1}</span>`;
+        let inner = `<div class="chair-graphic"></div><div class="table-graphic"><span class="seat-num">${seat.id + 1}</span>`;
         if (seat.state === 'empty') {
-          el.innerHTML += `<span class="seat-customer">🪑</span><span class="seat-status">あき せき</span>`;
+          inner += `</div><div class="seat-status">あき せき</div>`;
         } else if (seat.state === 'waiting') {
-          const readyMark = (seat.id === activeSeatId && dishReady) ? '✅' : '';
+          const readyMark = (seat.id === activeSeatId && dishReady);
           el.classList.add('tappable');
-          el.innerHTML += `<span class="seat-customer">${seat.customerEmoji}</span><span class="seat-order">${DISHES[seat.dish].emoji}</span><span class="seat-status">${readyMark ? 'サーブ できる！' : 'ちゅうもんちゅう'}</span>`;
+          inner += `<span class="seat-customer">${seat.customerEmoji}</span><span class="seat-order">${DISHES[seat.dish].emoji}</span></div><div class="seat-status">${readyMark ? 'サーブ できる！' : 'ちゅうもんちゅう'}</div>`;
         } else if (seat.state === 'eating') {
-          el.innerHTML += `<span class="seat-customer">${seat.customerEmoji}</span><span class="seat-order">${DISHES[seat.dish].emoji}😋</span><span class="seat-status">たべてるよ</span>`;
+          inner += `<span class="seat-customer">${seat.customerEmoji}</span><span class="seat-order">${DISHES[seat.dish].emoji}😋</span></div><div class="seat-status">たべてるよ</div>`;
         } else if (seat.state === 'dirty') {
           el.classList.add('tappable');
-          el.innerHTML += `<span class="seat-customer">🍽️</span><span class="seat-status">あらってね</span>`;
+          inner += `<span class="seat-customer">🍽️</span></div><div class="seat-status">あらってね</div>`;
+        } else {
+          inner += `</div>`;
         }
+        el.innerHTML = inner;
       });
     }
 
@@ -295,11 +394,29 @@
       const emptySeats = seats.filter(s => s.state === 'empty');
       if (emptySeats.length === 0) return;
       const seat = emptySeats[Math.floor(Math.random() * emptySeats.length)];
-      seat.state = 'waiting';
-      seat.dish = DISH_KEYS[Math.floor(Math.random() * DISH_KEYS.length)];
-      seat.customerEmoji = CUSTOMER_EMOJIS[Math.floor(Math.random() * CUSTOMER_EMOJIS.length)];
+      const dish = DISH_KEYS[Math.floor(Math.random() * DISH_KEYS.length)];
+      const customerEmoji = CUSTOMER_EMOJIS[Math.floor(Math.random() * CUSTOMER_EMOJIS.length)];
+
+      // ドアから あるいて きて、せきに つく えんしゅつ
+      const walker = document.createElement('div');
+      walker.className = 'walking-customer';
+      walker.textContent = customerEmoji;
+      walker.style.left = DOOR_POS.x + '%';
+      walker.style.top = DOOR_POS.y + '%';
+      walkersLayerEl.appendChild(walker);
       GameAudio.playClickTick();
-      renderSeats();
+      requestAnimationFrame(() => {
+        walker.style.left = TABLE_POS[seat.id].x + '%';
+        walker.style.top = (TABLE_POS[seat.id].y - 6) + '%';
+      });
+
+      setTimeout(() => {
+        walker.remove();
+        seat.state = 'waiting';
+        seat.dish = dish;
+        seat.customerEmoji = customerEmoji;
+        renderSeats();
+      }, 900);
     }
 
     function onSeatTap(seatId) {
@@ -350,7 +467,6 @@
           collectedIngredients.push(ing);
           GameAudio.playClickTick();
           renderKitchen();
-          checkIngredientsDone();
         });
         fridgeGridEl.appendChild(btn);
       });
@@ -370,10 +486,6 @@
         cookStation.classList.remove('show');
         stopCookLoop();
       }
-    }
-
-    function checkIngredientsDone() {
-      // renderKitchen() already handles revealing the cook UI
     }
 
     function startCookLoop() {
@@ -412,6 +524,19 @@
       GameAudio.playClickTick();
       finishBtn.classList.remove('show');
       markDishReady();
+    });
+
+    kitchenCloseBtn.addEventListener('click', () => {
+      GameAudio.playClickTick();
+      kitchenPanel.classList.add('hide');
+      if (!dishReady) {
+        // まだ できてない ときは、この ちゅうもんを あきらめて べつの せきを えらべるように する
+        stopCookLoop();
+        activeSeatId = null;
+        activeDish = null;
+        collectedIngredients = [];
+      }
+      renderSeats();
     });
 
     function markDishReady() {
