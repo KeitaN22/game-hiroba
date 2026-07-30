@@ -85,13 +85,14 @@
 
   <div class="hud">
     <span>あたった 🎯 <span id="correctCount">0</span>/<span id="totalCount">6</span></span>
+    <span>くみ 📖 <span id="groupCount">1</span>/<span id="groupTotal">4</span></span>
   </div>
 
   <div class="stage-wrap">
     <div class="arena">
       <div class="overlay" id="startOverlay" style="position: static; background: none; color: #333;">
-        <h2>🕵️ だれかな？</h2>
-        <p>この 3にんを おぼえてね！なまえを パスワードで うちこむよ。</p>
+        <h2 id="introTitle">🕵️ だれかな？</h2>
+        <p id="introDesc">この 3にんを おぼえてね！なまえを パスワードで うちこむよ。</p>
         <div class="intro-grid" id="introGrid"></div>
         <button class="big-btn" id="startBtn" style="margin-top:16px;">▶ おぼえた！スタート</button>
       </div>
@@ -123,16 +124,37 @@
       muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
 
-    // オリジナルの 3にんの キャラクターだよ
-    const CHARACTERS = [
-      { name: 'もじゃもじゃくん', emoji: '🟢', desc: 'もじゃもじゃの みどりの モンスター' },
-      { name: 'ぴかぴかちゃん', emoji: '⭐', desc: 'きらきら ひかる きいろの ほし' },
-      { name: 'のっしーくん', emoji: '🦕', desc: 'おおきくて やさしい あおの きょうりゅう' },
+    // オリジナルの キャラクターたち。3にんずつの くみに わかれてるよ
+    const CHARACTER_GROUPS = [
+      [
+        { name: 'もじゃもじゃくん', emoji: '🟢', desc: 'もじゃもじゃの みどりの モンスター' },
+        { name: 'ぴかぴかちゃん', emoji: '⭐', desc: 'きらきら ひかる きいろの ほし' },
+        { name: 'のっしーくん', emoji: '🦕', desc: 'おおきくて やさしい あおの きょうりゅう' },
+      ],
+      [
+        { name: 'ふわふわちゃん', emoji: '☁️', desc: 'そらに うかぶ しろい くも' },
+        { name: 'ころころくん', emoji: '🟠', desc: 'まんまるの オレンジいろの たま' },
+        { name: 'ぷるぷるちゃん', emoji: '🍮', desc: 'ぷるぷる ゆれる プリン' },
+      ],
+      [
+        { name: 'がおがおくん', emoji: '🦁', desc: 'たてがみが かっこいい ライオン' },
+        { name: 'もこもこちゃん', emoji: '🐑', desc: 'もこもこの けの ひつじ' },
+        { name: 'ぴょんぴょんくん', emoji: '🐰', desc: 'たかく ジャンプする うさぎ' },
+      ],
+      [
+        { name: 'きらきらちゃん', emoji: '✨', desc: 'よぞらで きらめく ほしくず' },
+        { name: 'どんどこくん', emoji: '🥁', desc: 'げんきに たたく たいこ' },
+        { name: 'つるつるちゃん', emoji: '🐍', desc: 'つるつるの からだの へび' },
+      ],
     ];
 
-    const ROUND_COUNT = 6;
+    const ROUNDS_PER_GROUP = 3;
+    const TOTAL_COUNT = CHARACTER_GROUPS.length * ROUNDS_PER_GROUP;
 
+    const introTitleEl = document.getElementById('introTitle');
+    const introDescEl = document.getElementById('introDesc');
     const introGridEl = document.getElementById('introGrid');
+    const startBtn = document.getElementById('startBtn');
     const startOverlay = document.getElementById('startOverlay');
     const quizView = document.getElementById('quizView');
     const endOverlay = document.getElementById('endOverlay');
@@ -143,39 +165,67 @@
     const feedbackMsgEl = document.getElementById('feedbackMsg');
     const correctCountEl = document.getElementById('correctCount');
     const totalCountEl = document.getElementById('totalCount');
+    const groupCountEl = document.getElementById('groupCount');
+    const groupTotalEl = document.getElementById('groupTotal');
 
-    CHARACTERS.forEach(c => {
-      const card = document.createElement('div');
-      card.className = 'intro-card';
-      card.innerHTML = `<span class="intro-emoji">${c.emoji}</span><span class="intro-name">${c.name}</span>`;
-      introGridEl.appendChild(card);
-    });
-    totalCountEl.textContent = ROUND_COUNT;
+    totalCountEl.textContent = TOTAL_COUNT;
+    groupTotalEl.textContent = CHARACTER_GROUPS.length;
 
-    let roundIndex = 0;
+    let groupIndex = 0;
+    let order = [];
+    let roundInGroup = 0;
     let correctCount = 0;
     let currentCharacter = null;
     let playing = false;
     let answered = false;
 
-    function pickCharacter() {
-      return CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
     }
 
     function normalize(text) {
       return text.trim();
     }
 
+    function showGroupIntro() {
+      playing = false;
+      quizView.classList.add('hide');
+      endOverlay.classList.add('hide');
+      startOverlay.classList.remove('hide');
+      groupCountEl.textContent = groupIndex + 1;
+
+      introTitleEl.textContent = groupIndex === 0 ? '🕵️ だれかな？' : `🕵️ つぎの 3にん！（${groupIndex + 1}くみめ）`;
+      introDescEl.textContent = 'この 3にんを おぼえてね！なまえを パスワードで うちこむよ。';
+      introGridEl.innerHTML = '';
+      CHARACTER_GROUPS[groupIndex].forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'intro-card';
+        card.innerHTML = `<span class="intro-emoji">${c.emoji}</span><span class="intro-name">${c.name}</span>`;
+        introGridEl.appendChild(card);
+      });
+      startBtn.textContent = groupIndex === 0 ? '▶ おぼえた！スタート' : '▶ この3にんも おぼえた！';
+    }
+
     function nextRound() {
-      if (roundIndex >= ROUND_COUNT) {
-        endGame();
+      if (roundInGroup >= ROUNDS_PER_GROUP) {
+        groupIndex++;
+        if (groupIndex >= CHARACTER_GROUPS.length) {
+          endGame();
+          return;
+        }
+        showGroupIntro();
         return;
       }
-      currentCharacter = pickCharacter();
+      currentCharacter = CHARACTER_GROUPS[groupIndex][order[roundInGroup]];
       quizEmojiEl.textContent = currentCharacter.emoji;
       passwordInput.value = '';
       passwordInput.classList.remove('wrong');
-      feedbackMsgEl.textContent = ' ';
+      feedbackMsgEl.textContent = ' ';
       feedbackMsgEl.className = 'feedback-msg';
       answered = false;
       passwordInput.focus();
@@ -189,7 +239,7 @@
         answered = true;
         correctCount++;
         correctCountEl.textContent = correctCount;
-        roundIndex++;
+        roundInGroup++;
         GameAudio.playClearFanfare();
         feedbackMsgEl.textContent = `せいかい！ ${currentCharacter.name} だよ！`;
         feedbackMsgEl.classList.add('ok');
@@ -208,16 +258,23 @@
       if (e.key === 'Enter') submitAnswer();
     });
 
-    function startGame() {
-      roundIndex = 0;
-      correctCount = 0;
-      correctCountEl.textContent = 0;
+    function startGroupQuiz() {
+      order = shuffle([0, 1, 2]);
+      roundInGroup = 0;
       playing = true;
       startOverlay.classList.add('hide');
       endOverlay.classList.add('hide');
       quizView.classList.remove('hide');
-      GameAudio.playBGM();
+      if (groupIndex === 0) GameAudio.playBGM();
       nextRound();
+    }
+
+    function startGame() {
+      groupIndex = 0;
+      correctCount = 0;
+      correctCountEl.textContent = 0;
+      groupCountEl.textContent = 1;
+      showGroupIntro();
     }
 
     function endGame() {
@@ -225,14 +282,15 @@
       quizView.classList.add('hide');
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
-      endTitleEl.textContent = correctCount === ROUND_COUNT ? '🏆 パーフェクト！ 🏆' : '🎉 おわり！ 🎉';
-      endTextEl.textContent = `${ROUND_COUNT}もん中 ${correctCount}もん あたったね！`;
+      endTitleEl.textContent = correctCount === TOTAL_COUNT ? '🏆 パーフェクト！ 🏆' : '🎉 おわり！ 🎉';
+      endTextEl.textContent = `${TOTAL_COUNT}もん中 ${correctCount}もん あたったね！`;
       endOverlay.classList.remove('hide');
       Leaderboard.showRankFlow({ gameId: 'who-is-this', score: correctCount, higherIsBetter: true, unit: 'もん', title: '🕵️ あたった かず ランキング' });
     }
 
-    document.getElementById('startBtn').addEventListener('click', startGame);
+    startBtn.addEventListener('click', startGroupQuiz);
     document.getElementById('retryBtn').addEventListener('click', startGame);
+    showGroupIntro();
   </script>
 </body>
 </html>
