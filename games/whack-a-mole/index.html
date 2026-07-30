@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの もぐらたたき</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #C8F7C5 0%, #A8E6CF 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    background: linear-gradient(#7BC96F 0%, #6AB85E 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 22px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .hole-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .mole-hole {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, #6B4526 0%, #4A2F19 70%);
+    box-shadow: inset 0 6px 10px rgba(0,0,0,0.5);
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .mole {
+    position: absolute;
+    left: 50%; bottom: -10%;
+    transform: translate(-50%, 0%);
+    font-size: 2.6rem;
+    transition: transform 0.12s ease-out;
+    user-select: none;
+  }
+  .mole-hole.up .mole {
+    transform: translate(-50%, -55%);
+  }
+  .mole-hole.hit .mole {
+    transform: translate(-50%, -55%) scale(1.3) rotate(15deg);
+  }
+
+  .hit-star {
+    position: absolute;
+    top: 4px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.3rem;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .mole-hole.hit .hit-star {
+    animation: starPop 0.4s ease-out forwards;
+  }
+  @keyframes starPop {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.6); }
+    100% { opacity: 0; transform: translate(-50%, -30px) scale(1.4); }
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🐹 そうすけの もぐらたたき</h1>
+
+  <div class="hud" id="hud">
+    <span>たたいた 🎯 <span id="hitCount">0</span></span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">45</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="hole-grid" id="holeGrid"></div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🐹 もぐらたたき</h2>
+        <p>
+          あなから でてきた もぐらを、はやく タップして たたこう！<br>
+          45びょうで なんかい たたけるかな？
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script src="../../leaderboard.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const HOLE_COUNT = 9;
+    const GAME_TIME = 45;
+    const MOLE_EMOJI = '🐹';
+
+    const holeGridEl = document.getElementById('holeGrid');
+    const hitCountEl = document.getElementById('hitCount');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const hudEl = document.getElementById('hud');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let holeEls = [];
+    let holeUpState = [];
+    let hitCount = 0;
+    let timeLeft = GAME_TIME;
+    let playing = false;
+    let countdownTimer = null;
+    let moleTimer = null;
+    let hideTimer = null;
+    let activeHole = -1;
+
+    for (let i = 0; i < HOLE_COUNT; i++) {
+      const hole = document.createElement('div');
+      hole.className = 'mole-hole';
+      hole.innerHTML = `<span class="mole">${MOLE_EMOJI}</span><span class="hit-star">✨</span>`;
+      hole.addEventListener('pointerdown', () => hitHole(i));
+      holeGridEl.appendChild(hole);
+      holeEls.push(hole);
+      holeUpState.push(false);
+    }
+
+    function randomHoleExcept(exclude) {
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * HOLE_COUNT);
+      } while (idx === exclude && HOLE_COUNT > 1);
+      return idx;
+    }
+
+    function popMole() {
+      if (!playing) return;
+      if (activeHole >= 0) {
+        holeEls[activeHole].classList.remove('up');
+        holeUpState[activeHole] = false;
+      }
+      const idx = randomHoleExcept(activeHole);
+      activeHole = idx;
+      holeUpState[idx] = true;
+      holeEls[idx].classList.add('up');
+
+      const elapsed = GAME_TIME - timeLeft;
+      const upDuration = Math.max(500, 1100 - elapsed * 12);
+      const nextGap = Math.max(350, 900 - elapsed * 10);
+
+      hideTimer = setTimeout(() => {
+        if (holeUpState[idx]) {
+          holeEls[idx].classList.remove('up');
+          holeUpState[idx] = false;
+        }
+      }, upDuration);
+
+      moleTimer = setTimeout(popMole, upDuration + nextGap);
+    }
+
+    function hitHole(i) {
+      if (!playing) return;
+      if (!holeUpState[i]) return;
+      holeUpState[i] = false;
+      clearTimeout(hideTimer);
+      holeEls[i].classList.remove('up');
+      holeEls[i].classList.add('hit');
+      setTimeout(() => holeEls[i].classList.remove('hit'), 400);
+      hitCount++;
+      hitCountEl.textContent = hitCount;
+      GameAudio.playClickTick();
+    }
+
+    function resetGame() {
+      hitCount = 0;
+      timeLeft = GAME_TIME;
+      hitCountEl.textContent = 0;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      activeHole = -1;
+      holeEls.forEach((el, i) => { el.classList.remove('up', 'hit'); holeUpState[i] = false; });
+    }
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          endGame();
+        }
+      }, 1000);
+
+      clearTimeout(moleTimer);
+      clearTimeout(hideTimer);
+      moleTimer = setTimeout(popMole, 500);
+    }
+
+    function endGame() {
+      playing = false;
+      clearInterval(countdownTimer);
+      clearTimeout(moleTimer);
+      clearTimeout(hideTimer);
+      if (activeHole >= 0) holeEls[activeHole].classList.remove('up');
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = `${hitCount}かい もぐらを たたけたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'whack-a-mole', score: hitCount, higherIsBetter: true, unit: 'かい', title: '🐹 たたいた かず ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

@@ -148,4 +148,12 @@ const GAMES = [
     path: 'games/who-is-this/index.html',
     desc: '3にんの キャラクターを おぼえて、なまえを パスワードで こたえよう！',
   },
+  {
+    id: 'whack-a-mole',
+    title: 'そうすけの もぐらたたき',
+    emoji: '🐹',
+    color: '#6AB85E',
+    path: 'games/whack-a-mole/index.html',
+    desc: 'あなから でてきた もぐらを、はやく タップして たたこう！',
+  },
 ];
