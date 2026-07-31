@@ -159,6 +159,14 @@
       osc.stop(now + 0.12);
     },
 
+    // ぬった わりあい(0〜1)が おおいほど、たかい おとに なる ペイントおと
+    playPaintTick(ratio) {
+      if (muted) return;
+      const ctx = getCtx();
+      const freq = 500 + Math.max(0, Math.min(1, ratio)) * 900;
+      beep(freq, ctx.currentTime, 0.09, 'square', 0.16);
+    },
+
     // ぷちぷちぷちぷち…ちゅ、という きーぼーどの ポップアップおと
     playBubblePopChu() {
       if (muted) return;

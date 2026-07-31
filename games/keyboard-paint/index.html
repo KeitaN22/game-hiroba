@@ -173,9 +173,25 @@
     const personPopEl = document.getElementById('personPop');
     const allKeyEls = [];
 
+    function paintedRatio() {
+      const paintedCount = allKeyEls.filter(el => el.style.background && el.style.background !== '' && rgbToHex(el.style.background).toLowerCase() !== DEFAULT_KEY_COLOR.toLowerCase()).length;
+      return paintedCount / allKeyEls.length;
+    }
+
+    function rgbToHex(rgb) {
+      const m = rgb.match(/\d+/g);
+      if (!m) return rgb;
+      return '#' + m.slice(0, 3).map(n => Number(n).toString(16).padStart(2, '0')).join('');
+    }
+
     function paintKey(el) {
+      const wasPainted = el.style.background && rgbToHex(el.style.background).toLowerCase() !== DEFAULT_KEY_COLOR.toLowerCase();
       el.style.background = selectedColor;
-      GameAudio.playClickTick();
+      const ratio = paintedRatio();
+      GameAudio.playPaintTick(ratio);
+      if (!wasPainted && ratio >= 1) {
+        setTimeout(() => GameAudio.playClearFanfare(), 120);
+      }
     }
 
     ROWS.forEach((rowLetters, i) => {
