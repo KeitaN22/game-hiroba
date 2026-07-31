@@ -159,6 +159,47 @@
       osc.stop(now + 0.12);
     },
 
+    // ぷちぷちぷちぷち…ちゅ、という きーぼーどの ポップアップおと
+    playBubblePopChu() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const puchiCount = 4;
+      for (let i = 0; i < puchiCount; i++) {
+        const t = now + i * 0.09;
+        beep(1200 - i * 40, t, 0.04, 'square', 0.1);
+        const bufferSize = Math.floor(ctx.sampleRate * 0.02);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let k = 0; k < bufferSize; k++) data[k] = (Math.random() * 2 - 1) * (1 - k / bufferSize);
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1800;
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(t);
+        noise.stop(t + 0.02);
+      }
+      const chuStart = now + puchiCount * 0.09 + 0.03;
+      const osc = ctx.createOscillator();
+      const g2 = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, chuStart);
+      osc.frequency.exponentialRampToValueAtTime(220, chuStart + 0.18);
+      g2.gain.setValueAtTime(0.22, chuStart);
+      g2.gain.exponentialRampToValueAtTime(0.001, chuStart + 0.2);
+      osc.connect(g2);
+      g2.connect(ctx.destination);
+      osc.start(chuStart);
+      osc.stop(chuStart + 0.2);
+    },
+
     playGunshot() {
       if (muted) return;
       const ctx = getCtx();

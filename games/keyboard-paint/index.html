@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの キーボードぬりぬり</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #7EC8E3 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .keyboard-panel {
+    position: relative;
+    background: #444;
+    border-radius: 18px;
+    padding: 16px 12px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.25), 0 12px 24px rgba(0,0,0,0.25);
+  }
+
+  .key-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .key {
+    flex: 1;
+    max-width: 40px;
+    aspect-ratio: 1 / 1;
+    border: none;
+    border-radius: 8px;
+    background: #eee;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .key:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+
+  .space-row .key {
+    max-width: none;
+    flex: 4;
+    aspect-ratio: auto;
+    height: 40px;
+  }
+  .person-key {
+    flex: 1.4 !important;
+    max-width: 64px !important;
+    aspect-ratio: auto !important;
+    height: 40px;
+    background: #FFD966 !important;
+    font-size: 1.4rem !important;
+  }
+
+  .person-pop {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, 0) scale(0.2);
+    font-size: 2.4rem;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .person-pop.animate {
+    animation: personPop 0.8s ease-out forwards;
+  }
+  @keyframes personPop {
+    0% { transform: translate(-50%, 0) scale(0.2); opacity: 0; }
+    25% { transform: translate(-50%, -50px) scale(1.25); opacity: 1; }
+    60% { transform: translate(-50%, -62px) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -80px) scale(0.6); opacity: 0; }
+  }
+
+  .palette {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 10px;
+    margin-top: 14px;
+  }
+  .swatch {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 3px solid rgba(0,0,0,0.15);
+    cursor: pointer;
+    padding: 0;
+  }
+  .swatch.selected { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333; }
+
+  .tool-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+    margin-top: 14px;
+  }
+  .tool-btn {
+    font-size: 1.05rem; font-weight: bold;
+    padding: 10px 20px;
+    border: none; border-radius: 999px;
+    background: #fff; color: #333;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .tool-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .hint {
+    text-align: center; font-size: 0.9rem; color: #444;
+    background: rgba(255,255,255,0.85); border-radius: 12px; padding: 8px 14px;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">⌨️ そうすけの キーボードぬりぬり</h1>
+
+  <div class="stage-wrap">
+    <div class="hint">すきな いろを えらんで、キーを タッチして ぬろう！🧑のキーを おすと 人が とびだすよ！</div>
+
+    <div class="keyboard-panel">
+      <div class="key-row" id="row1"></div>
+      <div class="key-row" id="row2"></div>
+      <div class="key-row" id="row3"></div>
+      <div class="key-row space-row" id="row4"></div>
+      <span class="person-pop" id="personPop">🧑</span>
+    </div>
+
+    <div class="palette" id="palette"></div>
+    <div class="tool-row">
+      <button class="tool-btn" id="clearBtn">🔄 まっさら に する</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const COLORS = [
+      { name: 'あか', hex: '#FF3B3B' },
+      { name: 'だいだい', hex: '#FF8C42' },
+      { name: 'きいろ', hex: '#FFD93D' },
+      { name: 'きみどり', hex: '#A0D468' },
+      { name: 'みどり', hex: '#4CAF50' },
+      { name: 'みずいろ', hex: '#4FC3F7' },
+      { name: 'あお', hex: '#4C7BF3' },
+      { name: 'むらさき', hex: '#9B59B6' },
+      { name: 'ピンク', hex: '#FF6FA5' },
+      { name: 'ちゃいろ', hex: '#8B5E3C' },
+      { name: 'しろ', hex: '#FFFFFF' },
+      { name: 'きんいろ', hex: '#FFD700' },
+    ];
+
+    const ROWS = [
+      ['Q','W','E','R','T','Y','U','I','O','P'],
+      ['A','S','D','F','G','H','J','K','L'],
+      ['Z','X','C','V','B','N','M'],
+    ];
+
+    const DEFAULT_KEY_COLOR = '#eeeeee';
+    let selectedColor = COLORS[0].hex;
+
+    const paletteEl = document.getElementById('palette');
+    const personPopEl = document.getElementById('personPop');
+    const allKeyEls = [];
+
+    function paintKey(el) {
+      el.style.background = selectedColor;
+      GameAudio.playClickTick();
+    }
+
+    ROWS.forEach((rowLetters, i) => {
+      const rowEl = document.getElementById('row' + (i + 1));
+      rowLetters.forEach(letter => {
+        const btn = document.createElement('button');
+        btn.className = 'key';
+        btn.textContent = letter;
+        btn.addEventListener('click', () => paintKey(btn));
+        rowEl.appendChild(btn);
+        allKeyEls.push(btn);
+      });
+    });
+
+    // さいごの れつ：スペースキー + 人のマークのキー
+    const row4El = document.getElementById('row4');
+    const spaceKey = document.createElement('button');
+    spaceKey.className = 'key';
+    spaceKey.textContent = '';
+    spaceKey.addEventListener('click', () => paintKey(spaceKey));
+    row4El.appendChild(spaceKey);
+    allKeyEls.push(spaceKey);
+
+    const personKey = document.createElement('button');
+    personKey.className = 'key person-key';
+    personKey.textContent = '🧑';
+    personKey.addEventListener('click', () => {
+      GameAudio.playBubblePopChu();
+      personPopEl.classList.remove('animate');
+      void personPopEl.offsetWidth; // アニメーションを さいせいし直す ため
+      personPopEl.classList.add('animate');
+    });
+    row4El.appendChild(personKey);
+
+    function renderPalette() {
+      paletteEl.innerHTML = '';
+      COLORS.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'swatch' + (i === 0 ? ' selected' : '');
+        btn.style.background = c.hex;
+        btn.title = c.name;
+        btn.addEventListener('click', () => {
+          selectedColor = c.hex;
+          paletteEl.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+          btn.classList.add('selected');
+        });
+        paletteEl.appendChild(btn);
+      });
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      allKeyEls.forEach(el => { el.style.background = DEFAULT_KEY_COLOR; });
+      GameAudio.playClickTick();
+    });
+
+    renderPalette();
+  </script>
+</body>
+</html>

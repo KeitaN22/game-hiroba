@@ -164,4 +164,12 @@ const GAMES = [
     path: 'games/sansuu/index.html',
     desc: 'もんだいの こたえを 4つの なかから えらんで、なんもん とけるか ちょうせん！',
   },
+  {
+    id: 'keyboard-paint',
+    title: 'そうすけの キーボードぬりぬり',
+    emoji: '⌨️',
+    color: '#7EC8E3',
+    path: 'games/keyboard-paint/index.html',
+    desc: 'キーボードの キーを すきな いろで ぬろう！🧑のキーを おすと 人が とびだすよ！',
+  },
 ];
