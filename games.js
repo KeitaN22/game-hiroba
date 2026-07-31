@@ -156,4 +156,12 @@ const GAMES = [
     path: 'games/whack-a-mole/index.html',
     desc: 'あなから でてきた もぐらを、はやく タップして たたこう！',
   },
+  {
+    id: 'sansuu',
+    title: 'そうすけの たしざん ひきざん',
+    emoji: '➕',
+    color: '#4C7BF3',
+    path: 'games/sansuu/index.html',
+    desc: 'もんだいの こたえを 4つの なかから えらんで、なんもん とけるか ちょうせん！',
+  },
 ];
