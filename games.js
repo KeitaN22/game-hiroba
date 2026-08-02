@@ -172,4 +172,12 @@ const GAMES = [
     path: 'games/keyboard-paint/index.html',
     desc: 'キーボードの キーを すきな いろで ぬろう！🧑のキーを おすと 人が とびだすよ！',
   },
+  {
+    id: 'squishy',
+    title: 'そうすけの スクイーズ ぎゅっ',
+    emoji: '🧈',
+    color: '#FFC1E3',
+    path: 'games/squishy/index.html',
+    desc: 'バターや パンケーキ、ラップの スクイーズを ゆびで ぎゅっと おしてみよう！',
+  },
 ];

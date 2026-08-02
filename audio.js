@@ -159,6 +159,63 @@
       osc.stop(now + 0.12);
     },
 
+    // もちもち、という やわらかい スクイーズおと(バター)
+    playMochiSquish() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(260, now + 0.08);
+      osc.frequency.linearRampToValueAtTime(180, now + 0.22);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.22, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.28);
+    },
+
+    // ポー、という まるくて やわらかい スクイーズおと(パンケーキ)
+    playPancakeSquish() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.22);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.24, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    },
+
+    // ピュッ、という みじかくて たかい スクイーズおと(ラップ)
+    playWrapSquish() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(2000, now);
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    },
+
     // ぬった わりあい(0〜1)が おおいほど、たかい おとに なる ペイントおと
     playPaintTick(ratio) {
       if (muted) return;

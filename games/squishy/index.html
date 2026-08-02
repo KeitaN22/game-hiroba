@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの スクイーズ ぎゅっ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .pick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 14px;
+    width: 100%;
+  }
+  .pick-card {
+    border: none;
+    border-radius: 18px;
+    padding: 16px 8px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-weight: bold;
+  }
+  .pick-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .pick-card .picoji { font-size: 2.6rem; }
+
+  .squish-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .squish-target {
+    font-size: 8rem;
+    user-select: none;
+    touch-action: none;
+    cursor: pointer;
+    transition: transform 0.12s ease-out;
+  }
+  .squish-target.squish {
+    animation: squishPop 0.28s ease-out;
+  }
+  @keyframes squishPop {
+    0% { transform: scale(1, 1); }
+    35% { transform: scale(1.22, 0.72); }
+    65% { transform: scale(0.9, 1.12); }
+    100% { transform: scale(1, 1); }
+  }
+
+  .squish-hint {
+    font-size: 0.95rem; color: #666; text-align: center;
+  }
+
+  .tool-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+  }
+  .tool-btn {
+    font-size: 1.05rem; font-weight: bold;
+    padding: 10px 20px;
+    border: none; border-radius: 999px;
+    background: #fff; color: #333;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .tool-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; color: #333; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🧈 そうすけの スクイーズ ぎゅっ</h1>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="overlay" id="pickOverlay" style="position: static; background: none; color: #333;">
+        <h2>🧈 なにを ぎゅっとする？</h2>
+        <p>すきな スクイーズを えらんで、ゆびで ぎゅっと おしてみよう！</p>
+        <div class="pick-grid" id="pickGrid"></div>
+      </div>
+
+      <div class="squish-zone hide" id="squishZone">
+        <div class="squish-target" id="squishTarget">🧈</div>
+        <div class="squish-hint">ゆびで おすと ぎゅっと なるよ！</div>
+        <div class="tool-row">
+          <button class="tool-btn" id="backBtn">🔄 べつのを えらぶ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=3"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const ITEMS = [
+      { id: 'butter', name: 'バター', emoji: '🧈', sound: () => GameAudio.playMochiSquish() },
+      { id: 'pancake', name: 'パンケーキ', emoji: '🥞', sound: () => GameAudio.playPancakeSquish() },
+      { id: 'wrap', name: 'ラップ', emoji: '🧻', sound: () => GameAudio.playWrapSquish() },
+    ];
+
+    const pickOverlay = document.getElementById('pickOverlay');
+    const pickGridEl = document.getElementById('pickGrid');
+    const squishZone = document.getElementById('squishZone');
+    const squishTargetEl = document.getElementById('squishTarget');
+
+    let currentItem = null;
+    let squishInterval = null;
+
+    function renderPickGrid() {
+      pickGridEl.innerHTML = '';
+      ITEMS.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'pick-card';
+        btn.innerHTML = `<span class="picoji">${item.emoji}</span><span>${item.name}</span>`;
+        btn.addEventListener('click', () => openItem(item));
+        pickGridEl.appendChild(btn);
+      });
+    }
+
+    function doSquish() {
+      currentItem.sound();
+      squishTargetEl.classList.remove('squish');
+      void squishTargetEl.offsetWidth;
+      squishTargetEl.classList.add('squish');
+    }
+
+    function openItem(item) {
+      currentItem = item;
+      squishTargetEl.textContent = item.emoji;
+      pickOverlay.classList.add('hide');
+      squishZone.classList.remove('hide');
+    }
+
+    function backToList() {
+      clearInterval(squishInterval);
+      currentItem = null;
+      squishZone.classList.add('hide');
+      pickOverlay.classList.remove('hide');
+    }
+
+    squishTargetEl.addEventListener('pointerdown', () => {
+      if (!currentItem) return;
+      doSquish();
+      clearInterval(squishInterval);
+      squishInterval = setInterval(doSquish, 380);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+      squishTargetEl.addEventListener(evt, () => clearInterval(squishInterval));
+    });
+
+    document.getElementById('backBtn').addEventListener('click', backToList);
+
+    renderPickGrid();
+  </script>
+</body>
+</html>
