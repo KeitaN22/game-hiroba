@@ -126,7 +126,7 @@
     </div>
   </div>
 
-  <script src="../../audio.js?v=3"></script>
+  <script src="../../audio.js?v=4"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -138,6 +138,15 @@
       { id: 'butter', name: 'バター', emoji: '🧈', sound: () => GameAudio.playMochiSquish() },
       { id: 'pancake', name: 'パンケーキ', emoji: '🥞', sound: () => GameAudio.playPancakeSquish() },
       { id: 'wrap', name: 'ラップ', emoji: '🧻', sound: () => GameAudio.playWrapSquish() },
+      { id: 'slime', name: 'スライム', emoji: '🟢', sound: () => GameAudio.playSlimeSquish() },
+      { id: 'marshmallow', name: 'マシュマロ', emoji: '🍥', sound: () => GameAudio.playMarshmallowSquish() },
+      { id: 'ricecake', name: 'おもち', emoji: '🍡', sound: () => GameAudio.playRiceCakeSquish() },
+      { id: 'bubblewrap', name: 'ぷちぷちシート', emoji: '🫧', sound: () => GameAudio.playBubbleWrapPop() },
+      { id: 'jelly', name: 'ゼリー', emoji: '🍮', sound: () => GameAudio.playJellyWobble() },
+      { id: 'balloon', name: 'ふうせん', emoji: '🎈', sound: () => GameAudio.playBalloonSqueak() },
+      { id: 'icecream', name: 'アイスクリーム', emoji: '🍦', sound: () => GameAudio.playIceCreamSquish() },
+      { id: 'gummy', name: 'ぐみ', emoji: '🍬', sound: () => GameAudio.playGummySquish() },
+      { id: 'bread', name: 'しょくパン', emoji: '🍞', sound: () => GameAudio.playBreadSquish() },
     ];
 
     const pickOverlay = document.getElementById('pickOverlay');
