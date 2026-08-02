@@ -56,6 +56,12 @@
     align-items: center;
     gap: 20px;
   }
+  .squish-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .squish-target {
     font-size: 8rem;
     user-select: none;
@@ -71,6 +77,29 @@
     35% { transform: scale(1.22, 0.72); }
     65% { transform: scale(0.9, 1.12); }
     100% { transform: scale(1, 1); }
+  }
+
+  .hand {
+    position: absolute;
+    top: 50%;
+    font-size: 3.4rem;
+    pointer-events: none;
+    user-select: none;
+    z-index: 5;
+  }
+  .hand-left { left: -6px; transform: translateY(-50%); }
+  .hand-right { right: -6px; transform: translateY(-50%) scaleX(-1); }
+  .hand-left.squeeze { animation: handSqueezeLeft 0.28s ease-out; }
+  .hand-right.squeeze { animation: handSqueezeRight 0.28s ease-out; }
+  @keyframes handSqueezeLeft {
+    0% { transform: translateY(-50%) translateX(0); }
+    35% { transform: translateY(-50%) translateX(26px); }
+    100% { transform: translateY(-50%) translateX(0); }
+  }
+  @keyframes handSqueezeRight {
+    0% { transform: translateY(-50%) scaleX(-1) translateX(0); }
+    35% { transform: translateY(-50%) scaleX(-1) translateX(26px); }
+    100% { transform: translateY(-50%) scaleX(-1) translateX(0); }
   }
 
   .squish-hint {
@@ -117,8 +146,12 @@
       </div>
 
       <div class="squish-zone hide" id="squishZone">
-        <div class="squish-target" id="squishTarget">🧈</div>
-        <div class="squish-hint">ゆびで おすと ぎゅっと なるよ！</div>
+        <div class="squish-stage">
+          <span class="hand hand-left" id="handLeft">🤚</span>
+          <div class="squish-target" id="squishTarget">🧈</div>
+          <span class="hand hand-right" id="handRight">🤚</span>
+        </div>
+        <div class="squish-hint">ゆびで おすと もみもみ ぎゅっと なるよ！</div>
         <div class="tool-row">
           <button class="tool-btn" id="backBtn">🔄 べつのを えらぶ</button>
         </div>
@@ -153,6 +186,8 @@
     const pickGridEl = document.getElementById('pickGrid');
     const squishZone = document.getElementById('squishZone');
     const squishTargetEl = document.getElementById('squishTarget');
+    const handLeftEl = document.getElementById('handLeft');
+    const handRightEl = document.getElementById('handRight');
 
     let currentItem = null;
     let squishInterval = null;
@@ -173,6 +208,12 @@
       squishTargetEl.classList.remove('squish');
       void squishTargetEl.offsetWidth;
       squishTargetEl.classList.add('squish');
+
+      handLeftEl.classList.remove('squeeze');
+      handRightEl.classList.remove('squeeze');
+      void handLeftEl.offsetWidth;
+      handLeftEl.classList.add('squeeze');
+      handRightEl.classList.add('squeeze');
     }
 
     function openItem(item) {
