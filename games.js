@@ -180,4 +180,12 @@ const GAMES = [
     path: 'games/squishy/index.html',
     desc: 'バターや パンケーキ、ラップの スクイーズを ゆびで ぎゅっと おしてみよう！',
   },
+  {
+    id: 'fruit-merge',
+    title: 'そうすけの フルーツマージ',
+    emoji: '🍎',
+    color: '#6FCF97',
+    path: 'games/fruit-merge/index.html',
+    desc: 'おなじ フルーツを ぶつけて、どんどん おおきい フルーツに マージしよう！',
+  },
 ];

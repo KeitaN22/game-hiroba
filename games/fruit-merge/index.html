@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの フルーツマージ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #6FCF97 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .next-preview {
+    display: flex; align-items: center; gap: 4px; font-size: 1.3rem;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: linear-gradient(#FFF8E7 0%, #FFEFC2 100%);
+    border-radius: 16px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 0.95rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🍎 そうすけの フルーツマージ</h1>
+
+  <div class="hud" id="hud">
+    <span>スコア 🎯 <span id="scoreEl">0</span></span>
+    <span class="next-preview">つぎ <span id="nextEmoji">🍎</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="320" height="440"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🍎 フルーツマージ</h2>
+      <p>
+        ゆびで うえを なぞって いちを きめて、はなすと フルーツが おちるよ。<br>
+        おなじ フルーツどうしが ぶつかると、つぎの おおきい フルーツに マージするよ！<br>
+        りんご🍎 → バナナ🍌 → ブルーベリー🫐 → みかん🍊 → レモン🍋 → もも🍑 → パイナップル🍍 → メロン🍈 → すいか🍉<br>
+        つみすぎて うえの せんを こえないように きをつけてね！
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="endOverlay">
+      <h2>🎉 おわり！ 🎉</h2>
+      <p id="endText"></p>
+      <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=5"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    const TIERS = [
+      { emoji: '🍎', name: 'りんご', radius: 15, points: 1 },
+      { emoji: '🍌', name: 'バナナ', radius: 20, points: 3 },
+      { emoji: '🫐', name: 'ブルーベリー', radius: 24, points: 6 },
+      { emoji: '🍊', name: 'みかん', radius: 29, points: 10 },
+      { emoji: '🍋', name: 'レモン', radius: 34, points: 15 },
+      { emoji: '🍑', name: 'もも', radius: 40, points: 21 },
+      { emoji: '🍍', name: 'パイナップル', radius: 46, points: 28 },
+      { emoji: '🍈', name: 'メロン', radius: 53, points: 36 },
+      { emoji: '🍉', name: 'すいか', radius: 62, points: 45 },
+    ];
+    const DROP_TIER_MAX = 2; // りんご・バナナ・ブルーベリーだけが おちてくる
+    const GRAVITY = 1000;
+    const WALL_DAMPING = 0.45;
+    const FLOOR_DAMPING = 0.35;
+    const FRICTION = 0.985;
+    const DANGER_Y = 60;
+    const DANGER_HOLD = 1.6;
+    const DROP_COOLDOWN = 350;
+
+    const hudEl = document.getElementById('hud');
+    const scoreEl = document.getElementById('scoreEl');
+    const nextEmojiEl = document.getElementById('nextEmoji');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let fruits = [];
+    let nextId = 1;
+    let score = 0;
+    let playing = false;
+    let aimX = W / 2;
+    let isAiming = false;
+    let lastDropAt = 0;
+    let nextTier = 0;
+    let dangerTimer = 0;
+    let lastFrame = 0;
+
+    function randomDropTier() {
+      const r = Math.random();
+      if (r < 0.55) return 0;
+      if (r < 0.85) return 1;
+      return 2;
+    }
+
+    function resetGame() {
+      fruits = [];
+      score = 0;
+      scoreEl.textContent = 0;
+      aimX = W / 2;
+      isAiming = false;
+      dangerTimer = 0;
+      hudEl.classList.remove('urgent');
+      nextTier = randomDropTier();
+      nextEmojiEl.textContent = TIERS[nextTier].emoji;
+    }
+
+    function spawnDrop(x) {
+      const tier = nextTier;
+      const r = TIERS[tier].radius;
+      const cx = Math.max(r, Math.min(W - r, x));
+      fruits.push({ id: nextId++, tier, x: cx, y: r + 4, vx: 0, vy: 0 });
+      GameAudio.playFruitDrop();
+      nextTier = randomDropTier();
+      nextEmojiEl.textContent = TIERS[nextTier].emoji;
+    }
+
+    // --- ぶつりの こうしん(テストからも よべるように わけてある) ---
+    function physicsStep(dt) {
+      fruits.forEach(f => {
+        f.vy += GRAVITY * dt;
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+
+        const r = TIERS[f.tier].radius;
+        if (f.x - r < 0) { f.x = r; f.vx = -f.vx * WALL_DAMPING; }
+        if (f.x + r > W) { f.x = W - r; f.vx = -f.vx * WALL_DAMPING; }
+        if (f.y + r > H) {
+          f.y = H - r;
+          f.vy = -f.vy * FLOOR_DAMPING;
+          f.vx *= FRICTION;
+          if (Math.abs(f.vy) < 12) f.vy = 0;
+        }
+      });
+
+      const toRemove = new Set();
+      const toAdd = [];
+      for (let i = 0; i < fruits.length; i++) {
+        for (let j = i + 1; j < fruits.length; j++) {
+          const a = fruits[i], b = fruits[j];
+          if (toRemove.has(a.id) || toRemove.has(b.id)) continue;
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy) || 0.001;
+          const ra = TIERS[a.tier].radius, rb = TIERS[b.tier].radius;
+          const minDist = ra + rb;
+          if (dist >= minDist) continue;
+
+          if (a.tier === b.tier && a.tier < TIERS.length - 1) {
+            toRemove.add(a.id);
+            toRemove.add(b.id);
+            const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+            const newTier = a.tier + 1;
+            toAdd.push({ id: nextId++, tier: newTier, x: midX, y: midY, vx: 0, vy: -90 });
+            score += TIERS[newTier].points;
+            GameAudio.playFruitMerge(newTier);
+          } else {
+            const overlap = minDist - dist;
+            const nx = dx / dist, ny = dy / dist;
+            const invA = 1 / ra, invB = 1 / rb;
+            const total = invA + invB;
+            const moveA = overlap * (invA / total);
+            const moveB = overlap * (invB / total);
+            a.x -= nx * moveA; a.y -= ny * moveA;
+            b.x += nx * moveB; b.y += ny * moveB;
+            a.vx *= 0.98; b.vx *= 0.98;
+          }
+        }
+      }
+
+      if (toRemove.size > 0) {
+        fruits = fruits.filter(f => !toRemove.has(f.id));
+      }
+      if (toAdd.length > 0) {
+        fruits.push(...toAdd);
+      }
+
+      scoreEl.textContent = score;
+
+      let topY = H;
+      fruits.forEach(f => {
+        const top = f.y - TIERS[f.tier].radius;
+        if (top < topY) topY = top;
+      });
+      if (topY < DANGER_Y) {
+        dangerTimer += dt;
+        hudEl.classList.add('urgent');
+      } else {
+        dangerTimer = 0;
+        hudEl.classList.remove('urgent');
+      }
+      if (dangerTimer >= DANGER_HOLD) {
+        endGame();
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(255,59,59,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, DANGER_Y);
+      ctx.lineTo(W, DANGER_Y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      fruits.forEach(f => {
+        const r = TIERS[f.tier].radius;
+        ctx.font = `${r * 1.5}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(TIERS[f.tier].emoji, f.x, f.y);
+      });
+
+      if (playing && isAiming) {
+        const r = TIERS[nextTier].radius;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.moveTo(aimX, 0);
+        ctx.lineTo(aimX, H);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.7;
+        ctx.font = `${r * 1.5}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(TIERS[nextTier].emoji, aimX, r + 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function loop(now) {
+      if (playing) {
+        const dt = Math.min(0.033, (now - lastFrame) / 1000);
+        lastFrame = now;
+        physicsStep(dt);
+      }
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function getCanvasX(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      return (evt.clientX - rect.left) * scaleX;
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!playing) return;
+      isAiming = true;
+      aimX = Math.max(0, Math.min(W, getCanvasX(e)));
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!playing || !isAiming) return;
+      aimX = Math.max(0, Math.min(W, getCanvasX(e)));
+    });
+    window.addEventListener('pointerup', () => {
+      if (!playing || !isAiming) return;
+      isAiming = false;
+      const now = performance.now();
+      if (now - lastDropAt >= DROP_COOLDOWN) {
+        lastDropAt = now;
+        spawnDrop(aimX);
+      }
+    });
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      lastFrame = performance.now();
+    }
+
+    function endGame() {
+      if (!playing) return;
+      playing = false;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = `${score}てん とれたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'fruit-merge', score, higherIsBetter: true, unit: 'てん', title: '🍎 フルーツマージ ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    resetGame();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

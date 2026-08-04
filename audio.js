@@ -159,6 +159,34 @@
       osc.stop(now + 0.12);
     },
 
+    // ぽとん、という フルーツが おちる おと
+    playFruitDrop() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(170, now + 0.1);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    },
+
+    // きらーん、という レベルアップ ふうの マージおと(ティアが たかいほど たかい おと)
+    playFruitMerge(tier) {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const base = 440 + Math.max(0, tier) * 40;
+      beep(base, now, 0.14, 'triangle', 0.2);
+      beep(base * 1.5, now + 0.08, 0.18, 'triangle', 0.18);
+    },
+
     // にゅるん、という みずっぽい スクイーズおと(スライム)
     playSlimeSquish() {
       if (muted) return;
