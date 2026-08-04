@@ -188,4 +188,12 @@ const GAMES = [
     path: 'games/fruit-merge/index.html',
     desc: 'おなじ フルーツを ぶつけて、どんどん おおきい フルーツに マージしよう！',
   },
+  {
+    id: 'friend-collect',
+    title: 'そうすけの おともだちあつめ',
+    emoji: '🚕',
+    color: '#7EC8E3',
+    path: 'games/friend-collect/index.html',
+    desc: '20びょう いないに こうえんの おともだち10にんを あつめて、タクシーに のろう！',
+  },
 ];

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの おともだちあつめ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #7EC8E3 0%, #A8E6CF 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 460px;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    background: linear-gradient(#BEE9E8 0 18%, #8FD98F 18% 100%);
+  }
+
+  .sun { position: absolute; top: 4%; right: 6%; font-size: 2rem; }
+  .deco { position: absolute; font-size: 2.2rem; transform: translate(-50%, -50%); pointer-events: none; }
+
+  .friend {
+    position: absolute;
+    font-size: 2rem;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .friend.collected {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) translateY(-20px);
+  }
+
+  .player {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  .taxi {
+    position: absolute;
+    top: 50%;
+    left: -15%;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    transition: left 1.4s ease-in-out;
+    z-index: 8;
+  }
+  .taxi.arrive { left: 50%; transform: translate(-50%, -50%); }
+  .taxi.hide { display: none; }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
+    margin-top: 16px;
+  }
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(3, 60px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.5rem;
+    border: none; border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🚕 そうすけの おともだちあつめ</h1>
+
+  <div class="hud" id="hud">
+    <span>あつめた 🧒 <span id="collectedCount">0</span>/<span id="totalCount">10</span></span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">20</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <span class="sun">☀️</span>
+      <div id="decoLayer"></div>
+      <div id="friendsLayer"></div>
+      <div class="player" id="player">🧑</div>
+      <div class="taxi hide" id="taxi">🚕</div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🚕 おともだちあつめ</h2>
+        <p>
+          やじるしで うごいて、こうえんの なかの おともだち 10にんを あつめよう！<br>
+          20びょう いないに ぜんいん あつめられたら、タクシーに のって かえれるよ。<br>
+          じかんぎれに なったら アウトだよ！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=5"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const FRIEND_COUNT = 10;
+    const GAME_TIME = 20;
+    const PROXIMITY = 34;
+    const FRIEND_EMOJIS = ['👦', '👧', '🧒', '👶', '🧑', '👨', '👩', '🧓', '👴', '👵'];
+    const DECOS = [
+      { emoji: '🌳', x: 10, y: 30 }, { emoji: '🌳', x: 88, y: 28 },
+      { emoji: '🌳', x: 6, y: 70 }, { emoji: '🌳', x: 92, y: 68 },
+      { emoji: '🪑', x: 22, y: 55 }, { emoji: '🪑', x: 78, y: 45 },
+      { emoji: '🌸', x: 50, y: 88 }, { emoji: '🌸', x: 15, y: 90 },
+    ];
+    const PLAYER_HOME = { x: 50, y: 92 };
+
+    const arenaEl = document.getElementById('arena');
+    const decoLayerEl = document.getElementById('decoLayer');
+    const friendsLayerEl = document.getElementById('friendsLayer');
+    const playerEl = document.getElementById('player');
+    const taxiEl = document.getElementById('taxi');
+    const hudEl = document.getElementById('hud');
+    const collectedCountEl = document.getElementById('collectedCount');
+    const totalCountEl = document.getElementById('totalCount');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    totalCountEl.textContent = FRIEND_COUNT;
+
+    let friends = [];
+    let friendEls = [];
+    let collectedCount = 0;
+    let timeLeft = GAME_TIME;
+    let playing = false;
+    let countdownTimer = null;
+    let playerX = 0, playerY = 0;
+    let input = { up: false, down: false, left: false, right: false };
+    let lastFrame = 0;
+
+    function pxOf(pctX, pctY) {
+      return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
+    }
+
+    function renderDecos() {
+      decoLayerEl.innerHTML = '';
+      DECOS.forEach(d => {
+        const el = document.createElement('span');
+        el.className = 'deco';
+        el.textContent = d.emoji;
+        el.style.left = d.x + '%';
+        el.style.top = d.y + '%';
+        decoLayerEl.appendChild(el);
+      });
+    }
+
+    function randomFriendPos(existing) {
+      let pos, tries = 0;
+      do {
+        pos = { x: 10 + Math.random() * 80, y: 12 + Math.random() * 65 };
+        tries++;
+      } while (
+        tries < 30 &&
+        existing.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 12)
+      );
+      return pos;
+    }
+
+    function spawnFriends() {
+      friendsLayerEl.innerHTML = '';
+      friends = [];
+      friendEls = [];
+      const positions = [];
+      for (let i = 0; i < FRIEND_COUNT; i++) {
+        const pos = randomFriendPos(positions);
+        positions.push(pos);
+        friends.push({ id: i, x: pos.x, y: pos.y, emoji: FRIEND_EMOJIS[i % FRIEND_EMOJIS.length], collected: false });
+      }
+      friends.forEach(f => {
+        const el = document.createElement('div');
+        el.className = 'friend';
+        el.textContent = f.emoji;
+        el.style.left = f.x + '%';
+        el.style.top = f.y + '%';
+        friendsLayerEl.appendChild(el);
+        friendEls.push(el);
+      });
+    }
+
+    function resetGame() {
+      collectedCount = 0;
+      timeLeft = GAME_TIME;
+      collectedCountEl.textContent = 0;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      taxiEl.classList.add('hide');
+      taxiEl.classList.remove('arrive');
+      const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+      playerX = home.x;
+      playerY = home.y;
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      spawnFriends();
+    }
+
+    function checkCollisions() {
+      friends.forEach((f, i) => {
+        if (f.collected) return;
+        const p = pxOf(f.x, f.y);
+        const dist = Math.hypot(playerX - p.x, playerY - p.y);
+        if (dist < PROXIMITY) {
+          f.collected = true;
+          collectedCount++;
+          collectedCountEl.textContent = collectedCount;
+          friendEls[i].classList.add('collected');
+          GameAudio.playClickTick();
+          if (collectedCount >= FRIEND_COUNT) {
+            winGame();
+          }
+        }
+      });
+    }
+
+    function update(dt) {
+      if (!playing) return;
+      const speed = 150;
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      playerX = Math.max(14, Math.min(arenaEl.clientWidth - 14, playerX + dx * speed * dt));
+      playerY = Math.max(14, Math.min(arenaEl.clientHeight - 14, playerY + dy * speed * dt));
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      checkCollisions();
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function setDir(dir, value) { input[dir] = value; }
+    ['Up', 'Down', 'Left', 'Right'].forEach(dir => {
+      const key = dir.toLowerCase();
+      const btn = document.getElementById('btn' + dir);
+      btn.addEventListener('pointerdown', () => setDir(key, true));
+      btn.addEventListener('pointerup', () => setDir(key, false));
+      btn.addEventListener('pointerleave', () => setDir(key, false));
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 5) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          loseGame();
+        }
+      }, 1000);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      taxiEl.classList.remove('hide');
+      void taxiEl.offsetWidth;
+      taxiEl.classList.add('arrive');
+      setTimeout(() => {
+        endTitleEl.textContent = '🚕 タクシーに のれたね！ 🎉';
+        endTextEl.textContent = `10にん ぜんいん あつめて、じかんが ${timeLeft}びょう のこったよ！`;
+        endOverlay.classList.remove('hide');
+        Leaderboard.showRankFlow({ gameId: 'friend-collect', score: collectedCount, higherIsBetter: true, unit: 'にん', title: '🚕 あつめた にんずう ランキング' });
+      }, 1200);
+    }
+
+    function loseGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      endTitleEl.textContent = '😭 じかんぎれ アウト！';
+      endTextEl.textContent = `${collectedCount}/${FRIEND_COUNT}にん しか あつめられなかったよ。もう いちど ちょうせん しよう！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'friend-collect', score: collectedCount, higherIsBetter: true, unit: 'にん', title: '🚕 あつめた にんずう ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    renderDecos();
+    const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+    playerX = home.x;
+    playerY = home.y;
+    playerEl.style.left = playerX + 'px';
+    playerEl.style.top = playerY + 'px';
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
