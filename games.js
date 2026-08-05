@@ -204,4 +204,12 @@ const GAMES = [
     path: 'games/pizza-delivery/index.html',
     desc: 'バイクで レーンを かえながら、じゃまものを よけて 50メートル ピザを とどけよう！',
   },
+  {
+    id: 'body-maze',
+    title: 'そうすけの からだの なか たんけん',
+    emoji: '🫀',
+    color: '#FF9E9E',
+    path: 'games/body-maze/index.html',
+    desc: 'くちから はいって、からだの なかの めいろを すすんで、そとまで でられるかな？',
+  },
 ];
