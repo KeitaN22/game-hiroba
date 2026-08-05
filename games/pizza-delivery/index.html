@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ピザとどけ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFC1E3 0%, #7EC8E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0 20px, transparent 20px 44px),
+      #6B6B6B;
+    background-size: 6px 100%, auto;
+    background-position: 50% 0, 0 0;
+    background-repeat: repeat-y, no-repeat;
+  }
+  .arena::before {
+    content: '';
+    position: absolute; left: 8%; top: 0; bottom: 0; width: 4px; background: rgba(255,255,255,0.35);
+  }
+  .arena::after {
+    content: '';
+    position: absolute; right: 8%; top: 0; bottom: 0; width: 4px; background: rgba(255,255,255,0.35);
+  }
+
+  .obstacle {
+    position: absolute;
+    font-size: 2rem;
+    transform: translate(-50%, -50%);
+  }
+
+  .bike {
+    position: absolute;
+    font-size: 2.4rem;
+    transform: translate(-50%, -50%);
+    transition: left 0.15s ease-out;
+    z-index: 6;
+  }
+  .bike.crash {
+    animation: crashSpin 0.6s ease-out forwards;
+  }
+  @keyframes crashSpin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(340deg) translateY(30px); opacity: 0.3; }
+  }
+
+  .pizza-box {
+    position: absolute;
+    font-size: 1.5rem;
+    transform: translate(-50%, -50%);
+    transition: left 0.15s ease-out;
+    z-index: 5;
+  }
+  .pizza-box.fly {
+    animation: pizzaFly 0.7s ease-in forwards;
+  }
+  @keyframes pizzaFly {
+    0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
+    100% { transform: translate(calc(-50% + 60px), 40px) rotate(200deg); opacity: 0; }
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 24px;
+    margin-top: 16px;
+  }
+  .lane-btn {
+    font-size: 1.6rem;
+    border: none; border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+    padding: 16px 30px;
+  }
+  .lane-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🍕 そうすけの ピザとどけ</h1>
+
+  <div class="hud" id="hud">
+    <span>きょり 🛵 <span id="distanceEl">0</span>/<span id="targetEl">50</span> m</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <div id="obstacleLayer"></div>
+      <div class="pizza-box" id="pizzaBox">🍕</div>
+      <div class="bike" id="bike">🏍️</div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🍕 ピザとどけ</h2>
+        <p>
+          みぎ・ひだりで レーンを かえて、じゃまものを よけながら すすもう！<br>
+          ぶつかると バイクから おちて ピザも おちて、ゲームオーバーだよ。<br>
+          50メートル すすめたら はいたつ せいこう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <button class="lane-btn" id="btnLeft">⬅️</button>
+    <button class="lane-btn" id="btnRight">➡️</button>
+  </div>
+
+  <script src="../../audio.js?v=5"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const LANE_X = [22, 50, 78];
+    const BIKE_Y = 82;
+    const TARGET_METERS = 50;
+    const METERS_PER_SEC = 3.2;
+    const HIT_TOLERANCE = 7;
+    const OBSTACLE_EMOJIS = ['🕳️', '📦', '🪨', '🚧', '🐕'];
+
+    const arenaEl = document.getElementById('arena');
+    const obstacleLayerEl = document.getElementById('obstacleLayer');
+    const bikeEl = document.getElementById('bike');
+    const pizzaBoxEl = document.getElementById('pizzaBox');
+    const distanceEl = document.getElementById('distanceEl');
+    const targetEl = document.getElementById('targetEl');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    targetEl.textContent = TARGET_METERS;
+
+    let laneIndex = 1;
+    let distance = 0;
+    let playing = false;
+    let obstacles = [];
+    let obstacleEls = {};
+    let nextObstacleId = 1;
+    let spawnTimer = 0;
+    let nextSpawnGap = 900;
+    let lastFrame = 0;
+
+    function progressRatio() {
+      return Math.min(1, distance / TARGET_METERS);
+    }
+
+    function updateBikePosition() {
+      bikeEl.style.left = LANE_X[laneIndex] + '%';
+      bikeEl.style.top = BIKE_Y + '%';
+      pizzaBoxEl.style.left = LANE_X[laneIndex] + '%';
+      pizzaBoxEl.style.top = (BIKE_Y - 9) + '%';
+    }
+
+    function resetGame() {
+      distance = 0;
+      laneIndex = 1;
+      obstacles = [];
+      obstacleLayerEl.innerHTML = '';
+      obstacleEls = {};
+      spawnTimer = 0;
+      nextSpawnGap = 900;
+      distanceEl.textContent = 0;
+      bikeEl.classList.remove('crash');
+      pizzaBoxEl.classList.remove('fly');
+      pizzaBoxEl.style.opacity = '1';
+      updateBikePosition();
+    }
+
+    function moveLane(dir) {
+      if (!playing) return;
+      laneIndex = Math.max(0, Math.min(LANE_X.length - 1, laneIndex + dir));
+      updateBikePosition();
+    }
+
+    function spawnObstacle() {
+      const ratio = progressRatio();
+      const doubleChance = 0.15 + ratio * 0.35;
+      const lanesToUse = [0, 1, 2].sort(() => Math.random() - 0.5);
+      const count = Math.random() < doubleChance ? 2 : 1;
+      for (let i = 0; i < count; i++) {
+        const lane = lanesToUse[i];
+        const emoji = OBSTACLE_EMOJIS[Math.floor(Math.random() * OBSTACLE_EMOJIS.length)];
+        const ob = { id: nextObstacleId++, lane, y: -8, emoji };
+        obstacles.push(ob);
+        const el = document.createElement('span');
+        el.className = 'obstacle';
+        el.textContent = emoji;
+        el.style.left = LANE_X[lane] + '%';
+        el.style.top = ob.y + '%';
+        obstacleLayerEl.appendChild(el);
+        obstacleEls[ob.id] = el;
+      }
+    }
+
+    function physicsStep(dt) {
+      const ratio = progressRatio();
+      distance += METERS_PER_SEC * dt;
+      distanceEl.textContent = Math.min(TARGET_METERS, Math.floor(distance));
+
+      if (distance >= TARGET_METERS) {
+        winGame();
+        return;
+      }
+
+      const scrollSpeed = 22 + ratio * 18;
+      spawnTimer += dt * 1000;
+      if (spawnTimer >= nextSpawnGap) {
+        spawnTimer = 0;
+        nextSpawnGap = Math.max(450, 900 - ratio * 400);
+        spawnObstacle();
+      }
+
+      const toRemove = [];
+      obstacles.forEach(ob => {
+        ob.y += scrollSpeed * dt;
+        const el = obstacleEls[ob.id];
+        el.style.top = ob.y + '%';
+        if (ob.y > 108) {
+          toRemove.push(ob.id);
+        } else if (ob.lane === laneIndex && Math.abs(ob.y - BIKE_Y) < HIT_TOLERANCE) {
+          crash();
+        }
+      });
+      if (toRemove.length > 0) {
+        obstacles = obstacles.filter(ob => {
+          if (toRemove.includes(ob.id)) {
+            obstacleEls[ob.id].remove();
+            delete obstacleEls[ob.id];
+            return false;
+          }
+          return true;
+        });
+      }
+    }
+
+    function crash() {
+      if (!playing) return;
+      playing = false;
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      bikeEl.classList.add('crash');
+      pizzaBoxEl.classList.add('fly');
+      setTimeout(() => {
+        endTitleEl.textContent = '💥 ぶつかっちゃった！';
+        endTextEl.textContent = `${Math.floor(distance)}m まで すすめたよ。ピザが おちて はいたつ しっぱい…もう いちど ちょうせん しよう！`;
+        endOverlay.classList.remove('hide');
+        Leaderboard.showRankFlow({ gameId: 'pizza-delivery', score: Math.floor(distance), higherIsBetter: true, unit: 'm', title: '🍕 すすんだ きょり ランキング' });
+      }, 700);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      distanceEl.textContent = TARGET_METERS;
+      endTitleEl.textContent = '🍕 はいたつ せいこう！ 🎉';
+      endTextEl.textContent = `${TARGET_METERS}m はしって、ピザを とどけられたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'pizza-delivery', score: TARGET_METERS, higherIsBetter: true, unit: 'm', title: '🍕 すすんだ きょり ランキング' });
+    }
+
+    function loop(now) {
+      if (playing) {
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        physicsStep(dt);
+      }
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById('btnLeft').addEventListener('click', () => moveLane(-1));
+    document.getElementById('btnRight').addEventListener('click', () => moveLane(1));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') moveLane(-1);
+      if (e.key === 'ArrowRight') moveLane(1);
+    });
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      lastFrame = performance.now();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    updateBikePosition();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

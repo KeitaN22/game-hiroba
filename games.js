@@ -196,4 +196,12 @@ const GAMES = [
     path: 'games/friend-collect/index.html',
     desc: '20びょう いないに こうえんの おともだち10にんを あつめて、タクシーに のろう！',
   },
+  {
+    id: 'pizza-delivery',
+    title: 'そうすけの ピザとどけ',
+    emoji: '🍕',
+    color: '#FFC1E3',
+    path: 'games/pizza-delivery/index.html',
+    desc: 'バイクで レーンを かえながら、じゃまものを よけて 50メートル ピザを とどけよう！',
+  },
 ];
