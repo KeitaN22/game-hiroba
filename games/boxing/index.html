@@ -114,6 +114,10 @@
           <div class="hp-label">🤖 あいて</div>
           <div class="hp-track"><div class="hp-fill enemy" id="enemyHpFill" style="width:100%"></div></div>
         </div>
+        <div>
+          <div class="hp-label">🧑 そうすけ</div>
+          <div class="hp-track"><div class="hp-fill" id="playerHpFill" style="width:100%"></div></div>
+        </div>
       </div>
 
       <div class="gauge-track"><div class="gauge-fill" id="gaugeFill" style="width:0%"></div></div>
@@ -128,9 +132,10 @@
         <h2>🥊 ボクシング</h2>
         <p>
           「Fパンチ」で ふつうの パンチ、「Gキック」で キックを だせるよ。<br>
-          こうげきすると したの きいろい ゲージが たまるよ。<br>
+          こうげきすると したの きいろい ゲージが すぐ たまるよ。<br>
           ゲージが まんたんに なったら「Pとくべつ」を おして、めちゃくちゃパンチ10れんだ！<br>
-          あいての HPを 0に すれば かち！ 45びょういないに たおそう！
+          あいても こうげき してくるから、よけながら たたかおう！<br>
+          あいての HPは めちゃくちゃ おおいよ。0に すれば かち！
         </p>
         <button class="big-btn" id="startBtn">▶ スタート</button>
       </div>
@@ -158,20 +163,27 @@
       muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
 
-    const ENEMY_MAX_HP = 100;
+    const ENEMY_MAX_HP = 500;
     const PUNCH_DAMAGE = 6;
-    const PUNCH_GAUGE = 8;
+    const PUNCH_GAUGE = 35;
     const KICK_DAMAGE = 10;
-    const KICK_GAUGE = 12;
+    const KICK_GAUGE = 50;
     const SPECIAL_HITS = 10;
     const SPECIAL_HIT_DAMAGE = 5;
     const SPECIAL_HIT_GAP = 90;
-    const GAME_TIME = 45;
+    const GAME_TIME = 60;
     const ATTACK_LOCK_MS = 130;
+
+    const PLAYER_MAX_HP = 100;
+    const ENEMY_ATTACK_MIN_GAP = 1400;
+    const ENEMY_ATTACK_MAX_GAP = 2600;
+    const ENEMY_ATTACK_MIN_DMG = 5;
+    const ENEMY_ATTACK_MAX_DMG = 12;
 
     const hudEl = document.getElementById('hud');
     const timeLeftEl = document.getElementById('timeLeft');
     const enemyHpFillEl = document.getElementById('enemyHpFill');
+    const playerHpFillEl = document.getElementById('playerHpFill');
     const gaugeFillEl = document.getElementById('gaugeFill');
     const playerFighterEl = document.getElementById('playerFighter');
     const enemyFighterEl = document.getElementById('enemyFighter');
@@ -185,15 +197,18 @@
     const endTextEl = document.getElementById('endText');
 
     let enemyHp = ENEMY_MAX_HP;
+    let playerHp = PLAYER_MAX_HP;
     let gauge = 0;
     let playing = false;
     let attackLocked = false;
     let inSpecial = false;
     let timeLeft = GAME_TIME;
     let countdownTimer = null;
+    let enemyAttackTimer = null;
 
     function resetGame() {
       enemyHp = ENEMY_MAX_HP;
+      playerHp = PLAYER_MAX_HP;
       gauge = 0;
       timeLeft = GAME_TIME;
       attackLocked = false;
@@ -207,6 +222,7 @@
 
     function updateBars() {
       enemyHpFillEl.style.width = Math.max(0, (enemyHp / ENEMY_MAX_HP) * 100) + '%';
+      playerHpFillEl.style.width = Math.max(0, (playerHp / PLAYER_MAX_HP) * 100) + '%';
       gaugeFillEl.style.width = Math.max(0, Math.min(100, gauge)) + '%';
       gaugeFillEl.classList.toggle('full', gauge >= 100);
       specialBtn.classList.toggle('ready', gauge >= 100 && playing && !inSpecial);
@@ -225,6 +241,35 @@
       if (enemyHp <= 0) {
         winGame();
       }
+    }
+
+    function applyDamageToPlayer(amount) {
+      playerHp = Math.max(0, playerHp - amount);
+      updateBars();
+      if (playerHp <= 0) {
+        loseGame('やられた！');
+      }
+    }
+
+    function scheduleEnemyAttack() {
+      clearTimeout(enemyAttackTimer);
+      const gap = ENEMY_ATTACK_MIN_GAP + Math.random() * (ENEMY_ATTACK_MAX_GAP - ENEMY_ATTACK_MIN_GAP);
+      enemyAttackTimer = setTimeout(enemyAttack, gap);
+    }
+
+    function enemyAttack() {
+      if (!playing) return;
+      const dmg = Math.round(ENEMY_ATTACK_MIN_DMG + Math.random() * (ENEMY_ATTACK_MAX_DMG - ENEMY_ATTACK_MIN_DMG));
+      enemyFighterEl.classList.remove('lunge');
+      void enemyFighterEl.offsetWidth;
+      enemyFighterEl.classList.add('lunge');
+      playerFighterEl.classList.remove('hit-flash');
+      void playerFighterEl.offsetWidth;
+      playerFighterEl.classList.add('hit-flash');
+      showImpact();
+      if (dmg >= 9) GameAudio.playKickImpact(); else GameAudio.playPunchImpact();
+      applyDamageToPlayer(dmg);
+      if (playing) scheduleEnemyAttack();
     }
 
     function doAttack(kind) {
@@ -295,6 +340,7 @@
       endOverlay.classList.add('hide');
       playing = true;
       GameAudio.playBGM();
+      scheduleEnemyAttack();
 
       clearInterval(countdownTimer);
       countdownTimer = setInterval(() => {
@@ -304,7 +350,7 @@
         if (timeLeft <= 10) hudEl.classList.add('urgent');
         if (timeLeft <= 0) {
           timeLeftEl.textContent = 0;
-          loseGame();
+          loseGame('じかんぎれ…');
         }
       }, 1000);
     }
@@ -313,6 +359,7 @@
       if (!playing) return;
       playing = false;
       clearInterval(countdownTimer);
+      clearTimeout(enemyAttackTimer);
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
       endTitleEl.textContent = '🏆 KO！ かった！ 🏆';
@@ -321,13 +368,14 @@
       Leaderboard.showRankFlow({ gameId: 'boxing', score: timeLeft, higherIsBetter: true, unit: 'びょう のこし', title: '🥊 のこり じかん ランキング' });
     }
 
-    function loseGame() {
+    function loseGame(reason) {
       if (!playing) return;
       playing = false;
       clearInterval(countdownTimer);
+      clearTimeout(enemyAttackTimer);
       GameAudio.stopBGM();
       GameAudio.playFailBuzz();
-      endTitleEl.textContent = '😖 じかんぎれ…';
+      endTitleEl.textContent = `😖 ${reason || 'まけちゃった…'}`;
       endTextEl.textContent = `あいての HPを あと ${enemyHp} のこしちゃった。もう いちど ちょうせん しよう！`;
       endOverlay.classList.remove('hide');
       Leaderboard.showRankFlow({ gameId: 'boxing', score: 0, higherIsBetter: true, unit: 'びょう のこし', title: '🥊 のこり じかん ランキング' });
