@@ -212,4 +212,12 @@ const GAMES = [
     path: 'games/body-maze/index.html',
     desc: 'くちから はいって、からだの なかの めいろを すすんで、そとまで でられるかな？',
   },
+  {
+    id: 'boxing',
+    title: 'そうすけの ボクシング',
+    emoji: '🥊',
+    color: '#FF9A9E',
+    path: 'games/boxing/index.html',
+    desc: 'Fパンチと Gキックで あいてを こうげき！ ゲージが たまったら Pで めちゃくちゃパンチ！',
+  },
 ];

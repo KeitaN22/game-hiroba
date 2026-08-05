@@ -159,6 +159,32 @@
       osc.stop(now + 0.12);
     },
 
+    // どすん、という おもい キックの おと
+    playKickImpact() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      beep(90, now, 0.18, 'square', 0.26);
+      beep(60, now + 0.03, 0.2, 'sine', 0.22);
+      const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 350;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.08);
+    },
+
     // ぽとん、という フルーツが おちる おと
     playFruitDrop() {
       if (muted) return;

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ボクシング</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FF9A9E 0%, #FFD93D 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    background: linear-gradient(#87CEEB 0%, #6FCF97 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .hp-bars { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+  .hp-label { font-size: 0.85rem; font-weight: bold; color: #333; margin-bottom: 2px; }
+  .hp-track { width: 100%; height: 18px; background: rgba(255,255,255,0.6); border-radius: 999px; overflow: hidden; }
+  .hp-fill { height: 100%; background: #4CAF50; transition: width 0.2s ease; }
+  .hp-fill.enemy { background: #FF6B6B; }
+
+  .gauge-track { width: 100%; height: 20px; background: rgba(255,255,255,0.6); border-radius: 999px; overflow: hidden; margin-bottom: 20px; border: 2px solid rgba(0,0,0,0.1); }
+  .gauge-fill { height: 100%; background: #FFD93D; transition: width 0.15s ease; }
+  .gauge-fill.full { animation: gaugeGlow 0.6s ease-in-out infinite; }
+  @keyframes gaugeGlow { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+
+  .fighters { display: flex; justify-content: space-around; align-items: flex-end; height: 160px; position: relative; }
+  .fighter { font-size: 5rem; transition: transform 0.1s ease-out; }
+  .fighter.player.lunge { animation: lungeRight 0.22s ease-out; }
+  .fighter.enemy.lunge { animation: lungeLeft 0.22s ease-out; }
+  @keyframes lungeRight { 50% { transform: translateX(24px) scale(1.1); } }
+  @keyframes lungeLeft { 50% { transform: translateX(-24px) scale(1.1); } }
+  .fighter.hit-flash { animation: hitFlash 0.18s ease-out; }
+  @keyframes hitFlash { 0%,100% { filter: none; } 50% { filter: brightness(2) saturate(0.3); } }
+
+  .impact-text {
+    position: absolute;
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #FF3B3B;
+    -webkit-text-stroke: 2px #fff;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .impact-text.show {
+    animation: impactPop 0.5s ease-out forwards;
+  }
+  @keyframes impactPop {
+    0% { opacity: 1; transform: translateY(0) scale(0.6); }
+    100% { opacity: 0; transform: translateY(-40px) scale(1.4); }
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
+    margin-top: 18px;
+  }
+  .action-btn {
+    font-size: 1rem; font-weight: bold; padding: 16px 22px; border: none; border-radius: 16px;
+    color: #fff; cursor: pointer; user-select: none;
+  }
+  .punch-btn { background: #4C7BF3; box-shadow: 0 5px 0 #2f56c9; }
+  .kick-btn { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .special-btn { background: #999; box-shadow: 0 5px 0 #666; }
+  .special-btn.ready { background: #FFD93D; color: #333; box-shadow: 0 5px 0 #cba500; animation: specialPulse 0.6s ease-in-out infinite; }
+  @keyframes specialPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+  .action-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .action-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🥊 そうすけの ボクシング</h1>
+
+  <div class="hud" id="hud">
+    <span class="time">のこり ⏱️ <span id="timeLeft">45</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <div class="hp-bars">
+        <div>
+          <div class="hp-label">🤖 あいて</div>
+          <div class="hp-track"><div class="hp-fill enemy" id="enemyHpFill" style="width:100%"></div></div>
+        </div>
+      </div>
+
+      <div class="gauge-track"><div class="gauge-fill" id="gaugeFill" style="width:0%"></div></div>
+
+      <div class="fighters">
+        <div class="fighter player" id="playerFighter">🧑</div>
+        <div class="fighter enemy" id="enemyFighter">🤖</div>
+        <span class="impact-text" id="impactText">💥</span>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🥊 ボクシング</h2>
+        <p>
+          「Fパンチ」で ふつうの パンチ、「Gキック」で キックを だせるよ。<br>
+          こうげきすると したの きいろい ゲージが たまるよ。<br>
+          ゲージが まんたんに なったら「Pとくべつ」を おして、めちゃくちゃパンチ10れんだ！<br>
+          あいての HPを 0に すれば かち！ 45びょういないに たおそう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <button class="action-btn punch-btn" id="punchBtn">👊 F パンチ</button>
+    <button class="action-btn kick-btn" id="kickBtn">🦵 G キック</button>
+    <button class="action-btn special-btn" id="specialBtn" disabled>💥 P とくべつ</button>
+  </div>
+
+  <script src="../../audio.js?v=6"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const ENEMY_MAX_HP = 100;
+    const PUNCH_DAMAGE = 6;
+    const PUNCH_GAUGE = 8;
+    const KICK_DAMAGE = 10;
+    const KICK_GAUGE = 12;
+    const SPECIAL_HITS = 10;
+    const SPECIAL_HIT_DAMAGE = 5;
+    const SPECIAL_HIT_GAP = 90;
+    const GAME_TIME = 45;
+    const ATTACK_LOCK_MS = 130;
+
+    const hudEl = document.getElementById('hud');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const enemyHpFillEl = document.getElementById('enemyHpFill');
+    const gaugeFillEl = document.getElementById('gaugeFill');
+    const playerFighterEl = document.getElementById('playerFighter');
+    const enemyFighterEl = document.getElementById('enemyFighter');
+    const impactTextEl = document.getElementById('impactText');
+    const punchBtn = document.getElementById('punchBtn');
+    const kickBtn = document.getElementById('kickBtn');
+    const specialBtn = document.getElementById('specialBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    let enemyHp = ENEMY_MAX_HP;
+    let gauge = 0;
+    let playing = false;
+    let attackLocked = false;
+    let inSpecial = false;
+    let timeLeft = GAME_TIME;
+    let countdownTimer = null;
+
+    function resetGame() {
+      enemyHp = ENEMY_MAX_HP;
+      gauge = 0;
+      timeLeft = GAME_TIME;
+      attackLocked = false;
+      inSpecial = false;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      updateBars();
+      playerFighterEl.classList.remove('lunge', 'hit-flash');
+      enemyFighterEl.classList.remove('lunge', 'hit-flash');
+    }
+
+    function updateBars() {
+      enemyHpFillEl.style.width = Math.max(0, (enemyHp / ENEMY_MAX_HP) * 100) + '%';
+      gaugeFillEl.style.width = Math.max(0, Math.min(100, gauge)) + '%';
+      gaugeFillEl.classList.toggle('full', gauge >= 100);
+      specialBtn.classList.toggle('ready', gauge >= 100 && playing && !inSpecial);
+      specialBtn.disabled = !(gauge >= 100 && playing && !inSpecial);
+    }
+
+    function showImpact() {
+      impactTextEl.classList.remove('show');
+      void impactTextEl.offsetWidth;
+      impactTextEl.classList.add('show');
+    }
+
+    function applyDamage(amount) {
+      enemyHp = Math.max(0, enemyHp - amount);
+      updateBars();
+      if (enemyHp <= 0) {
+        winGame();
+      }
+    }
+
+    function doAttack(kind) {
+      if (!playing || attackLocked || inSpecial) return;
+      attackLocked = true;
+      setTimeout(() => { attackLocked = false; }, ATTACK_LOCK_MS);
+
+      playerFighterEl.classList.remove('lunge');
+      void playerFighterEl.offsetWidth;
+      playerFighterEl.classList.add('lunge');
+      enemyFighterEl.classList.remove('hit-flash');
+      void enemyFighterEl.offsetWidth;
+      enemyFighterEl.classList.add('hit-flash');
+      showImpact();
+
+      if (kind === 'punch') {
+        GameAudio.playPunchImpact();
+        applyDamage(PUNCH_DAMAGE);
+        gauge = Math.min(100, gauge + PUNCH_GAUGE);
+      } else {
+        GameAudio.playKickImpact();
+        applyDamage(KICK_DAMAGE);
+        gauge = Math.min(100, gauge + KICK_GAUGE);
+      }
+      updateBars();
+    }
+
+    function doSpecial() {
+      if (!playing || gauge < 100 || inSpecial) return;
+      inSpecial = true;
+      gauge = 0;
+      updateBars();
+      let hits = 0;
+      const interval = setInterval(() => {
+        if (!playing) { clearInterval(interval); inSpecial = false; return; }
+        hits++;
+        playerFighterEl.classList.remove('lunge');
+        void playerFighterEl.offsetWidth;
+        playerFighterEl.classList.add('lunge');
+        enemyFighterEl.classList.remove('hit-flash');
+        void enemyFighterEl.offsetWidth;
+        enemyFighterEl.classList.add('hit-flash');
+        showImpact();
+        GameAudio.playPunchImpact();
+        applyDamage(SPECIAL_HIT_DAMAGE);
+        if (hits >= SPECIAL_HITS || enemyHp <= 0) {
+          clearInterval(interval);
+          inSpecial = false;
+          updateBars();
+        }
+      }, SPECIAL_HIT_GAP);
+    }
+
+    punchBtn.addEventListener('click', () => doAttack('punch'));
+    kickBtn.addEventListener('click', () => doAttack('kick'));
+    specialBtn.addEventListener('click', doSpecial);
+
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if (key === 'f') doAttack('punch');
+      if (key === 'g') doAttack('kick');
+      if (key === 'p') doSpecial();
+    });
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          loseGame();
+        }
+      }, 1000);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTitleEl.textContent = '🏆 KO！ かった！ 🏆';
+      endTextEl.textContent = `のこり ${timeLeft}びょうで あいてを たおしたよ！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'boxing', score: timeLeft, higherIsBetter: true, unit: 'びょう のこし', title: '🥊 のこり じかん ランキング' });
+    }
+
+    function loseGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      endTitleEl.textContent = '😖 じかんぎれ…';
+      endTextEl.textContent = `あいての HPを あと ${enemyHp} のこしちゃった。もう いちど ちょうせん しよう！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'boxing', score: 0, higherIsBetter: true, unit: 'びょう のこし', title: '🥊 のこり じかん ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    updateBars();
+  </script>
+</body>
+</html>
