@@ -55,13 +55,35 @@
   .player-token {
     border-radius: 50%;
     background: #FFD93D;
+    transition: left 0.13s linear, top 0.13s linear, clip-path 0.08s linear;
+  }
+  .player-eye {
+    position: absolute;
+    top: 22%; left: 46%;
+    width: 12%; height: 12%;
+    background: #333;
+    border-radius: 50%;
   }
   .chaser-token {
     border-radius: 50% 50% 0 0;
   }
-  .chaser-token .eyes { display: flex; gap: 4px; margin-top: -2px; }
-  .chaser-token .eyes span { width: 16%; height: 16%; background: #fff; border-radius: 50%; }
+  .chaser-token .eyes { display: flex; gap: 14%; margin-top: -8%; }
+  .chaser-token .eyes span {
+    position: relative;
+    width: 26%; height: 26%; background: #fff; border-radius: 50%;
+    display: block;
+  }
+  .chaser-token .eyes span::after {
+    content: '';
+    position: absolute;
+    top: 30%; left: 30%;
+    width: 45%; height: 45%;
+    background: #1a1a2e;
+    border-radius: 50%;
+  }
   .chaser-token.scared { background: #4C7BF3 !important; }
+  .chaser-token.scared .eyes span { background: #fff; }
+  .chaser-token.scared .eyes span::after { background: #1a3a6e; }
 
   .dpad-grid {
     display: grid;
@@ -239,7 +261,9 @@
       playerToken.className = 'token player-token';
       playerToken.style.width = (cellPx * 0.75) + 'px';
       playerToken.style.height = (cellPx * 0.75) + 'px';
+      playerToken.innerHTML = '<span class="player-eye"></span>';
       mazeBoardEl.appendChild(playerToken);
+      setPlayerFacing(0);
 
       chasers = CHASER_HOMES.map((home, i) => {
         const el = document.createElement('div');
@@ -290,6 +314,25 @@
           if (!isWall(r, c)) renderCell(r, c);
         }
       }
+    }
+
+    function pacClipPath(facingDeg) {
+      const gap = 70;
+      const startAngle = facingDeg + gap / 2;
+      const endAngle = facingDeg - gap / 2 + 360;
+      const steps = 20;
+      const points = ['50% 50%'];
+      for (let i = 0; i <= steps; i++) {
+        const a = (startAngle + (endAngle - startAngle) * (i / steps)) * Math.PI / 180;
+        const x = (50 + 50 * Math.cos(a)).toFixed(1);
+        const y = (50 + 50 * Math.sin(a)).toFixed(1);
+        points.push(`${x}% ${y}%`);
+      }
+      return `polygon(${points.join(',')})`;
+    }
+
+    function setPlayerFacing(deg) {
+      playerToken.style.clipPath = pacClipPath(deg);
     }
 
     function positionToken(el, r, c) {
@@ -387,6 +430,10 @@
       if (!playing || frozen) return;
       const nr = playerPos.row + dRow, nc = playerPos.col + dCol;
       if (isWall(nr, nc)) return;
+      if (dCol === 1) setPlayerFacing(0);
+      else if (dRow === 1) setPlayerFacing(90);
+      else if (dCol === -1) setPlayerFacing(180);
+      else if (dRow === -1) setPlayerFacing(270);
       playerPos = { row: nr, col: nc };
       updatePositions();
       eatAt(nr, nc);
