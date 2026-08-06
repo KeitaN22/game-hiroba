@@ -284,4 +284,12 @@ const GAMES = [
     path: 'games/dot-muncher/index.html',
     desc: 'めいろの まるを ぜんぶ たべつくそう！おおきい まるで おばけを ぎゃくしゅうできるよ！',
   },
+  {
+    id: 'town-walk',
+    title: 'そうすけの まちあるき',
+    emoji: '🚶',
+    color: '#7EC8E3',
+    path: 'games/town-walk/index.html',
+    desc: 'ピザやさんや ホテルなど、5つの まちの たてものに はいって いろんな たいけんを しよう！',
+  },
 ];
