@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの きがえっこ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #7EC8E3 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 480px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 22px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .avatar-wrap {
+    position: relative;
+    width: 150px;
+    height: 230px;
+    margin-bottom: 4px;
+  }
+  .avatar-head {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 62px; height: 62px; border-radius: 50%;
+    background: #FFD9B3;
+    box-shadow: inset -6px -6px 0 rgba(0,0,0,0.05);
+  }
+  .avatar-head::before, .avatar-head::after {
+    content: ''; position: absolute; top: 24px; width: 6px; height: 6px; border-radius: 50%; background: #333;
+  }
+  .avatar-head::before { left: 16px; }
+  .avatar-head::after { right: 16px; }
+  .avatar-shirt {
+    position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
+    width: 96px; height: 74px; border-radius: 18px 18px 6px 6px;
+    background: #FF6B6B;
+    transition: background 0.2s ease;
+  }
+  .avatar-shirt.pattern-stripe {
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.55) 0 8px, transparent 8px 16px);
+  }
+  .avatar-shirt .shirt-emoji { position: absolute; font-size: 1.1rem; }
+  .avatar-pants {
+    position: absolute; top: 126px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 76px;
+    background: linear-gradient(90deg, #4C6B9E 0 46%, #fff 46% 54%, #4C6B9E 54% 100%);
+    border-radius: 0 0 10px 10px;
+    transition: background 0.2s ease;
+  }
+  .avatar-shoes {
+    position: absolute; top: 200px; left: 50%; transform: translateX(-50%);
+    width: 90px; height: 16px;
+    display: flex; justify-content: space-between;
+  }
+  .avatar-shoes span { width: 34px; height: 16px; background: #333; border-radius: 6px; }
+
+  .picker-section { width: 100%; }
+  .picker-title { font-size: 1rem; font-weight: bold; color: #333; margin-bottom: 8px; text-align: center; }
+  .picker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .picker-card {
+    border: none;
+    border-radius: 14px;
+    padding: 10px 4px;
+    background: #FFF6D8;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-weight: bold;
+    font-size: 0.68rem;
+  }
+  .picker-card:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+  .picker-card.selected { box-shadow: 0 0 0 3px #333, 0 4px 0 rgba(0,0,0,0.2); }
+  .picker-swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.15); }
+
+  .decide-msg { font-size: 1rem; font-weight: bold; color: #4CAF50; min-height: 22px; text-align: center; }
+
+  .decide-btn {
+    font-size: 1.05rem; font-weight: bold; padding: 12px 26px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #c73f6a;
+  }
+  .decide-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #c73f6a; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">👕 そうすけの きがえっこ</h1>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="avatar-wrap">
+        <div class="avatar-head"></div>
+        <div class="avatar-shirt" id="avatarShirt"></div>
+        <div class="avatar-pants" id="avatarPants"></div>
+        <div class="avatar-shoes"><span></span><span></span></div>
+      </div>
+
+      <div class="picker-section">
+        <div class="picker-title">👕 どの Tシャツが きたい？</div>
+        <div class="picker-grid" id="shirtGrid"></div>
+      </div>
+
+      <div class="picker-section">
+        <div class="picker-title">👖 どの ズボンが きたい？</div>
+        <div class="picker-grid" id="pantsGrid"></div>
+      </div>
+
+      <button class="decide-btn" id="decideBtn">✅ これに きめる！</button>
+      <div class="decide-msg" id="decideMsg">&nbsp;</div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=8"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const SHIRTS = [
+      { id: 'red', name: 'あか', color: '#FF6B6B' },
+      { id: 'blue', name: 'あお', color: '#4C7BF3' },
+      { id: 'yellow', name: 'きいろ', color: '#FFD93D' },
+      { id: 'green', name: 'みどり', color: '#6FCF97' },
+      { id: 'stripe', name: 'しましま', color: '#FF9A56', pattern: 'pattern-stripe' },
+      { id: 'star', name: 'ほしがら', color: '#4C7BF3', emoji: '⭐' },
+    ];
+    const PANTS = [
+      { id: 'denim', name: 'デニム', color: '#4C6B9E' },
+      { id: 'black', name: 'くろ', color: '#333333' },
+      { id: 'khaki', name: 'カーキ', color: '#B5A46A' },
+      { id: 'red', name: 'あか', color: '#E85D5D' },
+      { id: 'pink', name: 'ピンク', color: '#FF9AC1' },
+      { id: 'green', name: 'みどり', color: '#5B9E6B' },
+    ];
+
+    const avatarShirtEl = document.getElementById('avatarShirt');
+    const avatarPantsEl = document.getElementById('avatarPants');
+    const shirtGridEl = document.getElementById('shirtGrid');
+    const pantsGridEl = document.getElementById('pantsGrid');
+    const decideMsgEl = document.getElementById('decideMsg');
+
+    let selectedShirt = SHIRTS[0];
+    let selectedPants = PANTS[0];
+
+    function pantsBg(pants) {
+      return `linear-gradient(90deg, ${pants.color} 0 46%, #fff 46% 54%, ${pants.color} 54% 100%)`;
+    }
+
+    function updateAvatar() {
+      avatarShirtEl.style.background = selectedShirt.color;
+      avatarShirtEl.className = 'avatar-shirt' + (selectedShirt.pattern ? ' ' + selectedShirt.pattern : '');
+      avatarShirtEl.innerHTML = selectedShirt.emoji
+        ? `<span class="shirt-emoji" style="top:10px;left:14px;">${selectedShirt.emoji}</span><span class="shirt-emoji" style="top:30px;left:56px;">${selectedShirt.emoji}</span><span class="shirt-emoji" style="top:46px;left:20px;">${selectedShirt.emoji}</span>`
+        : '';
+      avatarPantsEl.style.background = pantsBg(selectedPants);
+    }
+
+    function renderGrid(gridEl, items, getSelected, onPick) {
+      gridEl.innerHTML = '';
+      items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'picker-card' + (item.id === getSelected().id ? ' selected' : '');
+        btn.innerHTML = `<span class="picker-swatch" style="background:${item.color}"></span><span>${item.name}</span>`;
+        btn.addEventListener('click', () => {
+          onPick(item);
+          GameAudio.playClickTick();
+          renderGrid(gridEl, items, getSelected, onPick);
+          updateAvatar();
+          decideMsgEl.textContent = '';
+        });
+        gridEl.appendChild(btn);
+      });
+    }
+
+    renderGrid(shirtGridEl, SHIRTS, () => selectedShirt, (item) => { selectedShirt = item; });
+    renderGrid(pantsGridEl, PANTS, () => selectedPants, (item) => { selectedPants = item; });
+    updateAvatar();
+
+    document.getElementById('decideBtn').addEventListener('click', () => {
+      GameAudio.playClearFanfare();
+      decideMsgEl.textContent = `🎉 ${selectedShirt.name}の Tシャツと ${selectedPants.name}の ズボンに きめた！`;
+    });
+  </script>
+</body>
+</html>

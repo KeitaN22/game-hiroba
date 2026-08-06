@@ -159,6 +159,31 @@
       osc.stop(now + 0.12);
     },
 
+    // ぺちゃっ、という むしを たいじする おと
+    playBugSquish() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const bufferSize = Math.floor(ctx.sampleRate * 0.1);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 420;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.1);
+      beep(110, now, 0.08, 'square', 0.15);
+    },
+
     // ジャーっと ながれる トイレの みずおと
     playToiletFlush() {
       if (muted) return;

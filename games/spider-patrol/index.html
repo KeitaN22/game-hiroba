@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの くもたいじ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #C8F7C5 0%, #FFE985 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    background: repeating-linear-gradient(0deg, #F5EFE0 0 40px, #EDE4CC 40px 42px);
+  }
+
+  .window {
+    position: absolute; right: 6%; top: 8%;
+    font-size: 3rem;
+  }
+  .window-label {
+    position: absolute; right: 4%; top: 3%;
+    font-size: 0.55rem; font-weight: bold; color: #556;
+    background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 999px;
+  }
+
+  .spider {
+    position: absolute;
+    font-size: 2.6rem;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+  }
+  .spider.release {
+    animation: spiderRelease 0.6s ease-in forwards;
+  }
+  .spider.squish {
+    animation: spiderSquish 0.4s ease-out forwards;
+  }
+  @keyframes spiderRelease {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx, 100px)), calc(-50% + var(--dy, -60px))) scale(0.3); opacity: 0; }
+  }
+  @keyframes spiderSquish {
+    0% { transform: translate(-50%, -50%) scale(1, 1); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.5, 0.3); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.5, 0.1); opacity: 0; }
+  }
+
+  .action-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
+    margin-top: 16px;
+  }
+  .action-btn {
+    font-size: 1rem; font-weight: bold; padding: 16px 22px; border: none; border-radius: 16px;
+    color: #fff; cursor: pointer; user-select: none;
+  }
+  .release-btn { background: #4FC3F7; box-shadow: 0 5px 0 #2e93bd; }
+  .squish-btn { background: #8B5E3C; box-shadow: 0 5px 0 #5e3d24; }
+  .action-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .action-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🕷️ そうすけの くもたいじ</h1>
+
+  <div class="hud" id="hud">
+    <span>にがした 🪟 <span id="releaseCount">0</span></span>
+    <span>たいじした 👟 <span id="squishCount">0</span></span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">40</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <span class="window-label">🪟 そと</span>
+      <span class="window">🪟</span>
+      <span class="spider hide" id="spider">🕷️</span>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🕷️ くもたいじ</h2>
+        <p>
+          かべに くもが でてきたら、「🪟 そとに にがす」か「👟 たいじする」を えらぼう！<br>
+          40びょうで なんびき たいおう できるかな？
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="action-btn release-btn" id="releaseBtn" disabled>🪟 そとに にがす</button>
+    <button class="action-btn squish-btn" id="squishBtn" disabled>👟 たいじする</button>
+  </div>
+
+  <script src="../../audio.js?v=8"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const GAME_TIME = 40;
+    const SPIDER_MIN_DELAY = 500;
+    const SPIDER_MAX_DELAY = 1100;
+    const WINDOW_POS = { x: 88, y: 14 };
+
+    const arenaEl = document.getElementById('arena');
+    const spiderEl = document.getElementById('spider');
+    const hudEl = document.getElementById('hud');
+    const releaseCountEl = document.getElementById('releaseCount');
+    const squishCountEl = document.getElementById('squishCount');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const releaseBtn = document.getElementById('releaseBtn');
+    const squishBtn = document.getElementById('squishBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let releaseCount = 0;
+    let squishCount = 0;
+    let timeLeft = GAME_TIME;
+    let playing = false;
+    let spiderActive = false;
+    let countdownTimer = null;
+    let spawnTimer = null;
+
+    function resetGame() {
+      releaseCount = 0;
+      squishCount = 0;
+      timeLeft = GAME_TIME;
+      releaseCountEl.textContent = 0;
+      squishCountEl.textContent = 0;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      spiderActive = false;
+      spiderEl.classList.add('hide');
+      spiderEl.classList.remove('release', 'squish');
+      releaseBtn.disabled = true;
+      squishBtn.disabled = true;
+    }
+
+    function spawnSpider() {
+      if (!playing) return;
+      const x = 10 + Math.random() * 70;
+      const y = 20 + Math.random() * 65;
+      spiderEl.style.left = x + '%';
+      spiderEl.style.top = y + '%';
+      spiderEl.classList.remove('hide', 'release', 'squish');
+      spiderActive = true;
+      releaseBtn.disabled = false;
+      squishBtn.disabled = false;
+    }
+
+    function scheduleSpawn() {
+      clearTimeout(spawnTimer);
+      const delay = SPIDER_MIN_DELAY + Math.random() * (SPIDER_MAX_DELAY - SPIDER_MIN_DELAY);
+      spawnTimer = setTimeout(spawnSpider, delay);
+    }
+
+    function resolveSpider(action) {
+      if (!playing || !spiderActive) return;
+      spiderActive = false;
+      releaseBtn.disabled = true;
+      squishBtn.disabled = true;
+
+      if (action === 'release') {
+        const rect = arenaEl.getBoundingClientRect();
+        const spiderRect = spiderEl.getBoundingClientRect();
+        const targetX = rect.width * WINDOW_POS.x / 100;
+        const targetY = rect.height * WINDOW_POS.y / 100;
+        const curX = spiderRect.left - rect.left + spiderRect.width / 2;
+        const curY = spiderRect.top - rect.top + spiderRect.height / 2;
+        spiderEl.style.setProperty('--dx', (targetX - curX) + 'px');
+        spiderEl.style.setProperty('--dy', (targetY - curY) + 'px');
+        spiderEl.classList.add('release');
+        GameAudio.playWrapSquish();
+        releaseCount++;
+        releaseCountEl.textContent = releaseCount;
+      } else {
+        spiderEl.classList.add('squish');
+        GameAudio.playBugSquish();
+        squishCount++;
+        squishCountEl.textContent = squishCount;
+      }
+
+      setTimeout(() => {
+        spiderEl.classList.add('hide');
+        spiderEl.classList.remove('release', 'squish');
+        if (playing) scheduleSpawn();
+      }, 500);
+    }
+
+    releaseBtn.addEventListener('click', () => resolveSpider('release'));
+    squishBtn.addEventListener('click', () => resolveSpider('squish'));
+    spiderEl.addEventListener('click', () => {}); // ゆびで くもを ちょくせつ おしても はんのうしないよう、ボタンで えらぶ しくみ
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      scheduleSpawn();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      playing = false;
+      clearInterval(countdownTimer);
+      clearTimeout(spawnTimer);
+      spiderActive = false;
+      releaseBtn.disabled = true;
+      squishBtn.disabled = true;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      const total = releaseCount + squishCount;
+      endTextEl.textContent = `🪟 にがした：${releaseCount}ひき　👟 たいじした：${squishCount}ひき　あわせて ${total}ひき たいおうしたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'spider-patrol', score: total, higherIsBetter: true, unit: 'ひき', title: '🕷️ たいおうした かず ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

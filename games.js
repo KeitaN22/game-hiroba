@@ -260,4 +260,20 @@ const GAMES = [
     path: 'games/find-phone/index.html',
     desc: 'キッチンの うえや プリントの したなど、おうちの なかから けいたいを さがしだそう！',
   },
+  {
+    id: 'outfit-picker',
+    title: 'そうすけの きがえっこ',
+    emoji: '👕',
+    color: '#7EC8E3',
+    path: 'games/outfit-picker/index.html',
+    desc: 'どの Tシャツと どの ズボンが きたい？ すきな ふくを えらんで きせかえよう！',
+  },
+  {
+    id: 'spider-patrol',
+    title: 'そうすけの くもたいじ',
+    emoji: '🕷️',
+    color: '#C8F7C5',
+    path: 'games/spider-patrol/index.html',
+    desc: 'かべに でてきた くもを、そとに にがすか たいじするか えらぼう！',
+  },
 ];
