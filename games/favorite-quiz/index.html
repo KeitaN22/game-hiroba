@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの なにが すき？</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFC1E3 0%, #FFE985 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 460px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 22px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .category-title { font-size: 1.4rem; font-weight: bold; color: #333; text-align: center; }
+  .category-sub { font-size: 0.9rem; color: #777; text-align: center; margin-top: -10px; }
+
+  .choice-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+  }
+  .choice-card {
+    border: none;
+    border-radius: 16px;
+    padding: 14px 4px;
+    background: #FFF6D8;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-weight: bold;
+    font-size: 0.8rem;
+  }
+  .choice-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .choice-card.picked { background: #C8F7C5; box-shadow: 0 5px 0 #4CAF50; }
+  .choice-card .choji { font-size: 2.4rem; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 12px;
+    width: 100%;
+  }
+  .summary-card {
+    background: #FFF6D8; border-radius: 16px; padding: 12px; text-align: center;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+  }
+  .summary-card .scat { font-size: 0.7rem; color: #777; font-weight: bold; }
+  .summary-card .semoji { font-size: 2.2rem; display: block; margin: 4px 0; }
+  .summary-card .sname { font-size: 0.85rem; font-weight: bold; color: #333; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">💭 そうすけの なにが すき？</h1>
+
+  <div class="hud">
+    <span>すすみ 📖 <span id="roundCount">1</span>/<span id="roundTotal">5</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="hide" id="quizView" style="display:flex; flex-direction:column; align-items:center; gap:16px; width:100%;">
+        <div class="category-title" id="categoryTitle">?</div>
+        <div class="category-sub">すきな ものを 1つ えらんでね</div>
+        <div class="choice-grid" id="choiceGrid"></div>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>💭 なにが すき？</h2>
+        <p>くだものや どうぶつなど、いろんな なかまから すきな ものを えらんでいくよ！ぜんぶで 5かい あるよ。</p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 そうすけの すきな もの 🎉</h2>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <button class="big-btn" id="retryBtn" style="margin-top:16px;">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=6"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const CATEGORIES = [
+      { name: 'くだもの', options: [
+        { emoji: '🍎', name: 'りんご' }, { emoji: '🍌', name: 'バナナ' }, { emoji: '🍇', name: 'ぶどう' },
+        { emoji: '🍓', name: 'いちご' }, { emoji: '🍊', name: 'みかん' }, { emoji: '🍑', name: 'もも' },
+      ]},
+      { name: 'どうぶつ', options: [
+        { emoji: '🐶', name: 'いぬ' }, { emoji: '🐱', name: 'ねこ' }, { emoji: '🐰', name: 'うさぎ' },
+        { emoji: '🐻', name: 'くま' }, { emoji: '🦁', name: 'ライオン' }, { emoji: '🐼', name: 'パンダ' },
+      ]},
+      { name: 'やさい', options: [
+        { emoji: '🥬', name: 'キャベツ' }, { emoji: '🥕', name: 'にんじん' }, { emoji: '🍅', name: 'トマト' },
+        { emoji: '🌽', name: 'とうもろこし' }, { emoji: '🥦', name: 'ブロッコリー' }, { emoji: '🍆', name: 'なす' },
+      ]},
+      { name: 'のりもの', options: [
+        { emoji: '🚗', name: 'くるま' }, { emoji: '🚂', name: 'でんしゃ' }, { emoji: '🚀', name: 'ロケット' },
+        { emoji: '🚁', name: 'ヘリコプター' }, { emoji: '🚢', name: 'ふね' }, { emoji: '🚲', name: 'じてんしゃ' },
+      ]},
+      { name: 'おやつ', options: [
+        { emoji: '🍪', name: 'クッキー' }, { emoji: '🍩', name: 'ドーナツ' }, { emoji: '🍰', name: 'ケーキ' },
+        { emoji: '🍫', name: 'チョコ' }, { emoji: '🍭', name: 'あめ' }, { emoji: '🍦', name: 'アイス' },
+      ]},
+    ];
+
+    const quizView = document.getElementById('quizView');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const categoryTitleEl = document.getElementById('categoryTitle');
+    const choiceGridEl = document.getElementById('choiceGrid');
+    const summaryGridEl = document.getElementById('summaryGrid');
+    const roundCountEl = document.getElementById('roundCount');
+    const roundTotalEl = document.getElementById('roundTotal');
+
+    roundTotalEl.textContent = CATEGORIES.length;
+
+    let roundIndex = 0;
+    let answers = [];
+    let answered = false;
+
+    function showRound() {
+      answered = false;
+      roundCountEl.textContent = roundIndex + 1;
+      const cat = CATEGORIES[roundIndex];
+      categoryTitleEl.textContent = `${cat.name}で すきなのは？`;
+      choiceGridEl.innerHTML = '';
+      cat.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-card';
+        btn.innerHTML = `<span class="choji">${opt.emoji}</span><span>${opt.name}</span>`;
+        btn.addEventListener('click', () => pickOption(btn, cat, opt));
+        choiceGridEl.appendChild(btn);
+      });
+    }
+
+    function pickOption(btn, cat, opt) {
+      if (answered) return;
+      answered = true;
+      btn.classList.add('picked');
+      GameAudio.playClickTick();
+      answers.push({ category: cat.name, emoji: opt.emoji, name: opt.name });
+      setTimeout(() => {
+        roundIndex++;
+        if (roundIndex >= CATEGORIES.length) {
+          endQuiz();
+        } else {
+          showRound();
+        }
+      }, 550);
+    }
+
+    function endQuiz() {
+      quizView.classList.add('hide');
+      GameAudio.playClearFanfare();
+      summaryGridEl.innerHTML = '';
+      answers.forEach(a => {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        card.innerHTML = `<span class="scat">${a.category}</span><span class="semoji">${a.emoji}</span><span class="sname">${a.name}</span>`;
+        summaryGridEl.appendChild(card);
+      });
+      endOverlay.classList.remove('hide');
+    }
+
+    function startQuiz() {
+      roundIndex = 0;
+      answers = [];
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      quizView.classList.remove('hide');
+      GameAudio.playBGM();
+      showRound();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startQuiz);
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      GameAudio.stopBGM();
+      startQuiz();
+    });
+  </script>
+</body>
+</html>

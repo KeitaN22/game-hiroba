@@ -220,4 +220,12 @@ const GAMES = [
     path: 'games/boxing/index.html',
     desc: 'Fパンチと Gキックで あいてを こうげき！ ゲージが たまったら Pで めちゃくちゃパンチ！',
   },
+  {
+    id: 'favorite-quiz',
+    title: 'そうすけの なにが すき？',
+    emoji: '💭',
+    color: '#FFC1E3',
+    path: 'games/favorite-quiz/index.html',
+    desc: 'くだもの、どうぶつ、やさいなど、5つの なかまから すきな ものを えらんでいこう！',
+  },
 ];
