@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの べんきょう かくし</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FF9A9E 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 460px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 24px 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .paper-stage {
+    position: relative;
+    width: 100%;
+    height: 130px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .paper {
+    font-size: 5rem;
+    transition: opacity 0.2s ease;
+  }
+  .paper.gone { opacity: 0; }
+
+  .effect-emoji {
+    position: absolute;
+    top: 50%; left: 50%;
+    font-size: 3rem;
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .effect-emoji.show {
+    animation: effectPop 0.7s ease-out forwards;
+  }
+  @keyframes effectPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    30% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+  }
+
+  @keyframes paperBurn {
+    0% { transform: scale(1) rotate(0deg); filter: none; opacity: 1; }
+    60% { transform: scale(0.7) rotate(-8deg); filter: sepia(1) saturate(4) hue-rotate(-30deg); opacity: 0.8; }
+    100% { transform: scale(0.1) rotate(10deg); filter: sepia(1) saturate(4) hue-rotate(-30deg); opacity: 0; }
+  }
+  @keyframes paperFlush {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(60px) rotate(720deg) scale(0.1); opacity: 0; }
+  }
+  @keyframes paperTrash {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(50px) rotate(-30deg) scale(0.3); opacity: 0; }
+  }
+  @keyframes paperYard {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(40px) scale(0.2); opacity: 0; }
+  }
+  @keyframes paperPet {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.8) rotate(-10deg); opacity: 1; }
+    100% { transform: scale(0.05) rotate(20deg); opacity: 0; }
+  }
+  @keyframes paperWindow {
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translate(140px, -80px) rotate(50deg) scale(0.2); opacity: 0; }
+  }
+  .paper.anim-burn { animation: paperBurn 0.6s ease-in forwards; }
+  .paper.anim-flush { animation: paperFlush 0.6s ease-in forwards; }
+  .paper.anim-trash { animation: paperTrash 0.5s ease-in forwards; }
+  .paper.anim-yard { animation: paperYard 0.5s ease-in forwards; }
+  .paper.anim-pet { animation: paperPet 0.5s ease-in forwards; }
+  .paper.anim-window { animation: paperWindow 0.6s ease-in forwards; }
+
+  .flavor-msg { font-size: 1rem; font-weight: bold; color: #444; min-height: 24px; text-align: center; }
+
+  .method-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+  }
+  .method-card {
+    border: none;
+    border-radius: 16px;
+    padding: 14px 4px;
+    background: #FFF6D8;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-weight: bold;
+    font-size: 0.75rem;
+  }
+  .method-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .method-card:disabled { opacity: 0.5; cursor: default; }
+  .method-card .memoji { font-size: 2rem; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">📄 そうすけの べんきょう かくし</h1>
+
+  <div class="hud">
+    <span>きえた かず 🙈 <span id="vanishCount">0</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="paper-stage">
+        <span class="paper" id="paper">📄</span>
+        <span class="effect-emoji" id="effectEmoji">✨</span>
+      </div>
+      <div class="flavor-msg" id="flavorMsg">この プリントを どうやって かくす？</div>
+      <div class="method-grid" id="methodGrid"></div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=7"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const METHODS = [
+      { id: 'pan', name: 'フライパンで もやす', emoji: '🍳', anim: 'anim-burn', effect: '🔥', msg: 'ジュジュッ…もえて きえた！', sound: () => GameAudio.playFireWhoosh() },
+      { id: 'toilet', name: 'トイレに ながす', emoji: '🚽', anim: 'anim-flush', effect: '🌀', msg: 'ジャーッ…ながれて きえた！', sound: () => GameAudio.playToiletFlush() },
+      { id: 'trash', name: 'ゴミばこに かくす', emoji: '🗑️', anim: 'anim-trash', effect: '💨', msg: 'ポイッ…かくれて きえた！', sound: () => GameAudio.playClickTick() },
+      { id: 'yard', name: 'にわに うめる', emoji: '⛏️', anim: 'anim-yard', effect: '🕳️', msg: 'ザクッ…うまって きえた！', sound: () => GameAudio.playKickImpact() },
+      { id: 'pet', name: 'ペットに たべさせる', emoji: '🐶', anim: 'anim-pet', effect: '🐾', msg: 'パクッ…たべられて きえた！', sound: () => GameAudio.playGummySquish() },
+      { id: 'window', name: 'まどから とばす', emoji: '🪟', anim: 'anim-window', effect: '💨', msg: 'ヒュ〜ッ…とんでいって きえた！', sound: () => GameAudio.playWrapSquish() },
+    ];
+
+    const paperEl = document.getElementById('paper');
+    const effectEmojiEl = document.getElementById('effectEmoji');
+    const flavorMsgEl = document.getElementById('flavorMsg');
+    const methodGridEl = document.getElementById('methodGrid');
+    const vanishCountEl = document.getElementById('vanishCount');
+
+    let vanishCount = 0;
+    let busy = false;
+    let methodBtns = [];
+
+    function renderMethods() {
+      methodGridEl.innerHTML = '';
+      methodBtns = [];
+      METHODS.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = 'method-card';
+        btn.innerHTML = `<span class="memoji">${m.emoji}</span><span>${m.name}</span>`;
+        btn.addEventListener('click', () => disposeOf(m));
+        methodGridEl.appendChild(btn);
+        methodBtns.push(btn);
+      });
+    }
+
+    function setButtonsDisabled(disabled) {
+      methodBtns.forEach(b => { b.disabled = disabled; });
+    }
+
+    function disposeOf(method) {
+      if (busy) return;
+      busy = true;
+      setButtonsDisabled(true);
+
+      paperEl.classList.remove('gone', ...METHODS.map(m => m.anim));
+      void paperEl.offsetWidth;
+      paperEl.classList.add(method.anim);
+
+      effectEmojiEl.textContent = method.effect;
+      effectEmojiEl.classList.remove('show');
+      void effectEmojiEl.offsetWidth;
+      effectEmojiEl.classList.add('show');
+
+      method.sound();
+      flavorMsgEl.textContent = method.msg;
+
+      setTimeout(() => {
+        vanishCount++;
+        vanishCountEl.textContent = vanishCount;
+        paperEl.classList.add('gone');
+        paperEl.classList.remove(method.anim);
+        setTimeout(() => {
+          paperEl.classList.remove('gone');
+          flavorMsgEl.textContent = 'つぎの プリントを どうやって かくす？';
+          busy = false;
+          setButtonsDisabled(false);
+        }, 500);
+      }, 650);
+    }
+
+    renderMethods();
+  </script>
+</body>
+</html>

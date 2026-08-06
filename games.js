@@ -244,4 +244,12 @@ const GAMES = [
     path: 'games/movie-theater/index.html?v=2',
     desc: 'オリジナルヒーローの えいがを えらんで、えいがかんで みてみよう！',
   },
+  {
+    id: 'hide-homework',
+    title: 'そうすけの べんきょう かくし',
+    emoji: '📄',
+    color: '#FF9A9E',
+    path: 'games/hide-homework/index.html',
+    desc: 'フライパンで もやしたり、トイレに ながしたり…プリントを どうやって かくす？',
+  },
 ];
