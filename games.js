@@ -228,4 +228,12 @@ const GAMES = [
     path: 'games/favorite-quiz/index.html',
     desc: 'くだもの、どうぶつ、やさいなど、5つの なかまから すきな ものを えらんでいこう！',
   },
+  {
+    id: 'hide-and-seek',
+    title: 'そうすけの かくれんぼ',
+    emoji: '🙈',
+    color: '#FFC1E3',
+    path: 'games/hide-and-seek/index.html',
+    desc: 'クローゼットや テーブルの したなど、いえの なかの かくれる ばしょを さがして オニから かくれよう！',
+  },
 ];
