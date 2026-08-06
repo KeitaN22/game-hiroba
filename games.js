@@ -236,4 +236,12 @@ const GAMES = [
     path: 'games/hide-and-seek/index.html',
     desc: 'クローゼットや テーブルの したなど、いえの なかの かくれる ばしょを さがして オニから かくれよう！',
   },
+  {
+    id: 'movie-theater',
+    title: 'そうすけの えいがかん',
+    emoji: '🎬',
+    color: '#6B4E9E',
+    path: 'games/movie-theater/index.html',
+    desc: 'オリジナルヒーローの えいがを えらんで、えいがかんで みてみよう！',
+  },
 ];

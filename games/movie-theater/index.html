@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの えいがかん</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #333 0%, #6B4E9E 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 460px;
+    background: #1a1a2e;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.35);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .pick-title { color: #fff; font-size: 1.2rem; font-weight: bold; text-align: center; }
+  .pick-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    width: 100%;
+  }
+  .poster-card {
+    border: none;
+    border-radius: 16px;
+    padding: 18px 8px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-weight: bold;
+    color: #fff;
+  }
+  .poster-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .poster-card .poemoji { font-size: 2.8rem; }
+  .poster-card .potitle { font-size: 0.8rem; text-align: center; line-height: 1.3; }
+
+  .theater-screen {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: radial-gradient(circle at 50% 40%, #2a2a4a 0%, #0d0d1a 100%);
+    border-radius: 12px;
+    border: 6px solid #444;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .scene-emoji { font-size: 5rem; opacity: 0; transform: scale(0.7); transition: opacity 0.4s ease, transform 0.4s ease; }
+  .scene-emoji.show { opacity: 1; transform: scale(1); }
+  .scene-text { color: #fff; font-size: 1rem; font-weight: bold; text-align: center; opacity: 0; transition: opacity 0.4s ease; padding: 0 14px; }
+  .scene-text.show { opacity: 1; }
+  .movie-title-label { color: #FFD93D; font-size: 0.9rem; font-weight: bold; text-align: center; }
+
+  .theater-controls {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+    margin-top: 4px;
+  }
+  .theater-btn {
+    font-size: 0.95rem; font-weight: bold; padding: 12px 20px; border: none; border-radius: 999px;
+    background: #fff; color: #333; cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+  }
+  .theater-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 0.95rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🎬 そうすけの えいがかん</h1>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="overlay" id="pickOverlay" style="position: static; background: none;">
+        <div class="pick-title">🎬 みたい えいがを えらんでね！</div>
+        <div class="pick-grid" id="pickGrid"></div>
+      </div>
+
+      <div class="hide" id="theaterView" style="display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;">
+        <div class="movie-title-label" id="movieTitleLabel">-</div>
+        <div class="theater-screen" id="theaterScreen">
+          <span class="scene-emoji" id="sceneEmoji">🎬</span>
+          <span class="scene-text" id="sceneText"></span>
+        </div>
+        <div class="theater-controls hide" id="theaterControls">
+          <button class="theater-btn" id="rewatchBtn">🔁 もういちど みる</button>
+          <button class="theater-btn" id="otherMovieBtn">🎬 べつの えいがを みる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=6"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    // オリジナルの ヒーローたちの えいがだよ(まえに つくった ヒーローたいけつゲームの なかまたち)
+    const MOVIES = [
+      { id: 'itomaki', title: 'いとまきレンジャー だいかつやく', emoji: '🕷️', color: '#E85D5D', scenes: [
+        { emoji: '🕷️', text: 'いとまきレンジャー とうじょう！' },
+        { emoji: '🏙️', text: 'まちを まもるため、ビルの あいだを いどうする！' },
+        { emoji: '💥', text: 'わるものと たたかう！' },
+        { emoji: '🎉', text: 'まちに へいわが もどった！ おしまい。' },
+      ]},
+      { id: 'tsumekiba', title: 'つめきばファイター の たたかい', emoji: '🐾', color: '#8B6B4A', scenes: [
+        { emoji: '🐾', text: 'するどい つめを もつ ファイター とうじょう！' },
+        { emoji: '🌲', text: 'もりの おくで きびしい とっくんを する！' },
+        { emoji: '⚔️', text: 'てごわい てきと だいたいけつ！' },
+        { emoji: '🏆', text: 'みごと かちどきを あげた！ おしまい。' },
+      ]},
+      { id: 'akakuro', title: 'あかくろヒーロー の だいぼうけん', emoji: '🎭', color: '#444', scenes: [
+        { emoji: '🎭', text: 'おしゃべりな ヒーロー とうじょう！' },
+        { emoji: '😂', text: 'ジョークを いいながら すすんで いく！' },
+        { emoji: '💪', text: 'たいへんな ピンチを のりこえる！' },
+        { emoji: '🎬', text: 'つぎの ぼうけんへ つづく…' },
+      ]},
+      { id: 'honoo', title: 'ほのおレンジャー のろしを あげろ', emoji: '🔥', color: '#FF8C42', scenes: [
+        { emoji: '🔥', text: 'ほのおレンジャー とうじょう！' },
+        { emoji: '🌋', text: 'かざんの ちかくで しゅぎょうする！' },
+        { emoji: '💥', text: 'もてる ちからを だしきる！' },
+        { emoji: '🌅', text: 'あたらしい あさひが のぼった！ おしまい。' },
+      ]},
+      { id: 'kaminari', title: 'かみなりレンジャー の パワー', emoji: '⚡', color: '#4C7BF3', scenes: [
+        { emoji: '⚡', text: 'かみなりレンジャー とうじょう！' },
+        { emoji: '⛈️', text: 'あらしの なかを すすんで いく！' },
+        { emoji: '✨', text: 'とくべつな ちからが めざめる！' },
+        { emoji: '🌈', text: 'そらに おおきな にじが かかった！ おしまい。' },
+      ]},
+      { id: 'tate', title: 'たてレンジャー の まもりの ちかい', emoji: '🛡️', color: '#4CAF50', scenes: [
+        { emoji: '🛡️', text: 'たてレンジャー とうじょう！' },
+        { emoji: '🏰', text: 'おしろを まもる やくめを うけとる！' },
+        { emoji: '🛡️', text: 'てきの こうげきを しっかり ふせぐ！' },
+        { emoji: '😊', text: 'みんなが あんしんして くらせるように なった！ おしまい。' },
+      ]},
+    ];
+    const SCENE_DURATION = 1900;
+
+    const pickOverlay = document.getElementById('pickOverlay');
+    const pickGridEl = document.getElementById('pickGrid');
+    const theaterView = document.getElementById('theaterView');
+    const movieTitleLabelEl = document.getElementById('movieTitleLabel');
+    const sceneEmojiEl = document.getElementById('sceneEmoji');
+    const sceneTextEl = document.getElementById('sceneText');
+    const theaterControls = document.getElementById('theaterControls');
+
+    let currentMovie = null;
+    let sceneTimer = null;
+
+    function renderPickGrid() {
+      pickGridEl.innerHTML = '';
+      MOVIES.forEach(movie => {
+        const btn = document.createElement('button');
+        btn.className = 'poster-card';
+        btn.style.background = movie.color;
+        btn.innerHTML = `<span class="poemoji">${movie.emoji}</span><span class="potitle">${movie.title}</span>`;
+        btn.addEventListener('click', () => openMovie(movie));
+        pickGridEl.appendChild(btn);
+      });
+    }
+
+    function openMovie(movie) {
+      currentMovie = movie;
+      pickOverlay.classList.add('hide');
+      theaterView.classList.remove('hide');
+      movieTitleLabelEl.textContent = `🎬 ${movie.title}`;
+      playTrailer();
+    }
+
+    function playTrailer() {
+      clearTimeout(sceneTimer);
+      theaterControls.classList.add('hide');
+      GameAudio.playBGM();
+      showScene(0);
+    }
+
+    function showScene(index) {
+      const scenes = currentMovie.scenes;
+      if (index >= scenes.length) {
+        finishTrailer();
+        return;
+      }
+      sceneEmojiEl.classList.remove('show');
+      sceneTextEl.classList.remove('show');
+      void sceneEmojiEl.offsetWidth;
+      sceneEmojiEl.textContent = scenes[index].emoji;
+      sceneTextEl.textContent = scenes[index].text;
+      requestAnimationFrame(() => {
+        sceneEmojiEl.classList.add('show');
+        sceneTextEl.classList.add('show');
+      });
+      GameAudio.playClickTick();
+      sceneTimer = setTimeout(() => showScene(index + 1), SCENE_DURATION);
+    }
+
+    function finishTrailer() {
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      sceneEmojiEl.classList.remove('show');
+      sceneTextEl.classList.remove('show');
+      void sceneEmojiEl.offsetWidth;
+      sceneEmojiEl.textContent = '🎬';
+      sceneTextEl.textContent = 'THE END';
+      requestAnimationFrame(() => {
+        sceneEmojiEl.classList.add('show');
+        sceneTextEl.classList.add('show');
+      });
+      theaterControls.classList.remove('hide');
+    }
+
+    function backToList() {
+      clearTimeout(sceneTimer);
+      GameAudio.stopBGM();
+      currentMovie = null;
+      theaterView.classList.add('hide');
+      pickOverlay.classList.remove('hide');
+    }
+
+    document.getElementById('rewatchBtn').addEventListener('click', playTrailer);
+    document.getElementById('otherMovieBtn').addEventListener('click', backToList);
+
+    renderPickGrid();
+  </script>
+</body>
+</html>
