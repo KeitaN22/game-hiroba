@@ -289,7 +289,7 @@ const GAMES = [
     title: 'そうすけの まちあるき',
     emoji: '🚶',
     color: '#7EC8E3',
-    path: 'games/town-walk/index.html',
+    path: 'games/town-walk/index.html?v=2',
     desc: 'ピザやさんや ホテルなど、5つの まちの たてものに はいって いろんな たいけんを しよう！',
   },
 ];
