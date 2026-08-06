@@ -241,7 +241,7 @@ const GAMES = [
     title: 'そうすけの えいがかん',
     emoji: '🎬',
     color: '#6B4E9E',
-    path: 'games/movie-theater/index.html',
+    path: 'games/movie-theater/index.html?v=2',
     desc: 'オリジナルヒーローの えいがを えらんで、えいがかんで みてみよう！',
   },
 ];
