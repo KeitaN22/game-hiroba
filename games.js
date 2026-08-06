@@ -276,4 +276,12 @@ const GAMES = [
     path: 'games/spider-patrol/index.html',
     desc: 'かべに でてきた くもを、そとに にがすか たいじするか えらぼう！',
   },
+  {
+    id: 'dot-muncher',
+    title: 'そうすけの まるまるダッシュ',
+    emoji: '🟡',
+    color: '#4C7BF3',
+    path: 'games/dot-muncher/index.html',
+    desc: 'めいろの まるを ぜんぶ たべつくそう！おおきい まるで おばけを ぎゃくしゅうできるよ！',
+  },
 ];

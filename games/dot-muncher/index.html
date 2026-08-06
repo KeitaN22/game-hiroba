@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの まるまるダッシュ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #1a1a2e 0%, #4C7BF3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; gap: 18px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 20px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .maze-frame {
+    position: relative;
+    background: #0d0d1a;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.3);
+    padding: 10px;
+    display: inline-block;
+  }
+
+  .maze-board {
+    position: relative;
+    display: grid;
+    gap: 2px;
+  }
+
+  .maze-cell {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .maze-cell.floor { background: #1a1a2e; }
+  .maze-cell.wall { background: #2c2c54; border-radius: 4px; }
+
+  .dot { width: 22%; height: 22%; border-radius: 50%; background: #FFD93D; }
+  .power-dot { width: 45%; height: 45%; border-radius: 50%; background: #FFD93D; box-shadow: 0 0 6px #FFD93D; }
+
+  .token {
+    position: absolute;
+    display: flex; align-items: center; justify-content: center;
+    transition: left 0.13s linear, top 0.13s linear;
+    pointer-events: none;
+  }
+  .player-token {
+    border-radius: 50%;
+    background: #FFD93D;
+  }
+  .chaser-token {
+    border-radius: 50% 50% 0 0;
+  }
+  .chaser-token .eyes { display: flex; gap: 4px; margin-top: -2px; }
+  .chaser-token .eyes span { width: 16%; height: 16%; background: #fff; border-radius: 50%; }
+  .chaser-token.scared { background: #4C7BF3 !important; }
+
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 62px);
+    grid-template-rows: repeat(3, 62px);
+    gap: 8px;
+    justify-content: center;
+    margin: 20px auto 0;
+  }
+  .dpad-btn {
+    font-size: 1.7rem;
+    border: none;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 0.95rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🟡 そうすけの まるまるダッシュ</h1>
+
+  <div class="hud" id="hud">
+    <span>スコア 🟡 <span id="scoreEl">0</span></span>
+    <span>のこり ライフ ❤️ <span id="livesEl">3</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="maze-frame">
+      <div class="maze-board" id="mazeBoard"></div>
+    </div>
+
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <h2>🟡 まるまるダッシュ</h2>
+      <p>
+        まるい きいろい キャラを うごかして、めいろの まるを ぜんぶ たべよう！<br>
+        おおきい まるを たべると、ちょっとの あいだ おばけを たべられるように なるよ。<br>
+        おばけに つかまると ライフが へるよ。3かい つかまると おしまい。
+      </p>
+      <button class="big-btn" id="startBtn">▶ スタート</button>
+    </div>
+
+    <div class="overlay hide" id="endOverlay">
+      <h2 id="endTitle">🎉 おわり！ 🎉</h2>
+      <p id="endText"></p>
+      <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=9"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    // 0 = とおれる みち, 1 = かべ
+    const MAZE = [
+      [0,0,0,0,0,0,0,0,0],
+      [0,1,1,0,1,1,1,0,0],
+      [0,1,0,0,0,0,0,1,0],
+      [0,0,0,1,0,1,0,0,0],
+      [0,1,0,1,0,1,0,1,0],
+      [0,0,0,1,1,1,0,0,0],
+      [0,1,0,0,0,0,0,1,0],
+      [0,1,1,0,1,0,1,1,0],
+      [0,0,0,0,0,0,0,0,0],
+    ];
+    const ROWS = MAZE.length, COLS = MAZE[0].length;
+    const PLAYER_START = { row: 8, col: 4 };
+    const CHASER_HOMES = [
+      { row: 2, col: 3, color: '#FF6B6B' },
+      { row: 2, col: 4, color: '#9B59B6' },
+      { row: 2, col: 5, color: '#4FC3F7' },
+    ];
+    const POWER_CELLS = [ { row: 0, col: 0 }, { row: 0, col: 8 }, { row: 8, col: 0 }, { row: 8, col: 8 } ];
+    const LIVES_START = 3;
+    const POWER_DURATION = 6000;
+    const CHASER_TICK_MS = 450;
+    const CHASER_CHASE_CHANCE = 0.7;
+
+    let CELL = 40;
+    function computeCellPx() {
+      const available = Math.min(window.innerWidth - 60, 420);
+      const raw = Math.floor((available - (COLS - 1) * 2) / COLS);
+      return Math.max(26, Math.min(46, raw));
+    }
+
+    const mazeBoardEl = document.getElementById('mazeBoard');
+    const scoreEl = document.getElementById('scoreEl');
+    const livesEl = document.getElementById('livesEl');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    let cellEls = [];
+    let dots = {}; // "r,c" -> true (normal dot)
+    let powerDots = {};
+    let dotsRemaining = 0;
+    let playerPos = { ...PLAYER_START };
+    let playerToken = null;
+    let chasers = [];
+    let score = 0;
+    let lives = LIVES_START;
+    let playing = false;
+    let frozen = false;
+    let powerMode = false;
+    let powerTimer = null;
+    let chaserTickTimer = null;
+
+    function key(r, c) { return r + ',' + c; }
+    function isWall(r, c) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+      return MAZE[r][c] === 1;
+    }
+    function isPowerCell(r, c) {
+      return POWER_CELLS.some(p => p.row === r && p.col === c);
+    }
+    function isChaserHome(r, c) {
+      return CHASER_HOMES.some(h => h.row === r && h.col === c);
+    }
+
+    function buildBoard() {
+      const cellPx = computeCellPx();
+      CELL = cellPx + 2;
+      mazeBoardEl.style.gridTemplateColumns = `repeat(${COLS}, ${cellPx}px)`;
+      mazeBoardEl.style.gridTemplateRows = `repeat(${ROWS}, ${cellPx}px)`;
+      mazeBoardEl.innerHTML = '';
+      cellEls = [];
+      for (let r = 0; r < ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          const wall = isWall(r, c);
+          cell.className = 'maze-cell ' + (wall ? 'wall' : 'floor');
+          mazeBoardEl.appendChild(cell);
+          row.push(cell);
+        }
+        cellEls.push(row);
+      }
+
+      playerToken = document.createElement('div');
+      playerToken.className = 'token player-token';
+      playerToken.style.width = (cellPx * 0.75) + 'px';
+      playerToken.style.height = (cellPx * 0.75) + 'px';
+      mazeBoardEl.appendChild(playerToken);
+
+      chasers = CHASER_HOMES.map((home, i) => {
+        const el = document.createElement('div');
+        el.className = 'token chaser-token';
+        el.style.width = (cellPx * 0.78) + 'px';
+        el.style.height = (cellPx * 0.78) + 'px';
+        el.style.background = home.color;
+        el.innerHTML = '<span class="eyes"><span></span><span></span></span>';
+        mazeBoardEl.appendChild(el);
+        return { row: home.row, col: home.col, home, el, lastMove: null, safeUntil: 0 };
+      });
+    }
+
+    function initDots() {
+      dots = {};
+      powerDots = {};
+      dotsRemaining = 0;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (isWall(r, c) || isChaserHome(r, c)) continue;
+          if (isPowerCell(r, c)) {
+            powerDots[key(r, c)] = true;
+          } else {
+            dots[key(r, c)] = true;
+            dotsRemaining++;
+          }
+        }
+      }
+    }
+
+    function renderCell(r, c) {
+      const cell = cellEls[r][c];
+      cell.innerHTML = '';
+      if (dots[key(r, c)]) {
+        const d = document.createElement('span');
+        d.className = 'dot';
+        cell.appendChild(d);
+      } else if (powerDots[key(r, c)]) {
+        const d = document.createElement('span');
+        d.className = 'power-dot';
+        cell.appendChild(d);
+      }
+    }
+
+    function renderAllDots() {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (!isWall(r, c)) renderCell(r, c);
+        }
+      }
+    }
+
+    function positionToken(el, r, c) {
+      el.style.left = (c * CELL) + 'px';
+      el.style.top = (r * CELL) + 'px';
+    }
+
+    function updatePositions() {
+      positionToken(playerToken, playerPos.row, playerPos.col);
+      chasers.forEach(ch => positionToken(ch.el, ch.row, ch.col));
+    }
+
+    function resetGame() {
+      score = 0;
+      lives = LIVES_START;
+      scoreEl.textContent = 0;
+      livesEl.textContent = lives;
+      playerPos = { ...PLAYER_START };
+      powerMode = false;
+      clearTimeout(powerTimer);
+      buildBoard();
+      initDots();
+      renderAllDots();
+      chasers.forEach(ch => { ch.row = ch.home.row; ch.col = ch.home.col; ch.el.classList.remove('scared'); ch.lastMove = null; ch.safeUntil = 0; });
+      updatePositions();
+      frozen = false;
+    }
+
+    function eatAt(r, c) {
+      const k = key(r, c);
+      if (dots[k]) {
+        delete dots[k];
+        dotsRemaining--;
+        score += 10;
+        scoreEl.textContent = score;
+        renderCell(r, c);
+        GameAudio.playClickTick();
+        if (dotsRemaining <= 0) winGame();
+      } else if (powerDots[k]) {
+        delete powerDots[k];
+        score += 50;
+        scoreEl.textContent = score;
+        renderCell(r, c);
+        activatePower();
+      }
+    }
+
+    function activatePower() {
+      powerMode = true;
+      chasers.forEach(ch => ch.el.classList.add('scared'));
+      GameAudio.playClearFanfare();
+      clearTimeout(powerTimer);
+      powerTimer = setTimeout(() => {
+        powerMode = false;
+        chasers.forEach(ch => ch.el.classList.remove('scared'));
+      }, POWER_DURATION);
+    }
+
+    function checkCollisions() {
+      if (frozen || !playing) return;
+      chasers.forEach(ch => {
+        if (ch.row === playerPos.row && ch.col === playerPos.col) {
+          if (Date.now() < ch.safeUntil) return;
+          if (powerMode) {
+            score += 200;
+            scoreEl.textContent = score;
+            GameAudio.playClearFanfare();
+            ch.row = ch.home.row;
+            ch.col = ch.home.col;
+            ch.safeUntil = Date.now() + 1000;
+            positionToken(ch.el, ch.row, ch.col);
+          } else {
+            loseLife();
+          }
+        }
+      });
+    }
+
+    function loseLife() {
+      lives--;
+      livesEl.textContent = lives;
+      GameAudio.playFailBuzz();
+      if (lives <= 0) {
+        loseGame();
+        return;
+      }
+      frozen = true;
+      playerPos = { ...PLAYER_START };
+      chasers.forEach(ch => { ch.row = ch.home.row; ch.col = ch.home.col; ch.safeUntil = Date.now() + 1200; });
+      updatePositions();
+      setTimeout(() => { frozen = false; }, 900);
+    }
+
+    function tryMove(dRow, dCol) {
+      if (!playing || frozen) return;
+      const nr = playerPos.row + dRow, nc = playerPos.col + dCol;
+      if (isWall(nr, nc)) return;
+      playerPos = { row: nr, col: nc };
+      updatePositions();
+      eatAt(nr, nc);
+      checkCollisions();
+    }
+
+    function chaserStep(ch) {
+      const dirs = [
+        { dr: -1, dc: 0, name: 'up' },
+        { dr: 1, dc: 0, name: 'down' },
+        { dr: 0, dc: -1, name: 'left' },
+        { dr: 0, dc: 1, name: 'right' },
+      ];
+      const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
+      let valid = dirs.filter(d => !isWall(ch.row + d.dr, ch.col + d.dc));
+      if (valid.length > 1 && ch.lastMove) {
+        const noBack = valid.filter(d => d.name !== opposite[ch.lastMove]);
+        if (noBack.length > 0) valid = noBack;
+      }
+      if (valid.length === 0) return;
+
+      let chosen;
+      const wantChase = powerMode ? Math.random() > CHASER_CHASE_CHANCE : Math.random() < CHASER_CHASE_CHANCE;
+      if (wantChase) {
+        valid.sort((a, b) => {
+          const da = Math.abs((ch.row + a.dr) - playerPos.row) + Math.abs((ch.col + a.dc) - playerPos.col);
+          const db = Math.abs((ch.row + b.dr) - playerPos.row) + Math.abs((ch.col + b.dc) - playerPos.col);
+          return powerMode ? db - da : da - db;
+        });
+        chosen = valid[0];
+      } else {
+        chosen = valid[Math.floor(Math.random() * valid.length)];
+      }
+      ch.row += chosen.dr;
+      ch.col += chosen.dc;
+      ch.lastMove = chosen.name;
+    }
+
+    function chaserTick() {
+      if (!playing || frozen) return;
+      chasers.forEach(chaserStep);
+      updatePositions();
+      checkCollisions();
+    }
+
+    function setDir(dRow, dCol) {
+      tryMove(dRow, dCol);
+    }
+    document.getElementById('btnUp').addEventListener('click', () => setDir(-1, 0));
+    document.getElementById('btnDown').addEventListener('click', () => setDir(1, 0));
+    document.getElementById('btnLeft').addEventListener('click', () => setDir(0, -1));
+    document.getElementById('btnRight').addEventListener('click', () => setDir(0, 1));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') setDir(-1, 0);
+      if (e.key === 'ArrowDown') setDir(1, 0);
+      if (e.key === 'ArrowLeft') setDir(0, -1);
+      if (e.key === 'ArrowRight') setDir(0, 1);
+    });
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      clearInterval(chaserTickTimer);
+      chaserTickTimer = setInterval(chaserTick, CHASER_TICK_MS);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(chaserTickTimer);
+      clearTimeout(powerTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTitleEl.textContent = '🏆 ぜんぶ たべた！ 🏆';
+      endTextEl.textContent = `スコア ${score}てんで クリアしたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'dot-muncher', score, higherIsBetter: true, unit: 'てん', title: '🟡 まるまるダッシュ ランキング' });
+    }
+
+    function loseGame() {
+      playing = false;
+      clearInterval(chaserTickTimer);
+      clearTimeout(powerTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      endTitleEl.textContent = '😖 ライフが なくなった…';
+      endTextEl.textContent = `スコア ${score}てん だったよ。もう いちど ちょうせん しよう！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'dot-muncher', score, higherIsBetter: true, unit: 'てん', title: '🟡 まるまるダッシュ ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    buildBoard();
+    initDots();
+    renderAllDots();
+    updatePositions();
+  </script>
+</body>
+</html>
