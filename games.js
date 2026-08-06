@@ -252,4 +252,12 @@ const GAMES = [
     path: 'games/hide-homework/index.html',
     desc: 'フライパンで もやしたり、トイレに ながしたり…プリントを どうやって かくす？',
   },
+  {
+    id: 'find-phone',
+    title: 'そうすけの けいたい どこ？',
+    emoji: '📱',
+    color: '#FFE0B2',
+    path: 'games/find-phone/index.html',
+    desc: 'キッチンの うえや プリントの したなど、おうちの なかから けいたいを さがしだそう！',
+  },
 ];

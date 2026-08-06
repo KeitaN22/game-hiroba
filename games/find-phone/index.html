@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの けいたい どこ？</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE0B2 0%, #A6F3B7 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 480px;
+    background: linear-gradient(#FFF3E0 0%, #F5E6C8 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .arena::before {
+    content: '🏠 そうすけの おうち';
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem; font-weight: bold; color: #8B5E3C;
+    background: rgba(255,255,255,0.7); padding: 3px 12px; border-radius: 999px;
+  }
+
+  .flavor-msg { font-size: 1rem; font-weight: bold; color: #444; min-height: 24px; text-align: center; margin-top: 18px; }
+  .flavor-msg.found { color: #4CAF50; }
+
+  .spot-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+  .spot-card {
+    position: relative;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 4px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-weight: bold;
+    font-size: 0.68rem;
+    color: #333;
+    min-height: 80px;
+    justify-content: center;
+  }
+  .spot-card.room-kitchen { background: #FFE9A8; }
+  .spot-card.room-living { background: #C8F0C8; }
+  .spot-card.room-bedroom { background: #C5DFFF; }
+  .spot-card.room-entrance { background: #E8D5C0; }
+  .spot-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .spot-card .spemoji { font-size: 1.9rem; }
+  .spot-card.searched { opacity: 0.35; cursor: default; }
+  .spot-card.searched::after {
+    content: '❌';
+    position: absolute; top: -6px; right: -6px;
+    font-size: 1.1rem;
+  }
+  .spot-card.found-here { opacity: 1; box-shadow: 0 0 0 4px #FFD166, 0 5px 0 rgba(0,0,0,0.2); }
+  .spot-card.found-here::after { content: '📱'; font-size: 1.4rem; top: -10px; right: -10px; }
+
+  .tool-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+  }
+  .tool-btn {
+    font-size: 1.05rem; font-weight: bold;
+    padding: 10px 20px;
+    border: none; border-radius: 999px;
+    background: #fff; color: #333;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .tool-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">📱 そうすけの けいたい どこ？</h1>
+
+  <div class="hud">
+    <span>かいすう 🔍 <span id="triesCount">0</span></span>
+    <span>さいしょう きろく 🏆 <span id="bestTries">-</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="spot-grid" id="spotGrid"></div>
+      <div class="flavor-msg" id="flavorMsg">おうちの どこかに けいたいが あるよ。さがしてみよう！</div>
+      <div class="tool-row hide" id="toolRow">
+        <button class="tool-btn" id="againBtn">🔄 もういちど かくす</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=7"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const SEARCH_SPOTS = [
+      { id: 'counter', name: 'キッチンの カウンターの うえ', emoji: '🍳', room: 'room-kitchen' },
+      { id: 'fridge', name: 'れいぞうこの なか', emoji: '🧊', room: 'room-kitchen' },
+      { id: 'papers', name: 'プリントの やまの した', emoji: '📄', room: 'room-living' },
+      { id: 'sofa', name: 'ソファの すきま', emoji: '🛋️', room: 'room-living' },
+      { id: 'tv', name: 'テレビだいの うえ', emoji: '📺', room: 'room-living' },
+      { id: 'shelf', name: 'ほんだなの うしろ', emoji: '📚', room: 'room-living' },
+      { id: 'bed', name: 'ベッドの まくらの した', emoji: '🛏️', room: 'room-bedroom' },
+      { id: 'coat', name: 'うわぎの ポケットの なか', emoji: '🧥', room: 'room-entrance' },
+      { id: 'shoes', name: 'くつばこの うえ', emoji: '👟', room: 'room-entrance' },
+    ];
+
+    const spotGridEl = document.getElementById('spotGrid');
+    const flavorMsgEl = document.getElementById('flavorMsg');
+    const toolRowEl = document.getElementById('toolRow');
+    const triesCountEl = document.getElementById('triesCount');
+    const bestTriesEl = document.getElementById('bestTries');
+
+    const BEST_KEY = 'soutaFindPhoneBest';
+    let bestTries = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || null;
+    if (bestTries) bestTriesEl.textContent = bestTries;
+
+    let hiddenSpotId = null;
+    let tries = 0;
+    let found = false;
+    let spotEls = {};
+
+    function pickHiddenSpot() {
+      const idx = Math.floor(Math.random() * SEARCH_SPOTS.length);
+      return SEARCH_SPOTS[idx].id;
+    }
+
+    function renderSpots() {
+      spotGridEl.innerHTML = '';
+      spotEls = {};
+      SEARCH_SPOTS.forEach(spot => {
+        const btn = document.createElement('button');
+        btn.className = 'spot-card ' + spot.room;
+        btn.innerHTML = `<span class="spemoji">${spot.emoji}</span><span>${spot.name}</span>`;
+        btn.addEventListener('click', () => searchSpot(spot));
+        spotGridEl.appendChild(btn);
+        spotEls[spot.id] = btn;
+      });
+    }
+
+    function resetRound() {
+      hiddenSpotId = pickHiddenSpot();
+      tries = 0;
+      found = false;
+      triesCountEl.textContent = 0;
+      flavorMsgEl.textContent = 'おうちの どこかに けいたいが あるよ。さがしてみよう！';
+      flavorMsgEl.classList.remove('found');
+      toolRowEl.classList.add('hide');
+      renderSpots();
+    }
+
+    function searchSpot(spot) {
+      if (found) return;
+      const el = spotEls[spot.id];
+      if (el.classList.contains('searched')) return;
+
+      tries++;
+      triesCountEl.textContent = tries;
+
+      if (spot.id === hiddenSpotId) {
+        found = true;
+        el.classList.add('found-here');
+        GameAudio.playClearFanfare();
+        flavorMsgEl.textContent = `📱 みつけた！ ${tries}かいめで みつかったよ！`;
+        flavorMsgEl.classList.add('found');
+        if (!bestTries || tries < bestTries) {
+          bestTries = tries;
+          bestTriesEl.textContent = bestTries;
+          localStorage.setItem(BEST_KEY, String(bestTries));
+        }
+        toolRowEl.classList.remove('hide');
+      } else {
+        el.classList.add('searched');
+        GameAudio.playClickTick();
+        flavorMsgEl.textContent = `${spot.name}には なかったよ…`;
+      }
+    }
+
+    document.getElementById('againBtn').addEventListener('click', resetRound);
+
+    resetRound();
+  </script>
+</body>
+</html>
