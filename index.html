@@ -4,12 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ソウスケゲーム広場</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <div class="hero">
     <h1>🎮 ソウスケゲーム広場 🎮</h1>
-    <p>あそびたい ゲームを えらんでね！</p>
+    <p class="subtitle-row">
+      あそびたい ゲームを えらんでね！
+      <span class="snack-badge">🍬 <span id="snackCount">0</span></span>
+    </p>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -17,6 +20,18 @@
   <script src="games.js?v=28"></script>
   <script>
     const grid = document.getElementById('grid');
+    const snackCountEl = document.getElementById('snackCount');
+
+    const SNACK_KEY = 'soutaSnackCount';
+    function getSnackCount() {
+      return parseInt(localStorage.getItem(SNACK_KEY) || '0', 10);
+    }
+    function bumpSnackCount() {
+      const next = getSnackCount() + 1;
+      localStorage.setItem(SNACK_KEY, String(next));
+      return next;
+    }
+    snackCountEl.textContent = getSnackCount();
 
     if (GAMES.length === 0) {
       grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';
@@ -33,6 +48,9 @@
           <div class="desc">${game.desc}</div>
           <div class="play-btn">あそぶ ▶</div>
         `;
+        a.addEventListener('click', () => {
+          bumpSnackCount();
+        });
         grid.appendChild(a);
       });
     }
