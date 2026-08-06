@@ -66,6 +66,92 @@
     z-index: 6;
   }
 
+  .tree {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .extra-npc {
+    position: absolute;
+    font-size: 1.8rem;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .road {
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%; height: 16%;
+    background: #555;
+    z-index: 1;
+  }
+  .road::before, .road::after {
+    content: '';
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: repeating-linear-gradient(90deg, #FFD966 0 10px, transparent 10px 20px);
+  }
+  .road::before { top: 30%; }
+  .road::after { top: 70%; }
+
+  .crosswalk {
+    position: absolute;
+    top: 50%; height: 16%;
+    left: 42%; width: 16%;
+    z-index: 2;
+    background: repeating-linear-gradient(90deg, #fff 0 3%, transparent 3% 6%);
+  }
+
+  .traffic-light {
+    position: absolute;
+    left: 61%; top: 50%;
+    transform: translate(0, -140%);
+    font-size: 1.6rem;
+    z-index: 4;
+  }
+  .traffic-light .bulb {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    margin-left: 2px;
+    vertical-align: middle;
+    background: #555;
+  }
+  .traffic-light.walk .bulb.green { background: #4CAF50; box-shadow: 0 0 6px #4CAF50; }
+  .traffic-light.stop .bulb.red { background: #FF3B3B; box-shadow: 0 0 6px #FF3B3B; }
+
+  .car {
+    position: absolute;
+    font-size: 1.9rem;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+  }
+
+  .warning-msg {
+    position: absolute;
+    left: 50%; top: 42%;
+    transform: translate(-50%, -50%) scale(0.6);
+    background: rgba(255,59,59,0.92);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 999px;
+    opacity: 0;
+    z-index: 8;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .warning-msg.show {
+    animation: warnPop 1.2s ease-out forwards;
+  }
+  @keyframes warnPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+  }
+
   .controls-row {
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
     margin-top: 16px;
@@ -149,6 +235,13 @@
   <div class="stage-wrap">
     <div class="arena" id="arena">
       <span class="town-label" id="townLabel">-</span>
+      <div id="treesLayer"></div>
+      <div id="extraNpcLayer"></div>
+      <div class="road"></div>
+      <div class="crosswalk"></div>
+      <div class="traffic-light stop" id="trafficLight">🚦<span class="bulb red"></span><span class="bulb green"></span></div>
+      <div id="carsLayer"></div>
+      <span class="warning-msg" id="warningMsg">🚗 あぶない！ あかしんごうは まってね！</span>
       <div class="building" id="building">
         <span class="b-emoji" id="buildingEmoji">🏠</span>
         <span class="b-name" id="buildingName">-</span>
@@ -249,6 +342,20 @@
     const PLAYER_HOME = { x: 50, y: 85 };
     const PROXIMITY = 60;
 
+    const TREE_POSITIONS = [
+      { x: 8, y: 18 }, { x: 92, y: 18 }, { x: 10, y: 78 }, { x: 90, y: 78 }, { x: 25, y: 92 }, { x: 75, y: 92 },
+    ];
+    const EXTRA_NPC_POSITIONS = [
+      { x: 14, y: 22, emoji: '🧍' }, { x: 86, y: 24, emoji: '🧍‍♀️' }, { x: 18, y: 82, emoji: '🧑‍🦳' },
+    ];
+    const ROAD_TOP = 50, ROAD_BOTTOM = 66;
+    const CROSSWALK_X_MIN = 42, CROSSWALK_X_MAX = 58;
+    const LANE_Y = [54, 62];
+    const LIGHT_WALK_MS = 4000;
+    const LIGHT_STOP_MS = 4000;
+    const CAR_SPAWN_GAP = 900;
+    const CAR_SPEED = 32; // %/sec
+
     const arenaEl = document.getElementById('arena');
     const townLabelEl = document.getElementById('townLabel');
     const buildingEl = document.getElementById('building');
@@ -273,6 +380,12 @@
     const endOverlay = document.getElementById('endOverlay');
     const endTextEl = document.getElementById('endText');
 
+    const treesLayerEl = document.getElementById('treesLayer');
+    const extraNpcLayerEl = document.getElementById('extraNpcLayer');
+    const carsLayerEl = document.getElementById('carsLayer');
+    const trafficLightEl = document.getElementById('trafficLight');
+    const warningMsgEl = document.getElementById('warningMsg');
+
     stageTotalEl.textContent = TOWNS.length;
 
     let townIndex = 0;
@@ -284,8 +397,109 @@
     let nearBuilding = false;
     let lastFrame = 0;
 
+    let lightState = 'stop'; // 'walk' = すすめる(あお), 'stop' = とまれ(あか, くるまが とおる)
+    let lightTimer = null;
+    let cars = [];
+    let nextCarId = 1;
+    let carSpawnTimer = 0;
+    let hitCooldownUntil = 0;
+
     function pxOf(pctX, pctY) {
       return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
+    }
+
+    function renderEnvironment() {
+      treesLayerEl.innerHTML = '';
+      TREE_POSITIONS.forEach(t => {
+        const el = document.createElement('span');
+        el.className = 'tree';
+        el.textContent = '🌳';
+        el.style.left = t.x + '%';
+        el.style.top = t.y + '%';
+        treesLayerEl.appendChild(el);
+      });
+      extraNpcLayerEl.innerHTML = '';
+      EXTRA_NPC_POSITIONS.forEach(n => {
+        const el = document.createElement('span');
+        el.className = 'extra-npc';
+        el.textContent = n.emoji;
+        el.style.left = n.x + '%';
+        el.style.top = n.y + '%';
+        extraNpcLayerEl.appendChild(el);
+      });
+    }
+
+    function setLight(state) {
+      lightState = state;
+      trafficLightEl.classList.toggle('walk', state === 'walk');
+      trafficLightEl.classList.toggle('stop', state === 'stop');
+      clearTimeout(lightTimer);
+      lightTimer = setTimeout(() => setLight(state === 'walk' ? 'stop' : 'walk'), state === 'walk' ? LIGHT_WALK_MS : LIGHT_STOP_MS);
+    }
+
+    function spawnCar() {
+      const laneIdx = Math.floor(Math.random() * LANE_Y.length);
+      const dir = laneIdx === 0 ? 1 : -1;
+      const car = {
+        id: nextCarId++,
+        x: dir === 1 ? -6 : 106,
+        y: LANE_Y[laneIdx],
+        dir,
+        el: document.createElement('span'),
+      };
+      car.el.className = 'car';
+      car.el.textContent = dir === 1 ? '🚗' : '🚙';
+      car.el.style.transform = `translate(-50%, -50%) scaleX(${dir === 1 ? 1 : -1})`;
+      carsLayerEl.appendChild(car.el);
+      cars.push(car);
+    }
+
+    function updateCars(dt) {
+      if (lightState === 'stop') {
+        carSpawnTimer += dt * 1000;
+        if (carSpawnTimer >= CAR_SPAWN_GAP) {
+          carSpawnTimer = 0;
+          spawnCar();
+        }
+      }
+      cars = cars.filter(car => {
+        car.x += car.dir * CAR_SPEED * dt;
+        const p = pxOf(car.x, car.y);
+        car.el.style.left = p.x + 'px';
+        car.el.style.top = p.y + 'px';
+        if (car.x < -10 || car.x > 110) {
+          car.el.remove();
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function showWarning() {
+      warningMsgEl.classList.remove('show');
+      void warningMsgEl.offsetWidth;
+      warningMsgEl.classList.add('show');
+    }
+
+    function checkRoadHazard() {
+      if (indoors || Date.now() < hitCooldownUntil) return;
+      const playerPctX = (playerX / arenaEl.clientWidth) * 100;
+      const playerPctY = (playerY / arenaEl.clientHeight) * 100;
+      const inRoadBand = playerPctY > ROAD_TOP && playerPctY < ROAD_BOTTOM;
+      const inCrosswalkX = playerPctX > CROSSWALK_X_MIN && playerPctX < CROSSWALK_X_MAX;
+      if (!inRoadBand || !inCrosswalkX) return;
+      if (lightState !== 'stop') return;
+      const hitByCar = cars.some(car => Math.abs(car.x - playerPctX) < 6 && Math.abs(car.y - playerPctY) < 8);
+      if (hitByCar) {
+        hitCooldownUntil = Date.now() + 1500;
+        GameAudio.playFailBuzz();
+        showWarning();
+        const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+        playerX = home.x;
+        playerY = home.y;
+        playerEl.style.left = playerX + 'px';
+        playerEl.style.top = playerY + 'px';
+      }
     }
 
     function loadTown() {
@@ -327,7 +541,9 @@
     }
 
     function update(dt) {
-      if (!playing || indoors) return;
+      if (!playing) return;
+      updateCars(dt);
+      if (indoors) return;
       const speed = 150;
       let dx = 0, dy = 0;
       if (input.up) dy -= 1;
@@ -340,6 +556,7 @@
       playerEl.style.left = playerX + 'px';
       playerEl.style.top = playerY + 'px';
       updateNearBuilding();
+      checkRoadHazard();
     }
 
     function loop(now) {
@@ -413,6 +630,7 @@
 
     function finishGame() {
       playing = false;
+      stopLightCycle();
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
       endTextEl.textContent = `5つの まちを ぜんぶ まわって、いろんな たいけんを したね！`;
@@ -432,13 +650,23 @@
       indoorPanel.classList.add('hide');
       startOverlay.classList.add('hide');
       endOverlay.classList.add('hide');
+      cars.forEach(c => c.el.remove());
+      cars = [];
+      carSpawnTimer = 0;
+      hitCooldownUntil = 0;
+      setLight('stop');
       GameAudio.playBGM();
       loadTown();
+    }
+
+    function stopLightCycle() {
+      clearTimeout(lightTimer);
     }
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', startGame);
 
+    renderEnvironment();
     loadTown();
     lastFrame = performance.now();
     requestAnimationFrame(loop);
