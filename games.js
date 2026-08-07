@@ -340,4 +340,12 @@ const GAMES = [
     path: 'games/would-you-rather/index.html?v=3',
     desc: 'やじるしで たべものに ちかづいて あじみ、「どちらが いい？」に こたえよう！ぜんぶで 10ステージ！',
   },
+  {
+    id: 'app-maker',
+    title: 'そうすけの アプリづくり',
+    emoji: '📱',
+    color: '#7EC8E3',
+    path: 'games/app-maker/index.html',
+    desc: 'ボタンや テキスト、グラフなど いろんな どうぐを つかって、じぶんだけの アプリを つくろう！',
+  },
 ];

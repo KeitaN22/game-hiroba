@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの アプリづくり</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #7EC8E3 0%, #C8F7C5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .phone-frame {
+    width: 240px;
+    background: #222;
+    border-radius: 30px;
+    padding: 14px 10px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.25), 0 12px 24px rgba(0,0,0,0.3);
+  }
+  .phone-screen {
+    background: #FFF8E7;
+    border-radius: 16px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .app-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px;
+    background: rgba(255,255,255,0.5);
+  }
+  .app-icon { font-size: 1.8rem; }
+  .app-name-input {
+    flex: 1; min-width: 0;
+    font-size: 0.85rem; font-weight: bold;
+    border: none; background: transparent; color: #333;
+    outline: none;
+  }
+  .app-canvas {
+    flex: 1;
+    padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto;
+    max-height: 320px;
+  }
+  .empty-hint-text { font-size: 0.75rem; color: #999; text-align: center; margin-top: 20px; }
+
+  .app-el { border-radius: 10px; padding: 8px 10px; font-size: 0.78rem; }
+  .app-btn { background: #4C7BF3; color: #fff; font-weight: bold; text-align: center; border: none; }
+  .app-text { background: #fff; color: #333; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-image { background: #fff; font-size: 1.8rem; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-rating { background: #fff; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-notif { background: #FFF3CD; color: #7a5c00; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-graph { background: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .graph-bars { display: flex; align-items: flex-end; gap: 4px; height: 40px; margin-top: 4px; }
+  .graph-bars span { flex: 1; background: #6FCF97; border-radius: 3px 3px 0 0; }
+  .app-music { background: #333; color: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-search { background: #eee; color: #666; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+
+  .tool-panel {
+    width: 100%;
+    background: rgba(255,255,255,0.85);
+    border-radius: 16px;
+    padding: 14px;
+    box-sizing: border-box;
+  }
+  .tool-title { font-size: 0.85rem; font-weight: bold; color: #333; margin-bottom: 8px; text-align: center; }
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .tool-btn {
+    border: none; border-radius: 12px;
+    padding: 10px 4px;
+    background: #FFF6D8;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-weight: bold;
+    font-size: 0.55rem;
+  }
+  .tool-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .tool-btn .toemoji { font-size: 1.3rem; }
+  .tool-btn.utility { background: #FFD6D6; }
+
+  .done-btn {
+    font-size: 1.1rem; font-weight: bold; padding: 14px 32px;
+    border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #c73f6a;
+  }
+  .done-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #c73f6a; }
+
+  .celebrate-msg {
+    font-size: 1rem; font-weight: bold; color: #4CAF50; min-height: 24px; text-align: center;
+  }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">📱 そうすけの アプリづくり</h1>
+
+  <div class="stage-wrap">
+    <div class="phone-frame">
+      <div class="phone-screen" id="phoneScreen">
+        <div class="app-header" id="appHeader">
+          <span class="app-icon" id="appIcon">📱</span>
+          <input class="app-name-input" id="appNameInput" value="そうすけアプリ" maxlength="14">
+        </div>
+        <div class="app-canvas" id="appCanvas">
+          <div class="empty-hint-text" id="emptyHint">したの どうぐで アプリを つくろう！</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="celebrate-msg" id="celebrateMsg">&nbsp;</div>
+
+    <div class="tool-panel">
+      <div class="tool-title">🧰 どうぐばこ</div>
+      <div class="tool-grid" id="toolGrid"></div>
+    </div>
+
+    <button class="done-btn" id="doneBtn">✅ アプリを つくる！</button>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const ICONS = ['📱', '🎮', '🎨', '🎵', '🏀', '⚽', '🐶', '🐱', '🚀', '⭐', '🍕', '🌈'];
+    const BG_COLORS = ['#FFF8E7', '#E0F7FA', '#FCE4EC', '#E8F5E9', '#F3E5F5', '#FFF3E0'];
+    const IMAGE_EMOJIS = ['🖼️', '📷', '🌄', '🐾', '🌟'];
+    const TEXT_SAMPLES = ['テキストです', 'いらっしゃいませ！', 'せつめい ぶんしょう', 'よろしくね！'];
+
+    const appCanvasEl = document.getElementById('appCanvas');
+    const emptyHintEl = document.getElementById('emptyHint');
+    const appIconEl = document.getElementById('appIcon');
+    const appNameInput = document.getElementById('appNameInput');
+    const phoneScreenEl = document.getElementById('phoneScreen');
+    const toolGridEl = document.getElementById('toolGrid');
+    const doneBtn = document.getElementById('doneBtn');
+    const celebrateMsgEl = document.getElementById('celebrateMsg');
+
+    let elements = [];
+    let iconIndex = 0;
+    let bgIndex = 0;
+
+    function refreshEmptyHint() {
+      emptyHintEl.style.display = elements.length === 0 ? 'block' : 'none';
+    }
+
+    function addElement(html) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      const el = wrap.firstElementChild;
+      appCanvasEl.appendChild(el);
+      elements.push(el);
+      refreshEmptyHint();
+      appCanvasEl.scrollTop = appCanvasEl.scrollHeight;
+      GameAudio.playClickTick();
+    }
+
+    const TOOLS = [
+      { id: 'button', name: 'ボタン', emoji: '🔲', action: () => addElement('<button class="app-el app-btn">ボタン</button>') },
+      { id: 'text', name: 'テキスト', emoji: '📝', action: () => addElement(`<div class="app-el app-text">${TEXT_SAMPLES[Math.floor(Math.random() * TEXT_SAMPLES.length)]}</div>`) },
+      { id: 'image', name: 'がぞう', emoji: '🖼️', action: () => addElement(`<div class="app-el app-image">${IMAGE_EMOJIS[Math.floor(Math.random() * IMAGE_EMOJIS.length)]}</div>`) },
+      { id: 'rating', name: 'ひょうか', emoji: '⭐', action: () => addElement('<div class="app-el app-rating">⭐⭐⭐⭐⭐</div>') },
+      { id: 'notif', name: 'つうち', emoji: '🔔', action: () => addElement('<div class="app-el app-notif">🔔 あたらしい つうちが あります</div>') },
+      { id: 'graph', name: 'グラフ', emoji: '📊', action: () => addElement(`<div class="app-el app-graph">📊 グラフ<div class="graph-bars"><span style="height:${20 + Math.random()*20}px"></span><span style="height:${20 + Math.random()*20}px"></span><span style="height:${20 + Math.random()*20}px"></span><span style="height:${20 + Math.random()*20}px"></span></div></div>`) },
+      { id: 'music', name: 'おんがく', emoji: '🎵', action: () => addElement('<div class="app-el app-music">🎵 おんがくを さいせいちゅう</div>') },
+      { id: 'search', name: 'けんさく', emoji: '🔍', action: () => addElement('<div class="app-el app-search">🔍 けんさく...</div>') },
+      { id: 'icon', name: 'アイコン', emoji: '🖌️', action: () => {
+        iconIndex = (iconIndex + 1) % ICONS.length;
+        appIconEl.textContent = ICONS[iconIndex];
+        GameAudio.playClickTick();
+      }},
+      { id: 'bg', name: 'はいけい', emoji: '🎨', action: () => {
+        bgIndex = (bgIndex + 1) % BG_COLORS.length;
+        phoneScreenEl.style.background = BG_COLORS[bgIndex];
+        GameAudio.playClickTick();
+      }},
+      { id: 'undo', name: 'ひとつ けす', emoji: '🗑️', utility: true, action: () => {
+        const last = elements.pop();
+        if (last) last.remove();
+        refreshEmptyHint();
+        GameAudio.playClickTick();
+      }},
+      { id: 'clear', name: 'ぜんぶ けす', emoji: '🔄', utility: true, action: () => {
+        elements.forEach(el => el.remove());
+        elements = [];
+        refreshEmptyHint();
+        GameAudio.playClickTick();
+      }},
+    ];
+
+    function renderTools() {
+      toolGridEl.innerHTML = '';
+      TOOLS.forEach(tool => {
+        const btn = document.createElement('button');
+        btn.className = 'tool-btn' + (tool.utility ? ' utility' : '');
+        btn.innerHTML = `<span class="toemoji">${tool.emoji}</span><span>${tool.name}</span>`;
+        btn.addEventListener('click', tool.action);
+        toolGridEl.appendChild(btn);
+      });
+    }
+
+    doneBtn.addEventListener('click', () => {
+      GameAudio.playClearFanfare();
+      celebrateMsgEl.textContent = `🎉 「${appNameInput.value}」が できあがったよ！すごい！`;
+    });
+
+    refreshEmptyHint();
+    renderTools();
+  </script>
+</body>
+</html>
