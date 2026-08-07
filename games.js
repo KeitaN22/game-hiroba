@@ -305,7 +305,7 @@ const GAMES = [
     title: 'そうすけの はみがき たいけつ',
     emoji: '🪥',
     color: '#7EC8E3',
-    path: 'games/tooth-brush/index.html',
+    path: 'games/tooth-brush/index.html?v=2',
     desc: 'よごれた はを タップして みがいて、みんなの はを ピカピカに してあげよう！',
   },
 ];
