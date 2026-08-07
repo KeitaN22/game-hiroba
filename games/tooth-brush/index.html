@@ -62,16 +62,33 @@
     box-shadow: 0 3px 0 rgba(0,0,0,0.15);
     position: relative;
   }
-  .tooth.dirty {
+  .tooth.germ {
     background: #B58D5B;
     box-shadow: 0 3px 0 rgba(0,0,0,0.25), inset 0 0 0 2px #8B6B3E;
   }
-  .tooth.dirty::after {
+  .tooth.germ::after {
     content: '🟫';
     position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
     font-size: 0.7rem;
   }
-  .tooth:active:not(.dirty) { transform: translateY(2px); }
+  .tooth.purple {
+    background: #9B59B6;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25), inset 0 0 0 2px #6d3d82;
+  }
+  .tooth.purple::after {
+    content: '🟣';
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    font-size: 0.7rem;
+  }
+  .tooth.purple.wrong-tool {
+    animation: toothWrongShake 0.3s ease-in-out;
+  }
+  @keyframes toothWrongShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .tooth:active:not(.germ):not(.purple) { transform: translateY(2px); }
   .tooth.shine {
     animation: toothShine 0.4s ease-out;
   }
@@ -81,6 +98,19 @@
   }
 
   .flavor-msg { font-size: 0.95rem; font-weight: bold; color: #4CAF50; min-height: 24px; text-align: center; }
+
+  .tool-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .tool-btn {
+    font-size: 0.9rem; font-weight: bold; padding: 12px 18px; border: none; border-radius: 14px;
+    color: #fff; cursor: pointer; user-select: none;
+    background: #999; box-shadow: 0 5px 0 #666;
+  }
+  .tool-btn.toothpick { background: #4FC3F7; box-shadow: 0 5px 0 #2f8fbf; }
+  .tool-btn.toothpick.active { background: #9B59B6; box-shadow: 0 5px 0 #6d3d82; }
+  .tool-btn.toy-btn { background: #999; box-shadow: 0 5px 0 #666; }
+  .tool-btn.toy-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .tool-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .tool-btn:disabled { opacity: 0.5; cursor: default; }
 
   .overlay {
     position: absolute; inset: 0; background: rgba(0,0,0,0.65);
@@ -115,13 +145,18 @@
       </div>
       <div class="mouth" id="mouth"></div>
       <div class="flavor-msg" id="flavorMsg">よごれた はを タップして みがこう！</div>
+      <div class="tool-row">
+        <button class="tool-btn toothpick" id="toothpickBtn">🦷 つまようじで とる</button>
+        <button class="tool-btn toy-btn" id="giveToyBtn" disabled>🎁 おもちゃを わたす</button>
+      </div>
 
       <div class="overlay" id="startOverlay">
         <h2>🪥 はみがき たいけつ</h2>
         <p>
           みんなの はが よごれちゃった！<br>
-          よごれた はを タップして、ピカピカに みがいてあげよう！<br>
-          ぜんいんの はを きれいに できるかな？
+          ちゃいろい はは そのまま タップして みがこう！<br>
+          むらさきの ばいきんは、まず「🦷 つまようじで とる」を おしてから タップしてね！<br>
+          きれいに なったら「🎁 おもちゃを わたす」を おそう！
         </p>
         <button class="big-btn" id="startBtn">▶ スタート</button>
       </div>
@@ -163,6 +198,8 @@
     const patientTotalEl = document.getElementById('patientTotal');
     const mouthEl = document.getElementById('mouth');
     const flavorMsgEl = document.getElementById('flavorMsg');
+    const toothpickBtn = document.getElementById('toothpickBtn');
+    const giveToyBtn = document.getElementById('giveToyBtn');
     const startOverlay = document.getElementById('startOverlay');
     const endOverlay = document.getElementById('endOverlay');
     const endTitleEl = document.getElementById('endTitle');
@@ -177,12 +214,27 @@
     let timeLeft = GAME_TIME;
     let playing = false;
     let countdownTimer = null;
+    let toothpickMode = false;
+    let patientDone = false;
 
     function makeTeeth() {
       const dirtyCount = 4 + Math.floor(Math.random() * (TEETH_COUNT - 3));
       const indexes = Array.from({ length: TEETH_COUNT }, (_, i) => i).sort(() => Math.random() - 0.5);
-      const dirtySet = new Set(indexes.slice(0, dirtyCount));
-      return Array.from({ length: TEETH_COUNT }, (_, i) => ({ dirty: dirtySet.has(i) }));
+      const dirtyIdx = indexes.slice(0, dirtyCount);
+      const purpleCount = Math.max(1, Math.floor(dirtyCount * 0.4));
+      const purpleSet = new Set(dirtyIdx.slice(0, purpleCount));
+      const germSet = new Set(dirtyIdx.slice(purpleCount));
+      return Array.from({ length: TEETH_COUNT }, (_, i) => {
+        if (purpleSet.has(i)) return { state: 'purple' };
+        if (germSet.has(i)) return { state: 'germ' };
+        return { state: 'clean' };
+      });
+    }
+
+    function setToothpickMode(on) {
+      toothpickMode = on;
+      toothpickBtn.classList.toggle('active', on);
+      toothpickBtn.textContent = on ? '🦷 つまようじ つかいちゅう' : '🦷 つまようじで とる';
     }
 
     function renderPatient() {
@@ -191,10 +243,14 @@
       patientNameEl.textContent = p.name;
       patientCountEl.textContent = patientIndex + 1;
       teeth = makeTeeth();
+      patientDone = false;
+      giveToyBtn.disabled = true;
+      giveToyBtn.classList.remove('ready');
+      setToothpickMode(false);
       mouthEl.innerHTML = '';
       toothEls = teeth.map((t, i) => {
         const btn = document.createElement('button');
-        btn.className = 'tooth' + (t.dirty ? ' dirty' : '');
+        btn.className = 'tooth' + (t.state === 'clean' ? '' : ' ' + t.state);
         btn.addEventListener('click', () => brushTooth(i));
         mouthEl.appendChild(btn);
         return btn;
@@ -203,29 +259,44 @@
     }
 
     function brushTooth(i) {
-      if (!playing) return;
-      if (!teeth[i].dirty) return;
-      teeth[i].dirty = false;
-      toothEls[i].classList.remove('dirty');
-      toothEls[i].classList.remove('shine');
-      void toothEls[i].offsetWidth;
-      toothEls[i].classList.add('shine');
+      if (!playing || patientDone) return;
+      const t = teeth[i];
+      if (t.state === 'clean') return;
+
+      if (t.state === 'purple' && !toothpickMode) {
+        toothEls[i].classList.remove('wrong-tool');
+        void toothEls[i].offsetWidth;
+        toothEls[i].classList.add('wrong-tool');
+        flavorMsgEl.textContent = 'むらさきの ばいきんは「🦷 つまようじで とる」を おしてから タップしてね！';
+        GameAudio.playFailBuzz();
+        return;
+      }
+
+      t.state = 'clean';
+      toothEls[i].className = 'tooth shine';
       GameAudio.playClickTick();
       score++;
       scoreEl.textContent = score;
 
-      if (teeth.every(t => !t.dirty)) {
-        GameAudio.playClearFanfare();
-        flavorMsgEl.textContent = `${PATIENTS[patientIndex].name}の はが ピカピカに なった！`;
-        setTimeout(() => {
-          if (!playing) return;
-          patientIndex++;
-          if (patientIndex >= PATIENTS.length) {
-            winGame();
-          } else {
-            renderPatient();
-          }
-        }, 700);
+      if (teeth.every(x => x.state === 'clean')) {
+        patientDone = true;
+        setToothpickMode(false);
+        flavorMsgEl.textContent = `${PATIENTS[patientIndex].name}の はが ピカピカに なった！おもちゃを わたそう！`;
+        giveToyBtn.disabled = false;
+        giveToyBtn.classList.add('ready');
+      }
+    }
+
+    function giveToy() {
+      if (!playing || !patientDone) return;
+      GameAudio.playClearFanfare();
+      giveToyBtn.disabled = true;
+      giveToyBtn.classList.remove('ready');
+      patientIndex++;
+      if (patientIndex >= PATIENTS.length) {
+        winGame();
+      } else {
+        renderPatient();
       }
     }
 
@@ -282,6 +353,9 @@
       endOverlay.classList.remove('hide');
       Leaderboard.showRankFlow({ gameId: 'tooth-brush', score, higherIsBetter: true, unit: 'ほん', title: '🪥 みがいた はの かず ランキング' });
     }
+
+    toothpickBtn.addEventListener('click', () => setToothpickMode(!toothpickMode));
+    giveToyBtn.addEventListener('click', giveToy);
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', startGame);
