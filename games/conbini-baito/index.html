@@ -63,7 +63,7 @@
 
   .toilet-spot {
     position: absolute;
-    right: 5%; bottom: 6%;
+    transform: translate(-50%, -50%);
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     cursor: pointer;
   }
@@ -332,7 +332,8 @@
     const GAME_TIME = 60;
     const DOOR_POS = { x: 6, y: 55 };
     const COUNTER_STAND_POS = { x: 50, y: 78 };
-    const BOX_POS = { x: 85, y: 78 };
+    const TOILET_POS = { x: 90, y: 88 };
+    const BOX_POS = { x: 68, y: 88 };
     const REGISTER_POS = { x: 50, y: 68 };
     const PLAYER_HOME = { x: 50, y: 78 };
     const PROXIMITY = 55;
@@ -445,6 +446,8 @@
       renderShelf();
       boxSpotEl.style.left = BOX_POS.x + '%';
       boxSpotEl.style.top = BOX_POS.y + '%';
+      toiletSpotEl.style.left = TOILET_POS.x + '%';
+      toiletSpotEl.style.top = TOILET_POS.y + '%';
       const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
       clerkX = home.x; clerkY = home.y;
       clerkEl.style.left = clerkX + 'px';
@@ -708,6 +711,10 @@
 
     buildShelf();
     renderShelf();
+    boxSpotEl.style.left = BOX_POS.x + '%';
+    boxSpotEl.style.top = BOX_POS.y + '%';
+    toiletSpotEl.style.left = TOILET_POS.x + '%';
+    toiletSpotEl.style.top = TOILET_POS.y + '%';
     const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
     clerkX = home.x; clerkY = home.y;
     clerkEl.style.left = clerkX + 'px';
