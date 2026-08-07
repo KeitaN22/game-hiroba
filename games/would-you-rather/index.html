@@ -144,6 +144,36 @@
   }
   .summary-card .semoji { font-size: 1.8rem; display: block; }
   .summary-card .sname { font-size: 0.7rem; font-weight: bold; }
+
+  .eat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+  .eat-card {
+    border: none;
+    border-radius: 14px;
+    padding: 12px 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-weight: bold;
+    font-size: 0.7rem;
+    transition: transform 0.15s ease-out, opacity 0.2s ease;
+  }
+  .eat-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .eat-card .eemoji { font-size: 2rem; }
+  .eat-card.bite { animation: eatBiteWiggle 0.25s ease-out; }
+  @keyframes eatBiteWiggle {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.85) rotate(-6deg); }
+    100% { transform: scale(1); }
+  }
+  .eat-card.eaten { opacity: 0.15; cursor: default; }
+  .eat-msg { font-size: 1rem; font-weight: bold; min-height: 24px; }
 </style>
 </head>
 <body class="game-body">
@@ -183,7 +213,16 @@
         <h2>🎉 おわり！ 🎉</h2>
         <p>そうすけの こたえ、ぜんぶ おぼえたよ！</p>
         <div class="summary-grid" id="summaryGrid"></div>
-        <button class="big-btn" id="retryBtn" style="margin-top:16px;">🔄 もういちど</button>
+        <button class="big-btn" id="eatNowBtn" style="margin-top:16px;">🍽️ さっそく たべます</button>
+        <button class="big-btn" id="retryBtn" style="margin-top:10px;">🔄 もういちど</button>
+      </div>
+
+      <div class="overlay hide" id="eatOverlay">
+        <h2>🍽️ すきな ものを たべよう！</h2>
+        <p>タップして、えらんだ すきな ものを たべてみよう！</p>
+        <div class="eat-grid" id="eatGrid"></div>
+        <div class="eat-msg" id="eatMsg">&nbsp;</div>
+        <button class="big-btn hide" id="toEndBtn" style="margin-top:16px;">🔄 もういちど</button>
       </div>
     </div>
   </div>
@@ -240,6 +279,11 @@
     const startOverlay = document.getElementById('startOverlay');
     const endOverlay = document.getElementById('endOverlay');
     const summaryGridEl = document.getElementById('summaryGrid');
+    const eatNowBtn = document.getElementById('eatNowBtn');
+    const eatOverlay = document.getElementById('eatOverlay');
+    const eatGridEl = document.getElementById('eatGrid');
+    const eatMsgEl = document.getElementById('eatMsg');
+    const toEndBtn = document.getElementById('toEndBtn');
 
     stageTotalEl.textContent = STAGES.length;
 
@@ -388,10 +432,49 @@
       answers = [];
       startOverlay.classList.add('hide');
       endOverlay.classList.add('hide');
+      eatOverlay.classList.add('hide');
       playing = true;
       GameAudio.playBGM();
       loadStage();
     }
+
+    function openEatScreen() {
+      endOverlay.classList.add('hide');
+      eatOverlay.classList.remove('hide');
+      eatMsgEl.textContent = '';
+      toEndBtn.classList.add('hide');
+      eatGridEl.innerHTML = '';
+      answers.forEach((a, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'eat-card';
+        btn.innerHTML = `<span class="eemoji">${a.emoji}</span><span>${a.name}</span>`;
+        btn.addEventListener('click', () => eatItem(btn));
+        eatGridEl.appendChild(btn);
+      });
+    }
+
+    function eatItem(btn) {
+      if (btn.classList.contains('eaten')) return;
+      GameAudio.playKariBite();
+      btn.classList.remove('bite');
+      void btn.offsetWidth;
+      btn.classList.add('bite');
+      setTimeout(() => {
+        btn.classList.add('eaten');
+        const allEaten = Array.from(eatGridEl.children).every(c => c.classList.contains('eaten'));
+        if (allEaten) {
+          eatMsgEl.textContent = '🍽️ ぜんぶ たべたよ！ ごちそうさま！';
+          GameAudio.playClearFanfare();
+          toEndBtn.classList.remove('hide');
+        }
+      }, 250);
+    }
+
+    eatNowBtn.addEventListener('click', openEatScreen);
+    toEndBtn.addEventListener('click', () => {
+      eatOverlay.classList.add('hide');
+      startGame();
+    });
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', startGame);
