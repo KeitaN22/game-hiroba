@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの キーキャップ そうじ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #7EC8E3 0%, #C8F7C5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .keyboard-panel {
+    position: relative;
+    background: #444;
+    border-radius: 18px;
+    padding: 16px 12px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.25), 0 12px 24px rgba(0,0,0,0.25);
+  }
+
+  .key-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .key {
+    position: relative;
+    flex: 1;
+    max-width: 40px;
+    aspect-ratio: 1 / 1;
+    border: none;
+    border-radius: 8px;
+    background: #eee;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    touch-action: manipulation;
+    overflow: visible;
+  }
+  .key:active { transform: translateY(2px); }
+  .key.clean { background: #C8F7C5; }
+
+  .dirt-overlay {
+    position: absolute; inset: 3px;
+    border-radius: 40% 60% 55% 45% / 50% 45% 55% 50%;
+    background: #8B6B3E;
+    opacity: 0.85;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .dirt-overlay.gunk {
+    background: #6FCF97;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3) inset;
+  }
+  .dirt-overlay.gone {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  .key.shake .dirt-overlay {
+    animation: dirtShake 0.15s ease-in-out;
+  }
+  @keyframes dirtShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+  }
+
+  .flavor-pop {
+    position: absolute;
+    top: -14px; left: 50%;
+    transform: translateX(-50%) scale(0.5);
+    font-size: 0.6rem;
+    font-weight: bold;
+    color: #FF5D8F;
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .flavor-pop.show {
+    animation: flavorPop 0.5s ease-out forwards;
+  }
+  @keyframes flavorPop {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+    30% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(1); }
+  }
+
+  .tool-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
+  .tool-btn {
+    font-size: 0.95rem; font-weight: bold; padding: 12px 20px; border: none; border-radius: 999px;
+    color: #fff; cursor: pointer; user-select: none;
+    background: #999; box-shadow: 0 5px 0 #666;
+  }
+  .tool-btn.active { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .tool-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .hint {
+    text-align: center; font-size: 0.85rem; color: #444;
+    background: rgba(255,255,255,0.85); border-radius: 12px; padding: 8px 14px;
+    margin-bottom: 12px;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🧽 そうすけの キーキャップ そうじ</h1>
+
+  <div class="hud" id="hud">
+    <span>きれいに した キー ✨ <span id="cleanCount">0</span>/<span id="totalCount">27</span></span>
+    <span>じかん ⏱️ <span id="elapsedEl">0</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="hint" id="hintText">よごれた キーは 🧽スポンジを ながおし、ぐねぐねの キーは 🦷つまようじを ながおし！</div>
+
+    <div style="position: relative;">
+      <div class="keyboard-panel" id="keyboardPanel">
+        <div class="key-row" id="row1"></div>
+        <div class="key-row" id="row2"></div>
+        <div class="key-row" id="row3"></div>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🧽 キーキャップ そうじ</h2>
+        <p>
+          キーボードの キーが よごれちゃった！<br>
+          ちゃいろい よごれは 🧽スポンジで ながおし して シャシャシャッと こすろう！<br>
+          みどりの ぐねぐねは 🦷つまようじで ながおし して ポンッと とろう！<br>
+          ぜんぶ きれいに できるかな？
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 ピカピカ！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <button class="tool-btn active" id="spongeBtn">🧽 スポンジ</button>
+      <button class="tool-btn" id="toothpickBtn">🦷 つまようじ</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=11"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const ROWS = [
+      ['Q','W','E','R','T','Y','U','I','O'],
+      ['A','S','D','F','G','H','J','K','L'],
+      ['Z','X','C','V','B','N','M'],
+    ];
+    const SCRUB_TICKS_NEEDED = 4;
+    const SCRUB_TICK_MS = 160;
+    const TOOTHPICK_HOLD_MS = 600;
+    const GUNK_CHANCE = 0.22;
+
+    const hudEl = document.getElementById('hud');
+    const cleanCountEl = document.getElementById('cleanCount');
+    const totalCountEl = document.getElementById('totalCount');
+    const elapsedEl = document.getElementById('elapsedEl');
+    const spongeBtn = document.getElementById('spongeBtn');
+    const toothpickBtn = document.getElementById('toothpickBtn');
+    const hintText = document.getElementById('hintText');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endText = document.getElementById('endText');
+
+    let currentTool = 'sponge';
+    let keys = [];
+    let cleanCount = 0;
+    let totalCount = 0;
+    let playing = false;
+    let elapsed = 0;
+    let elapsedTimer = null;
+    let holdTimer = null;
+    let holdInterval = null;
+
+    function setTool(tool) {
+      currentTool = tool;
+      spongeBtn.classList.toggle('active', tool === 'sponge');
+      toothpickBtn.classList.toggle('active', tool === 'toothpick');
+      hintText.textContent = tool === 'sponge'
+        ? '🧽スポンジを よごれた キーの うえで ながおし して シャシャシャッ！'
+        : '🦷つまようじを ぐねぐねの キーの うえで ながおし して ポンッ！';
+    }
+    spongeBtn.addEventListener('click', () => setTool('sponge'));
+    toothpickBtn.addEventListener('click', () => setTool('toothpick'));
+
+    function buildKeyboard() {
+      keys = [];
+      ROWS.forEach((letters, r) => {
+        const rowEl = document.getElementById('row' + (r + 1));
+        rowEl.innerHTML = '';
+        letters.forEach(letter => {
+          const isGunk = Math.random() < GUNK_CHANCE;
+          const btn = document.createElement('button');
+          btn.className = 'key';
+          btn.textContent = letter;
+          const dirt = document.createElement('span');
+          dirt.className = 'dirt-overlay' + (isGunk ? ' gunk' : '');
+          btn.appendChild(dirt);
+          const flavor = document.createElement('span');
+          flavor.className = 'flavor-pop';
+          btn.appendChild(flavor);
+          rowEl.appendChild(btn);
+
+          const keyState = { state: isGunk ? 'gunk' : 'dirt', scrubTicks: 0, el: btn, dirtEl: dirt, flavorEl: flavor };
+          keys.push(keyState);
+          wireKey(keyState);
+        });
+      });
+      totalCount = keys.length;
+      totalCountEl.textContent = totalCount;
+    }
+
+    function showFlavor(keyState, text) {
+      keyState.flavorEl.textContent = text;
+      keyState.flavorEl.classList.remove('show');
+      void keyState.flavorEl.offsetWidth;
+      keyState.flavorEl.classList.add('show');
+    }
+
+    function cleanKey(keyState) {
+      keyState.state = 'clean';
+      keyState.el.classList.add('clean');
+      keyState.dirtEl.classList.add('gone');
+      cleanCount++;
+      cleanCountEl.textContent = cleanCount;
+      if (cleanCount >= totalCount) winGame();
+    }
+
+    function wireKey(keyState) {
+      keyState.el.addEventListener('pointerdown', () => startHold(keyState));
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+        keyState.el.addEventListener(evt, () => stopHold(keyState));
+      });
+    }
+
+    function startHold(keyState) {
+      if (!playing || keyState.state === 'clean') return;
+      clearTimeout(holdTimer);
+      clearInterval(holdInterval);
+
+      if (currentTool === 'sponge') {
+        if (keyState.state !== 'dirt') {
+          showFlavor(keyState, 'つまようじ つかって！');
+          return;
+        }
+        holdInterval = setInterval(() => {
+          keyState.scrubTicks++;
+          keyState.el.classList.remove('shake');
+          void keyState.el.offsetWidth;
+          keyState.el.classList.add('shake');
+          GameAudio.playSweep();
+          showFlavor(keyState, 'シャシャッ');
+          if (keyState.scrubTicks >= SCRUB_TICKS_NEEDED) {
+            clearInterval(holdInterval);
+            GameAudio.playClearFanfare();
+            showFlavor(keyState, 'ピカッ✨');
+            cleanKey(keyState);
+          }
+        }, SCRUB_TICK_MS);
+      } else {
+        if (keyState.state !== 'gunk') {
+          showFlavor(keyState, 'スポンジ つかって！');
+          return;
+        }
+        holdTimer = setTimeout(() => {
+          GameAudio.playBubbleWrapPop();
+          showFlavor(keyState, 'ポンッ！');
+          cleanKey(keyState);
+        }, TOOTHPICK_HOLD_MS);
+      }
+    }
+
+    function stopHold() {
+      clearTimeout(holdTimer);
+      clearInterval(holdInterval);
+    }
+
+    function resetGame() {
+      cleanCount = 0;
+      elapsed = 0;
+      cleanCountEl.textContent = 0;
+      elapsedEl.textContent = 0;
+      setTool('sponge');
+      buildKeyboard();
+    }
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      clearInterval(elapsedTimer);
+      elapsedTimer = setInterval(() => {
+        if (!playing) return;
+        elapsed++;
+        elapsedEl.textContent = elapsed;
+      }, 1000);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(elapsedTimer);
+      stopHold();
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endText.textContent = `${elapsed}びょうで キーボードを ぜんぶ ピカピカに できたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'keycap-clean', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🧽 キーキャップそうじ タイム ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    buildKeyboard();
+  </script>
+</body>
+</html>

@@ -316,4 +316,12 @@ const GAMES = [
     path: 'games/eating-asmr/index.html',
     desc: 'すきな たべものを えらんで、タップして もぐもぐ。クチャッと たべる おとが きもちいいよ！',
   },
+  {
+    id: 'keycap-clean',
+    title: 'そうすけの キーキャップ そうじ',
+    emoji: '🧽',
+    color: '#7EC8E3',
+    path: 'games/keycap-clean/index.html',
+    desc: 'よごれた キーは スポンジで シャシャシャッ、ぐねぐねの キーは つまようじで ポンッと きれいに しよう！',
+  },
 ];
