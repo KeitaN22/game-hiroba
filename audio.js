@@ -14,6 +14,42 @@
     return audioCtx;
   }
 
+  function biteNoise(ctx, startTime, dur, freqCenter, filterType, vol, q) {
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+    const filter = ctx.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.value = freqCenter;
+    if (q) filter.Q.value = q;
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(startTime);
+    noise.stop(startTime + dur);
+  }
+
+  function biteTone(ctx, startTime, dur, freqFrom, freqTo, vol, oscType) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = oscType || 'sine';
+    osc.frequency.setValueAtTime(freqFrom, startTime);
+    osc.frequency.exponentialRampToValueAtTime(freqTo, startTime + dur);
+    gain.gain.setValueAtTime(0.001, startTime);
+    gain.gain.linearRampToValueAtTime(vol, startTime + dur * 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + dur);
+  }
+
   function beep(freq, startTime, duration, type, volume) {
     if (muted) return;
     const ctx = getCtx();
@@ -548,6 +584,129 @@
       gain.connect(ctx.destination);
       noise.start(now);
       noise.stop(now + 0.08);
+    },
+
+    // 「あなたは どっち？」の たべる がめん よう。たべものごとに ちがう おと
+    playBiteChocolate() { this.playChewChocolate(); },
+    playBiteLemon() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(1600, now);
+      osc.frequency.linearRampToValueAtTime(2100, now + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.14, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    },
+    playBiteIceCream() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.22, 260, 170, 0.14, 'sine');
+    },
+    playBiteSpicy() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.18);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    },
+    playBiteCandy() { this.playChewCandy(); },
+    playBiteBroccoli() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteNoise(ctx, now, 0.07, 2400, 'bandpass', 0.15, 1.2);
+    },
+    playBiteDonut() { this.playChewDonut(); },
+    playBiteCarrot() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      beep(1900, now, 0.04, 'square', 0.13);
+      biteNoise(ctx, now, 0.05, 3000, 'highpass', 0.13);
+    },
+    playBiteCake() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.18, 200, 130, 0.15, 'sine');
+    },
+    playBiteTomato() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.14, 180, 110, 0.13, 'sine');
+      biteNoise(ctx, now, 0.1, 600, 'lowpass', 0.08);
+    },
+    playBitePopcorn() { this.playChewPopcorn(); },
+    playBiteCabbage() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteNoise(ctx, now, 0.1, 1600, 'bandpass', 0.16, 0.8);
+    },
+    playBiteWatermelon() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteNoise(ctx, now, 0.08, 1800, 'bandpass', 0.14, 1);
+      biteTone(ctx, now, 0.12, 220, 150, 0.09, 'sine');
+    },
+    playBiteEggplant() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.2, 160, 100, 0.14, 'sine');
+    },
+    playBiteCookie() { this.playChewCookie(); },
+    playBiteCucumber() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteNoise(ctx, now, 0.06, 2600, 'highpass', 0.14);
+    },
+    playBiteGrape() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.1, 500, 350, 0.13, 'sine');
+    },
+    playBiteOnion() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteNoise(ctx, now, 0.06, 2200, 'bandpass', 0.16, 1.5);
+    },
+    playBiteStrawberry() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.13, 420, 300, 0.13, 'sine');
+    },
+    playBiteMushroom() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      biteTone(ctx, now, 0.16, 190, 130, 0.13, 'sine');
     },
 
     // ジャーっと ながれる トイレの みずおと

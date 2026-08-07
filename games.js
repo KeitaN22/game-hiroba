@@ -337,7 +337,7 @@ const GAMES = [
     title: 'そうすけの あなたは どっち？',
     emoji: '🍫',
     color: '#FFC1E3',
-    path: 'games/would-you-rather/index.html?v=2',
+    path: 'games/would-you-rather/index.html?v=3',
     desc: 'やじるしで たべものに ちかづいて あじみ、「どちらが いい？」に こたえよう！ぜんぶで 10ステージ！',
   },
 ];

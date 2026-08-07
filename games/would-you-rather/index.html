@@ -241,7 +241,7 @@
     </div>
   </div>
 
-  <script src="../../audio.js?v=12"></script>
+  <script src="../../audio.js?v=13"></script>
   <script src="../../leaderboard.js?v=2"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
@@ -264,6 +264,29 @@
     ];
     const PLAYER_HOME = { x: 50, y: 85 };
     const PROXIMITY = 55;
+
+    const BITE_SOUND_MAP = {
+      'チョコレート': () => GameAudio.playBiteChocolate(),
+      'レモン': () => GameAudio.playBiteLemon(),
+      'アイスクリーム': () => GameAudio.playBiteIceCream(),
+      'からいもの': () => GameAudio.playBiteSpicy(),
+      'あめ': () => GameAudio.playBiteCandy(),
+      'ブロッコリー': () => GameAudio.playBiteBroccoli(),
+      'ドーナツ': () => GameAudio.playBiteDonut(),
+      'にんじん': () => GameAudio.playBiteCarrot(),
+      'ケーキ': () => GameAudio.playBiteCake(),
+      'トマト': () => GameAudio.playBiteTomato(),
+      'ポップコーン': () => GameAudio.playBitePopcorn(),
+      'キャベツ': () => GameAudio.playBiteCabbage(),
+      'スイカ': () => GameAudio.playBiteWatermelon(),
+      'なす': () => GameAudio.playBiteEggplant(),
+      'クッキー': () => GameAudio.playBiteCookie(),
+      'きゅうり': () => GameAudio.playBiteCucumber(),
+      'ぶどう': () => GameAudio.playBiteGrape(),
+      'たまねぎ': () => GameAudio.playBiteOnion(),
+      'いちご': () => GameAudio.playBiteStrawberry(),
+      'きのこ': () => GameAudio.playBiteMushroom(),
+    };
 
     const arenaEl = document.getElementById('arena');
     const stageCountEl = document.getElementById('stageCount');
@@ -448,14 +471,15 @@
         const btn = document.createElement('button');
         btn.className = 'eat-card';
         btn.innerHTML = `<span class="eemoji">${a.emoji}</span><span>${a.name}</span>`;
-        btn.addEventListener('click', () => eatItem(btn));
+        btn.addEventListener('click', () => eatItem(btn, a));
         eatGridEl.appendChild(btn);
       });
     }
 
-    function eatItem(btn) {
+    function eatItem(btn, item) {
       if (btn.classList.contains('eaten')) return;
-      GameAudio.playKariBite();
+      const soundFn = BITE_SOUND_MAP[item.name];
+      if (soundFn) soundFn(); else GameAudio.playKariBite();
       btn.classList.remove('bite');
       void btn.offsetWidth;
       btn.classList.add('bite');
