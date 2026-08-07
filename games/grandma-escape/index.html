@@ -76,6 +76,55 @@
     z-index: 6;
   }
 
+  .grandma {
+    position: absolute;
+    top: 50%; left: -15%;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    transition: left 0.7s cubic-bezier(0.3, 0, 0.7, 1);
+    z-index: 9;
+  }
+  .grandma.run { left: 50%; transform: translate(-50%, -50%); }
+  .grandma.hide { display: none; }
+
+  .tata-bubble {
+    position: absolute;
+    top: 50%; left: -15%;
+    transform: translateY(-90%);
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #FF3B3B;
+    -webkit-text-stroke: 2px #fff;
+    transition: left 0.7s cubic-bezier(0.3, 0, 0.7, 1);
+    z-index: 9;
+    white-space: nowrap;
+  }
+  .tata-bubble.run { left: 50%; }
+  .tata-bubble.hide { display: none; }
+
+  .angry-shout {
+    position: absolute;
+    top: 30%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    background: #FF3B3B;
+    padding: 8px 16px;
+    border-radius: 999px;
+    opacity: 0;
+    z-index: 9;
+    white-space: nowrap;
+  }
+  .angry-shout.show {
+    animation: shoutPop 0.5s ease-out forwards;
+  }
+  @keyframes shoutPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    60% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
   .reaction-msg {
     position: absolute;
     left: 50%; top: 46%;
@@ -161,6 +210,9 @@
         <span class="door-name">げんかん</span>
       </div>
       <span class="player" id="player">🧑</span>
+      <span class="grandma hide" id="grandma">👵</span>
+      <span class="tata-bubble hide" id="tataBubble">タタタタタ！</span>
+      <span class="angry-shout" id="angryShout">だっしゅつ するな！</span>
       <span class="reaction-msg" id="reactionMsg"></span>
 
       <div class="overlay" id="startOverlay">
@@ -227,7 +279,7 @@
     const PLAYER_HOME = { x: 50, y: 92 };
     const DOOR_POS = { x: 50, y: 10 };
     const PROXIMITY = 55;
-    const GAME_TIME = 60;
+    const GAME_TIME = 25;
 
     const arenaEl = document.getElementById('arena');
     const hudEl = document.getElementById('hud');
@@ -236,6 +288,9 @@
     const spotsLayerEl = document.getElementById('spotsLayer');
     const doorSpotEl = document.getElementById('doorSpot');
     const playerEl = document.getElementById('player');
+    const grandmaEl = document.getElementById('grandma');
+    const tataBubbleEl = document.getElementById('tataBubble');
+    const angryShoutEl = document.getElementById('angryShout');
     const reactionMsgEl = document.getElementById('reactionMsg');
     const searchBtn = document.getElementById('searchBtn');
     const escapeBtn = document.getElementById('escapeBtn');
@@ -301,6 +356,11 @@
       escapeBtn.disabled = true;
       searchBtn.classList.remove('ready');
       escapeBtn.classList.remove('ready');
+      grandmaEl.classList.add('hide');
+      grandmaEl.classList.remove('run');
+      tataBubbleEl.classList.add('hide');
+      tataBubbleEl.classList.remove('run');
+      angryShoutEl.classList.remove('show');
     }
 
     function findNearestSpot() {
@@ -440,11 +500,26 @@
       playing = false;
       clearInterval(countdownTimer);
       GameAudio.stopBGM();
-      GameAudio.playFailBuzz();
-      endTitleEl.textContent = '⏰ じかんぎれ…';
-      endTextEl.textContent = 'かぎが みつからなかったよ。もう いちど ちょうせん しよう！';
-      endOverlay.classList.remove('hide');
-      Leaderboard.showRankFlow({ gameId: 'grandma-escape', score: 0, higherIsBetter: true, unit: 'びょう のこし', title: '🔑 だっしゅつ ランキング' });
+
+      grandmaEl.classList.remove('hide');
+      tataBubbleEl.classList.remove('hide');
+      GameAudio.playSweep();
+      void grandmaEl.offsetWidth;
+      grandmaEl.classList.add('run');
+      tataBubbleEl.classList.add('run');
+
+      setTimeout(() => {
+        GameAudio.playFailBuzz();
+        angryShoutEl.classList.add('show');
+        tataBubbleEl.classList.add('hide');
+
+        setTimeout(() => {
+          endTitleEl.textContent = '👵 おばあちゃんに みつかった！';
+          endTextEl.textContent = '「だっしゅつ するな！」と おこられちゃった…もう いちど ちょうせん しよう！';
+          endOverlay.classList.remove('hide');
+          Leaderboard.showRankFlow({ gameId: 'grandma-escape', score: 0, higherIsBetter: true, unit: 'びょう のこし', title: '🔑 だっしゅつ ランキング' });
+        }, 900);
+      }, 750);
     }
 
     document.getElementById('startBtn').addEventListener('click', startGame);
