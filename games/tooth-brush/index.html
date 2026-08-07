@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの はみがき たいけつ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #7EC8E3 0%, #C8F7C5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 440px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 24px 18px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .patient-row { display: flex; align-items: center; gap: 12px; }
+  .patient-emoji { font-size: 3.2rem; }
+  .patient-name { font-size: 0.95rem; font-weight: bold; color: #333; }
+  .patient-progress { font-size: 0.8rem; color: #777; }
+
+  .mouth {
+    background: #FF9EAE;
+    border-radius: 24px;
+    padding: 18px 14px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 320px;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .tooth {
+    width: 34px; height: 40px;
+    background: #FFF8E7;
+    border-radius: 8px 8px 10px 10px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+    position: relative;
+  }
+  .tooth.dirty {
+    background: #B58D5B;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25), inset 0 0 0 2px #8B6B3E;
+  }
+  .tooth.dirty::after {
+    content: '🟫';
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    font-size: 0.7rem;
+  }
+  .tooth:active:not(.dirty) { transform: translateY(2px); }
+  .tooth.shine {
+    animation: toothShine 0.4s ease-out;
+  }
+  @keyframes toothShine {
+    0% { box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 0 0 6px rgba(255,255,255,0.9); }
+    100% { box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 0 0 0 rgba(255,255,255,0); }
+  }
+
+  .flavor-msg { font-size: 0.95rem; font-weight: bold; color: #4CAF50; min-height: 24px; text-align: center; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🪥 そうすけの はみがき たいけつ</h1>
+
+  <div class="hud" id="hud">
+    <span>きれいに した は 🦷 <span id="scoreEl">0</span></span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">60</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="patient-row">
+        <span class="patient-emoji" id="patientEmoji">🧑</span>
+        <div>
+          <div class="patient-name" id="patientName">-</div>
+          <div class="patient-progress">のこり 👤 <span id="patientCount">1</span>/<span id="patientTotal">6</span> にん</div>
+        </div>
+      </div>
+      <div class="mouth" id="mouth"></div>
+      <div class="flavor-msg" id="flavorMsg">よごれた はを タップして みがこう！</div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🪥 はみがき たいけつ</h2>
+        <p>
+          みんなの はが よごれちゃった！<br>
+          よごれた はを タップして、ピカピカに みがいてあげよう！<br>
+          ぜんいんの はを きれいに できるかな？
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=9"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const PATIENTS = [
+      { emoji: '👦', name: 'そうたくん' },
+      { emoji: '👧', name: 'ゆいちゃん' },
+      { emoji: '👴', name: 'おじいちゃん' },
+      { emoji: '👵', name: 'おばあちゃん' },
+      { emoji: '🧑', name: 'おとなの ひと' },
+      { emoji: '🐶', name: 'わんちゃん' },
+    ];
+    const TEETH_COUNT = 8;
+    const GAME_TIME = 60;
+
+    const hudEl = document.getElementById('hud');
+    const scoreEl = document.getElementById('scoreEl');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const patientEmojiEl = document.getElementById('patientEmoji');
+    const patientNameEl = document.getElementById('patientName');
+    const patientCountEl = document.getElementById('patientCount');
+    const patientTotalEl = document.getElementById('patientTotal');
+    const mouthEl = document.getElementById('mouth');
+    const flavorMsgEl = document.getElementById('flavorMsg');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    patientTotalEl.textContent = PATIENTS.length;
+
+    let patientIndex = 0;
+    let teeth = [];
+    let toothEls = [];
+    let score = 0;
+    let timeLeft = GAME_TIME;
+    let playing = false;
+    let countdownTimer = null;
+
+    function makeTeeth() {
+      const dirtyCount = 4 + Math.floor(Math.random() * (TEETH_COUNT - 3));
+      const indexes = Array.from({ length: TEETH_COUNT }, (_, i) => i).sort(() => Math.random() - 0.5);
+      const dirtySet = new Set(indexes.slice(0, dirtyCount));
+      return Array.from({ length: TEETH_COUNT }, (_, i) => ({ dirty: dirtySet.has(i) }));
+    }
+
+    function renderPatient() {
+      const p = PATIENTS[patientIndex];
+      patientEmojiEl.textContent = p.emoji;
+      patientNameEl.textContent = p.name;
+      patientCountEl.textContent = patientIndex + 1;
+      teeth = makeTeeth();
+      mouthEl.innerHTML = '';
+      toothEls = teeth.map((t, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'tooth' + (t.dirty ? ' dirty' : '');
+        btn.addEventListener('click', () => brushTooth(i));
+        mouthEl.appendChild(btn);
+        return btn;
+      });
+      flavorMsgEl.textContent = `${p.name}の はを みがいてあげよう！`;
+    }
+
+    function brushTooth(i) {
+      if (!playing) return;
+      if (!teeth[i].dirty) return;
+      teeth[i].dirty = false;
+      toothEls[i].classList.remove('dirty');
+      toothEls[i].classList.remove('shine');
+      void toothEls[i].offsetWidth;
+      toothEls[i].classList.add('shine');
+      GameAudio.playClickTick();
+      score++;
+      scoreEl.textContent = score;
+
+      if (teeth.every(t => !t.dirty)) {
+        GameAudio.playClearFanfare();
+        flavorMsgEl.textContent = `${PATIENTS[patientIndex].name}の はが ピカピカに なった！`;
+        setTimeout(() => {
+          if (!playing) return;
+          patientIndex++;
+          if (patientIndex >= PATIENTS.length) {
+            winGame();
+          } else {
+            renderPatient();
+          }
+        }, 700);
+      }
+    }
+
+    function resetGame() {
+      patientIndex = 0;
+      score = 0;
+      timeLeft = GAME_TIME;
+      scoreEl.textContent = 0;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      renderPatient();
+    }
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          loseGame();
+        }
+      }, 1000);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTitleEl.textContent = '🏆 ぜんいん ピカピカ！ 🏆';
+      endTextEl.textContent = `${PATIENTS.length}にん ぜんいんの はを きれいに できたね！ すごい！ (は ${score}ほん みがいたよ)`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'tooth-brush', score, higherIsBetter: true, unit: 'ほん', title: '🪥 みがいた はの かず ランキング' });
+    }
+
+    function loseGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      endTitleEl.textContent = '⏰ じかんぎれ…';
+      endTextEl.textContent = `は ${score}ほん みがけたよ。もう いちど ちょうせん しよう！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'tooth-brush', score, higherIsBetter: true, unit: 'ほん', title: '🪥 みがいた はの かず ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    renderPatient();
+  </script>
+</body>
+</html>

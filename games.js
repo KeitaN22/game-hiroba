@@ -300,4 +300,12 @@ const GAMES = [
     path: 'games/conbini-baito/index.html?v=5',
     desc: 'おきゃくさんが しなものを かって レジに くるよ。ふつうの ひとには レジ、わるものには でんわ！しなものの ほじゅうも あるよ。',
   },
+  {
+    id: 'tooth-brush',
+    title: 'そうすけの はみがき たいけつ',
+    emoji: '🪥',
+    color: '#7EC8E3',
+    path: 'games/tooth-brush/index.html',
+    desc: 'よごれた はを タップして みがいて、みんなの はを ピカピカに してあげよう！',
+  },
 ];
