@@ -158,7 +158,7 @@
     </div>
   </div>
 
-  <script src="../../audio.js?v=10"></script>
+  <script src="../../audio.js?v=11"></script>
   <script>
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -167,18 +167,18 @@
     });
 
     const FOODS = [
-      { id: 'karaage', name: 'からあげ', emoji: '🍗' },
-      { id: 'fries', name: 'ポテト', emoji: '🍟' },
-      { id: 'burger', name: 'ハンバーガー', emoji: '🍔' },
-      { id: 'pizza', name: 'ピザ', emoji: '🍕' },
-      { id: 'hotdog', name: 'ホットドッグ', emoji: '🌭' },
-      { id: 'pretzel', name: 'プレッツェル', emoji: '🥨' },
-      { id: 'popcorn', name: 'ポップコーン', emoji: '🍿' },
-      { id: 'cookie', name: 'クッキー', emoji: '🍪' },
-      { id: 'donut', name: 'ドーナツ', emoji: '🍩' },
-      { id: 'chocolate', name: 'チョコ', emoji: '🍫' },
-      { id: 'candy', name: 'キャンディ', emoji: '🍭' },
-      { id: 'dango', name: 'だんご', emoji: '🍡' },
+      { id: 'karaage', name: 'からあげ', emoji: '🍗', sound: () => GameAudio.playChewKaraage() },
+      { id: 'fries', name: 'ポテト', emoji: '🍟', sound: () => GameAudio.playChewFries() },
+      { id: 'burger', name: 'ハンバーガー', emoji: '🍔', sound: () => GameAudio.playChewBurger() },
+      { id: 'pizza', name: 'ピザ', emoji: '🍕', sound: () => GameAudio.playChewPizza() },
+      { id: 'hotdog', name: 'ホットドッグ', emoji: '🌭', sound: () => GameAudio.playChewHotdog() },
+      { id: 'pretzel', name: 'プレッツェル', emoji: '🥨', sound: () => GameAudio.playChewPretzel() },
+      { id: 'popcorn', name: 'ポップコーン', emoji: '🍿', sound: () => GameAudio.playChewPopcorn() },
+      { id: 'cookie', name: 'クッキー', emoji: '🍪', sound: () => GameAudio.playChewCookie() },
+      { id: 'donut', name: 'ドーナツ', emoji: '🍩', sound: () => GameAudio.playChewDonut() },
+      { id: 'chocolate', name: 'チョコ', emoji: '🍫', sound: () => GameAudio.playChewChocolate() },
+      { id: 'candy', name: 'キャンディ', emoji: '🍭', sound: () => GameAudio.playChewCandy() },
+      { id: 'dango', name: 'だんご', emoji: '🍡', sound: () => GameAudio.playChewDango() },
     ];
     const BITES_NEEDED = 6;
     const BITE_HOLD_GAP = 260;
@@ -229,7 +229,7 @@
       const ratio = Math.min(1, bites / BITES_NEEDED);
       biteProgressFillEl.style.width = (ratio * 100) + '%';
 
-      GameAudio.playKuchaChew();
+      currentFood.sound();
 
       foodTargetEl.classList.remove('bite');
       void foodTargetEl.offsetWidth;
