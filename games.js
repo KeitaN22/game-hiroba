@@ -329,7 +329,7 @@ const GAMES = [
     title: 'そうすけの おばあちゃんちだっしゅつ',
     emoji: '🔑',
     color: '#C8A97E',
-    path: 'games/grandma-escape/index.html?v=2',
+    path: 'games/grandma-escape/index.html?v=3',
     desc: 'はこや れいぞうこなど おばあちゃんちの なかを さがして 🔑かぎを みつけ、げんかんから にげよう！',
   },
 ];
