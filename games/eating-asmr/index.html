@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの もぐもぐ ASMR</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FF9A9E 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    min-height: 440px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .pick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+  }
+  .pick-card {
+    border: none;
+    border-radius: 16px;
+    padding: 14px 4px;
+    background: #FFF6D8;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-weight: bold;
+    font-size: 0.75rem;
+  }
+  .pick-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .pick-card .picoji { font-size: 2.4rem; }
+
+  .eat-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    width: 100%;
+  }
+  .food-stage {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    height: 180px;
+  }
+  .food-target {
+    font-size: 7rem;
+    user-select: none;
+    touch-action: none;
+    cursor: pointer;
+    transition: transform 0.15s ease-out, opacity 0.2s ease;
+  }
+  .food-target.bite {
+    animation: biteJiggle 0.22s ease-out;
+  }
+  @keyframes biteJiggle {
+    0% { transform: scale(1) rotate(0deg); }
+    40% { transform: scale(0.92, 1.05) rotate(-4deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .food-target.gone { opacity: 0; transform: scale(0.3); }
+
+  .bite-text {
+    position: absolute;
+    top: 10%; left: 50%;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #FF5D8F;
+    -webkit-text-stroke: 2px #fff;
+    transform: translate(-50%, 0) scale(0.5);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .bite-text.show {
+    animation: bitePop 0.5s ease-out forwards;
+  }
+  @keyframes bitePop {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+    30% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -50px) scale(1); }
+  }
+
+  .bite-progress { width: 100%; max-width: 260px; height: 16px; background: #eee; border-radius: 999px; overflow: hidden; }
+  .bite-progress-fill { height: 100%; background: #FF9A56; transition: width 0.15s ease; }
+
+  .food-name { font-size: 1rem; font-weight: bold; color: #333; }
+  .eat-msg { font-size: 0.95rem; font-weight: bold; color: #4CAF50; min-height: 22px; }
+
+  .tool-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .tool-btn {
+    font-size: 1.05rem; font-weight: bold;
+    padding: 10px 20px;
+    border: none; border-radius: 999px;
+    background: #fff; color: #333;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .tool-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; color: #333; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">😋 そうすけの もぐもぐ ASMR</h1>
+
+  <div class="stage-wrap">
+    <div class="arena">
+      <div class="overlay" id="pickOverlay" style="position: static; background: none; color: #333;">
+        <h2>😋 なにを たべる？</h2>
+        <p>すきな たべものを えらんで、タップして もぐもぐ たべよう！</p>
+        <div class="pick-grid" id="pickGrid"></div>
+      </div>
+
+      <div class="eat-zone hide" id="eatZone">
+        <div class="food-name" id="foodName">-</div>
+        <div class="food-stage">
+          <span class="food-target" id="foodTarget">🍗</span>
+          <span class="bite-text" id="biteText">あんっ！</span>
+        </div>
+        <div class="bite-progress"><div class="bite-progress-fill" id="biteProgressFill" style="width:0%"></div></div>
+        <div class="eat-msg" id="eatMsg">タップして たべよう！</div>
+        <div class="tool-row">
+          <button class="tool-btn" id="backBtn">🔄 べつのを えらぶ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=10"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const FOODS = [
+      { id: 'karaage', name: 'からあげ', emoji: '🍗' },
+      { id: 'fries', name: 'ポテト', emoji: '🍟' },
+      { id: 'burger', name: 'ハンバーガー', emoji: '🍔' },
+      { id: 'pizza', name: 'ピザ', emoji: '🍕' },
+      { id: 'hotdog', name: 'ホットドッグ', emoji: '🌭' },
+      { id: 'pretzel', name: 'プレッツェル', emoji: '🥨' },
+      { id: 'popcorn', name: 'ポップコーン', emoji: '🍿' },
+      { id: 'cookie', name: 'クッキー', emoji: '🍪' },
+      { id: 'donut', name: 'ドーナツ', emoji: '🍩' },
+      { id: 'chocolate', name: 'チョコ', emoji: '🍫' },
+      { id: 'candy', name: 'キャンディ', emoji: '🍭' },
+      { id: 'dango', name: 'だんご', emoji: '🍡' },
+    ];
+    const BITES_NEEDED = 6;
+    const BITE_HOLD_GAP = 260;
+
+    const pickOverlay = document.getElementById('pickOverlay');
+    const pickGridEl = document.getElementById('pickGrid');
+    const eatZone = document.getElementById('eatZone');
+    const foodNameEl = document.getElementById('foodName');
+    const foodTargetEl = document.getElementById('foodTarget');
+    const biteTextEl = document.getElementById('biteText');
+    const biteProgressFillEl = document.getElementById('biteProgressFill');
+    const eatMsgEl = document.getElementById('eatMsg');
+
+    let currentFood = null;
+    let bites = 0;
+    let eaten = false;
+    let biteInterval = null;
+
+    function renderPickGrid() {
+      pickGridEl.innerHTML = '';
+      FOODS.forEach(food => {
+        const btn = document.createElement('button');
+        btn.className = 'pick-card';
+        btn.innerHTML = `<span class="picoji">${food.emoji}</span><span>${food.name}</span>`;
+        btn.addEventListener('click', () => openFood(food));
+        pickGridEl.appendChild(btn);
+      });
+    }
+
+    function openFood(food) {
+      currentFood = food;
+      bites = 0;
+      eaten = false;
+      foodNameEl.textContent = food.name;
+      foodTargetEl.textContent = food.emoji;
+      foodTargetEl.classList.remove('gone', 'bite');
+      foodTargetEl.style.opacity = '1';
+      foodTargetEl.style.transform = 'scale(1)';
+      biteProgressFillEl.style.width = '0%';
+      eatMsgEl.textContent = 'タップして たべよう！';
+      pickOverlay.classList.add('hide');
+      eatZone.classList.remove('hide');
+    }
+
+    function takeBite() {
+      if (!currentFood || eaten) return;
+      bites++;
+      const ratio = Math.min(1, bites / BITES_NEEDED);
+      biteProgressFillEl.style.width = (ratio * 100) + '%';
+
+      GameAudio.playKuchaChew();
+
+      foodTargetEl.classList.remove('bite');
+      void foodTargetEl.offsetWidth;
+      foodTargetEl.classList.add('bite');
+      const scale = 1 - ratio * 0.7;
+      foodTargetEl.style.transform = `scale(${scale})`;
+
+      biteTextEl.classList.remove('show');
+      void biteTextEl.offsetWidth;
+      biteTextEl.classList.add('show');
+
+      if (bites >= BITES_NEEDED) {
+        eaten = true;
+        foodTargetEl.classList.add('gone');
+        eatMsgEl.textContent = `🍽️ ${currentFood.name}を ぜんぶ たべたよ！ ごちそうさま！`;
+        GameAudio.playClearFanfare();
+      } else {
+        eatMsgEl.textContent = 'もぐもぐ…あんっ！';
+      }
+    }
+
+    foodTargetEl.addEventListener('pointerdown', () => {
+      if (!currentFood) return;
+      takeBite();
+      clearInterval(biteInterval);
+      biteInterval = setInterval(() => {
+        if (eaten) { clearInterval(biteInterval); return; }
+        takeBite();
+      }, BITE_HOLD_GAP);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+      foodTargetEl.addEventListener(evt, () => clearInterval(biteInterval));
+    });
+
+    function backToList() {
+      clearInterval(biteInterval);
+      currentFood = null;
+      eatZone.classList.add('hide');
+      pickOverlay.classList.remove('hide');
+    }
+
+    document.getElementById('backBtn').addEventListener('click', backToList);
+
+    renderPickGrid();
+  </script>
+</body>
+</html>

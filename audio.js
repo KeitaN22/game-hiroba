@@ -228,6 +228,46 @@
       beep(110, now, 0.08, 'square', 0.15);
     },
 
+    // クチャッ、という たべものを かむ おと
+    playKuchaChew() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const pitchWobble = 0.9 + Math.random() * 0.2;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(190 * pitchWobble, now);
+      osc.frequency.exponentialRampToValueAtTime(120 * pitchWobble, now + 0.13);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+
+      const bufferSize = Math.floor(ctx.sampleRate * 0.12);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(0.001, now);
+      nGain.gain.linearRampToValueAtTime(0.13, now + 0.02);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 700 * pitchWobble;
+      filter.Q.value = 0.7;
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.12);
+    },
+
     // ジャーっと ながれる トイレの みずおと
     playToiletFlush() {
       if (muted) return;

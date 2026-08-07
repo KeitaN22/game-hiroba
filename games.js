@@ -308,4 +308,12 @@ const GAMES = [
     path: 'games/tooth-brush/index.html?v=2',
     desc: 'よごれた はを タップして みがいて、みんなの はを ピカピカに してあげよう！',
   },
+  {
+    id: 'eating-asmr',
+    title: 'そうすけの もぐもぐ ASMR',
+    emoji: '😋',
+    color: '#FF9A9E',
+    path: 'games/eating-asmr/index.html',
+    desc: 'すきな たべものを えらんで、タップして もぐもぐ。クチャッと たべる おとが きもちいいよ！',
+  },
 ];
