@@ -324,4 +324,12 @@ const GAMES = [
     path: 'games/keycap-clean/index.html',
     desc: 'よごれた キーは スポンジで シャシャシャッ、ぐねぐねの キーは つまようじで ポンッと きれいに しよう！',
   },
+  {
+    id: 'grandma-escape',
+    title: 'そうすけの おばあちゃんちだっしゅつ',
+    emoji: '🔑',
+    color: '#C8A97E',
+    path: 'games/grandma-escape/index.html',
+    desc: 'はこや れいぞうこなど おばあちゃんちの なかを さがして 🔑かぎを みつけ、げんかんから にげよう！',
+  },
 ];

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの おばあちゃんちだっしゅつ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE0B2 0%, #C8A97E 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .hud.urgent span.time { color: #FF3B3B; }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 460px;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    background: linear-gradient(#F5E6C8 0%, #E8D5B0 100%);
+  }
+
+  .room-label {
+    position: absolute; top: 3%; left: 50%; transform: translateX(-50%);
+    font-size: 0.65rem; font-weight: bold; color: #5c4326;
+    background: rgba(255,255,255,0.8); padding: 3px 12px; border-radius: 999px;
+    z-index: 5;
+  }
+
+  .spot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    transition: box-shadow 0.15s ease;
+  }
+  .spot .spot-emoji {
+    font-size: 2.1rem;
+    background: rgba(255,255,255,0.6);
+    border-radius: 14px;
+    padding: 6px 8px;
+  }
+  .spot.near .spot-emoji { box-shadow: 0 0 0 4px #FFD166; border-radius: 14px; }
+  .spot.searched .spot-emoji { opacity: 0.45; }
+  .spot-name { font-size: 0.52rem; font-weight: bold; color: #444; background: rgba(255,255,255,0.8); border-radius: 8px; padding: 1px 5px; max-width: 66px; text-align: center; }
+
+  .door {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .door .door-emoji {
+    font-size: 2.4rem;
+    background: rgba(255,255,255,0.6);
+    border-radius: 14px;
+    padding: 6px 10px;
+    transition: box-shadow 0.15s ease;
+  }
+  .door.near .door-emoji { box-shadow: 0 0 0 4px #FFD166; }
+  .door-name { font-size: 0.52rem; font-weight: bold; color: #444; background: rgba(255,255,255,0.8); border-radius: 8px; padding: 1px 5px; }
+
+  .player {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+  }
+
+  .reaction-msg {
+    position: absolute;
+    left: 50%; top: 46%;
+    transform: translate(-50%, -50%) scale(0.6);
+    background: rgba(255,255,255,0.95);
+    color: #333;
+    font-size: 0.85rem;
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 999px;
+    opacity: 0;
+    z-index: 8;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .reaction-msg.show { animation: reactPop 1.3s ease-out forwards; }
+  @keyframes reactPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -65%) scale(1); }
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
+    margin-top: 16px;
+  }
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(3, 58px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.4rem;
+    border: none; border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .action-col { display: flex; flex-direction: column; gap: 10px; }
+  .action-btn {
+    font-size: 0.95rem; font-weight: bold; padding: 14px 18px; border: none; border-radius: 16px;
+    color: #fff; cursor: pointer; user-select: none;
+    background: #999; box-shadow: 0 5px 0 #666;
+  }
+  .action-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .action-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .action-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🔑 そうすけの おばあちゃんちだっしゅつ</h1>
+
+  <div class="hud" id="hud">
+    <span>もちもの <span id="inventoryEl">-</span></span>
+    <span class="time">のこり ⏱️ <span id="timeLeft">60</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <span class="room-label">🏠 おばあちゃんの いえ</span>
+
+      <div id="spotsLayer"></div>
+      <div class="door" id="doorSpot">
+        <span class="door-emoji">🚪</span>
+        <span class="door-name">げんかん</span>
+      </div>
+      <span class="player" id="player">🧑</span>
+      <span class="reaction-msg" id="reactionMsg"></span>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🔑 おばあちゃんちだっしゅつ</h2>
+        <p>
+          やじるしで うごいて、いろんな ばしょに ちかづくと「さがす」ボタンが おせるよ。<br>
+          はこや れいぞうこなど、いえの なかを さがして 🔑かぎを みつけよう！<br>
+          かぎを みつけたら、げんかんへ いって にげよう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">🎉 だっしゅつ せいこう！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+    <div class="action-col">
+      <button class="action-btn" id="searchBtn" disabled>🔍 さがす</button>
+      <button class="action-btn" id="escapeBtn" disabled>🚪 にげる</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=11"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const SEARCH_SPOTS = [
+      { id: 'box', name: 'はこの なか', emoji: '📦', x: 20, y: 30 },
+      { id: 'fridge', name: 'れいぞうこの なか', emoji: '🧊', x: 80, y: 25 },
+      { id: 'bookshelf', name: 'ほんだなの うしろ', emoji: '📚', x: 15, y: 65 },
+      { id: 'dresser', name: 'たんすの なか', emoji: '🗄️', x: 85, y: 65 },
+      { id: 'sofa', name: 'ソファの した', emoji: '🛋️', x: 50, y: 78 },
+      { id: 'vase', name: 'かびんの よこ', emoji: '🏺', x: 35, y: 45 },
+      { id: 'clock', name: 'とけいの うしろ', emoji: '🕰️', x: 65, y: 45 },
+    ];
+    const FLAVOR_ITEMS = [
+      '🍬 あめが あった！',
+      '🧦 くつしたが あった！',
+      '📷 ふるい しゃしんが あった！',
+      '🪙 コインが あった！',
+      'なにも なかった…',
+    ];
+    const PLAYER_HOME = { x: 50, y: 92 };
+    const DOOR_POS = { x: 50, y: 10 };
+    const PROXIMITY = 55;
+    const GAME_TIME = 60;
+
+    const arenaEl = document.getElementById('arena');
+    const hudEl = document.getElementById('hud');
+    const inventoryEl = document.getElementById('inventoryEl');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const spotsLayerEl = document.getElementById('spotsLayer');
+    const doorSpotEl = document.getElementById('doorSpot');
+    const playerEl = document.getElementById('player');
+    const reactionMsgEl = document.getElementById('reactionMsg');
+    const searchBtn = document.getElementById('searchBtn');
+    const escapeBtn = document.getElementById('escapeBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    let spotEls = {};
+    let searchedSet = new Set();
+    let keySpotId = null;
+    let hasKey = false;
+    let playerX = 0, playerY = 0;
+    let input = { up: false, down: false, left: false, right: false };
+    let playing = false;
+    let nearSpotId = null;
+    let nearDoor = false;
+    let timeLeft = GAME_TIME;
+    let countdownTimer = null;
+    let lastFrame = 0;
+
+    function pxOf(pctX, pctY) {
+      return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
+    }
+
+    function renderSpots() {
+      spotsLayerEl.innerHTML = '';
+      spotEls = {};
+      SEARCH_SPOTS.forEach(spot => {
+        const el = document.createElement('div');
+        el.className = 'spot';
+        el.style.left = spot.x + '%';
+        el.style.top = spot.y + '%';
+        el.innerHTML = `<span class="spot-emoji">${spot.emoji}</span><span class="spot-name">${spot.name}</span>`;
+        spotsLayerEl.appendChild(el);
+        spotEls[spot.id] = el;
+      });
+    }
+
+    function showReaction(text) {
+      reactionMsgEl.textContent = text;
+      reactionMsgEl.classList.remove('show');
+      void reactionMsgEl.offsetWidth;
+      reactionMsgEl.classList.add('show');
+    }
+
+    function resetGame() {
+      searchedSet = new Set();
+      hasKey = false;
+      timeLeft = GAME_TIME;
+      timeLeftEl.textContent = timeLeft;
+      hudEl.classList.remove('urgent');
+      inventoryEl.textContent = '-';
+      keySpotId = SEARCH_SPOTS[Math.floor(Math.random() * SEARCH_SPOTS.length)].id;
+      renderSpots();
+      doorSpotEl.style.left = DOOR_POS.x + '%';
+      doorSpotEl.style.top = DOOR_POS.y + '%';
+      const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+      playerX = home.x; playerY = home.y;
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      searchBtn.disabled = true;
+      escapeBtn.disabled = true;
+      searchBtn.classList.remove('ready');
+      escapeBtn.classList.remove('ready');
+    }
+
+    function findNearestSpot() {
+      let best = null, bestDist = Infinity;
+      SEARCH_SPOTS.forEach(spot => {
+        if (searchedSet.has(spot.id)) return;
+        const p = pxOf(spot.x, spot.y);
+        const d = Math.hypot(playerX - p.x, playerY - p.y);
+        if (d < PROXIMITY && d < bestDist) { bestDist = d; best = spot; }
+      });
+      return best;
+    }
+
+    function updateProximity() {
+      const nearest = findNearestSpot();
+      const newNearId = nearest ? nearest.id : null;
+      if (newNearId !== nearSpotId) {
+        Object.values(spotEls).forEach(el => el.classList.remove('near'));
+        if (newNearId) spotEls[newNearId].classList.add('near');
+        nearSpotId = newNearId;
+      }
+      searchBtn.disabled = !nearSpotId;
+      searchBtn.classList.toggle('ready', !!nearSpotId);
+
+      const dp = pxOf(DOOR_POS.x, DOOR_POS.y);
+      nearDoor = Math.hypot(playerX - dp.x, playerY - dp.y) < PROXIMITY;
+      doorSpotEl.classList.toggle('near', nearDoor);
+      escapeBtn.disabled = !(nearDoor && hasKey);
+      escapeBtn.classList.toggle('ready', nearDoor && hasKey);
+    }
+
+    function update(dt) {
+      if (!playing) return;
+      const speed = 150;
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      playerX = Math.max(14, Math.min(arenaEl.clientWidth - 14, playerX + dx * speed * dt));
+      playerY = Math.max(14, Math.min(arenaEl.clientHeight - 14, playerY + dy * speed * dt));
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      updateProximity();
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function setDir(dir, value) { input[dir] = value; }
+    ['Up', 'Down', 'Left', 'Right'].forEach(dir => {
+      const key = dir.toLowerCase();
+      const btn = document.getElementById('btn' + dir);
+      btn.addEventListener('pointerdown', () => setDir(key, true));
+      btn.addEventListener('pointerup', () => setDir(key, false));
+      btn.addEventListener('pointerleave', () => setDir(key, false));
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    function doSearch() {
+      if (!playing || !nearSpotId) return;
+      const spot = SEARCH_SPOTS.find(s => s.id === nearSpotId);
+      searchedSet.add(spot.id);
+      spotEls[spot.id].classList.add('searched');
+
+      if (spot.id === keySpotId) {
+        hasKey = true;
+        inventoryEl.textContent = '🔑';
+        showReaction(`🔑 ${spot.name}に かぎが あった！`);
+        GameAudio.playClearFanfare();
+      } else {
+        const flavor = FLAVOR_ITEMS[Math.floor(Math.random() * FLAVOR_ITEMS.length)];
+        showReaction(flavor);
+        GameAudio.playClickTick();
+      }
+      updateProximity();
+    }
+
+    function doEscape() {
+      if (!playing || !nearDoor || !hasKey) return;
+      winGame();
+    }
+
+    searchBtn.addEventListener('click', doSearch);
+    escapeBtn.addEventListener('click', doEscape);
+
+    function startGame() {
+      resetGame();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        if (!playing) return;
+        timeLeft--;
+        timeLeftEl.textContent = timeLeft;
+        if (timeLeft <= 10) hudEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          timeLeftEl.textContent = 0;
+          loseGame();
+        }
+      }, 1000);
+    }
+
+    function winGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTitleEl.textContent = '🎉 だっしゅつ せいこう！ 🎉';
+      endTextEl.textContent = `のこり ${timeLeft}びょうで、おばあちゃんちから だっしゅつできたね！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'grandma-escape', score: timeLeft, higherIsBetter: true, unit: 'びょう のこし', title: '🔑 だっしゅつ ランキング' });
+    }
+
+    function loseGame() {
+      if (!playing) return;
+      playing = false;
+      clearInterval(countdownTimer);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      endTitleEl.textContent = '⏰ じかんぎれ…';
+      endTextEl.textContent = 'かぎが みつからなかったよ。もう いちど ちょうせん しよう！';
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'grandma-escape', score: 0, higherIsBetter: true, unit: 'びょう のこし', title: '🔑 だっしゅつ ランキング' });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    renderSpots();
+    doorSpotEl.style.left = DOOR_POS.x + '%';
+    doorSpotEl.style.top = DOOR_POS.y + '%';
+    const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+    playerX = home.x; playerY = home.y;
+    playerEl.style.left = playerX + 'px';
+    playerEl.style.top = playerY + 'px';
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
