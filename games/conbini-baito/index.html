@@ -113,6 +113,13 @@
     transform: translate(-50%, -180%);
   }
 
+  .money-icon {
+    position: absolute;
+    font-size: 1.3rem;
+    transition: left 0.4s ease-in, top 0.4s ease-in, opacity 0.3s ease;
+  }
+  .money-icon.hide { display: none; }
+
   .angry-bubble {
     position: absolute;
     font-size: 0.75rem;
@@ -240,6 +247,7 @@
       <span class="clerk" id="clerk">🧑‍💼</span>
       <span class="customer hide" id="customer">🧑</span>
       <span class="customer-item hide" id="customerItem"></span>
+      <span class="money-icon hide" id="moneyIcon">💴</span>
       <span class="angry-bubble" id="angryBubble">💢 はやく しろ！</span>
       <span class="reaction-msg" id="reactionMsg"></span>
       <span class="toilet-msg" id="toiletMsg">🚻 きゅうけいちゅう…</span>
@@ -302,7 +310,8 @@
     const GAME_TIME = 60;
     const DOOR_POS = { x: 6, y: 55 };
     const COUNTER_STAND_POS = { x: 50, y: 78 };
-    const BOX_POS = { x: 10, y: 88 };
+    const BOX_POS = { x: 85, y: 78 };
+    const REGISTER_POS = { x: 50, y: 68 };
     const PLAYER_HOME = { x: 50, y: 78 };
     const PROXIMITY = 55;
     const CUSTOMER_GAP_MS = 700;
@@ -316,6 +325,7 @@
     const clerkEl = document.getElementById('clerk');
     const customerEl = document.getElementById('customer');
     const customerItemEl = document.getElementById('customerItem');
+    const moneyIconEl = document.getElementById('moneyIcon');
     const angryBubbleEl = document.getElementById('angryBubble');
     const reactionMsgEl = document.getElementById('reactionMsg');
     const toiletMsgEl = document.getElementById('toiletMsg');
@@ -397,12 +407,15 @@
       customerBusy = false;
       customerEl.classList.add('hide');
       customerItemEl.classList.add('hide');
+      moneyIconEl.classList.add('hide');
       angryBubbleEl.classList.remove('show');
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
       restockBtn.disabled = true;
       buildShelf();
       renderShelf();
+      boxSpotEl.style.left = BOX_POS.x + '%';
+      boxSpotEl.style.top = BOX_POS.y + '%';
       const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
       clerkX = home.x; clerkY = home.y;
       clerkEl.style.left = clerkX + 'px';
@@ -521,6 +534,14 @@
           angryBubbleEl.style.left = COUNTER_STAND_POS.x + '%';
           angryBubbleEl.style.top = (COUNTER_STAND_POS.y - 16) + '%';
           angryBubbleEl.classList.add('show');
+        } else {
+          moneyIconEl.style.transition = 'none';
+          moneyIconEl.style.left = (COUNTER_STAND_POS.x + 6) + '%';
+          moneyIconEl.style.top = (COUNTER_STAND_POS.y - 20) + '%';
+          moneyIconEl.style.opacity = '1';
+          moneyIconEl.classList.remove('hide');
+          void moneyIconEl.offsetWidth;
+          moneyIconEl.style.transition = '';
         }
       }, 850);
     }
@@ -540,8 +561,11 @@
           GameAudio.playClearFanfare();
         } else {
           score += 10;
-          showReaction('💰 ありがとうございました！');
+          moneyIconEl.style.left = REGISTER_POS.x + '%';
+          moneyIconEl.style.top = REGISTER_POS.y + '%';
+          moneyIconEl.style.opacity = '0';
           GameAudio.playClickTick();
+          setTimeout(() => showReaction('💰 レジに おかねを いれたよ！ありがとうございました！'), 250);
         }
       } else {
         if (currentCustomer.isBad) {
@@ -562,6 +586,8 @@
         customerEl.classList.add('hide');
         customerItemEl.classList.add('hide');
         customerItemEl.style.opacity = '1';
+        moneyIconEl.classList.add('hide');
+        moneyIconEl.style.opacity = '1';
         currentCustomer = null;
         customerBusy = false;
         if (playing) {
