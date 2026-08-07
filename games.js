@@ -292,4 +292,12 @@ const GAMES = [
     path: 'games/town-walk/index.html?v=2',
     desc: 'ピザやさんや ホテルなど、5つの まちの たてものに はいって いろんな たいけんを しよう！',
   },
+  {
+    id: 'conbini-baito',
+    title: 'そうすけの コンビニバイト',
+    emoji: '🏪',
+    color: '#7EC8E3',
+    path: 'games/conbini-baito/index.html',
+    desc: 'ふつうの おきゃくさんには レジ、あやしい わるものには でんわ！24じかん コンビニで バイトしよう！',
+  },
 ];
