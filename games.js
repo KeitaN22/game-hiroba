@@ -297,7 +297,7 @@ const GAMES = [
     title: 'そうすけの コンビニバイト',
     emoji: '🏪',
     color: '#7EC8E3',
-    path: 'games/conbini-baito/index.html?v=2',
+    path: 'games/conbini-baito/index.html?v=3',
     desc: 'おきゃくさんが しなものを かって レジに くるよ。ふつうの ひとには レジ、わるものには でんわ！しなものの ほじゅうも あるよ。',
   },
 ];
