@@ -38,20 +38,32 @@
     z-index: 5;
   }
 
-  .shelf-row {
-    position: absolute; left: 4%; right: 4%; top: 8%;
-    display: flex; justify-content: space-between;
+  .shelf-bg {
+    position: absolute; left: 4%; right: 4%; top: 8%; height: 12%;
     background: #D8C9A8;
     border-radius: 10px;
-    padding: 6px 10px;
     box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15);
   }
-  .shelf-row span { font-size: 1.5rem; }
+  .shelf-slot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    transition: opacity 0.25s ease;
+  }
+  .shelf-slot.empty { opacity: 0.15; }
+
+  .box-spot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .box-spot .x-emoji { font-size: 2.2rem; background: rgba(255,255,255,0.6); border-radius: 12px; padding: 4px 8px; transition: box-shadow 0.15s ease; }
+  .box-spot.near .x-emoji { box-shadow: 0 0 0 4px #FFD166; }
+  .box-spot .x-label { font-size: 0.55rem; font-weight: bold; color: #444; background: rgba(255,255,255,0.85); border-radius: 8px; padding: 1px 5px; }
 
   .toilet-spot {
     position: absolute;
     right: 5%; bottom: 6%;
-    transform: translate(0, 0);
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     cursor: pointer;
   }
@@ -70,25 +82,52 @@
   }
 
   .counter {
-    position: absolute; left: 10%; right: 10%; top: 62%; height: 14%;
+    position: absolute; left: 10%; right: 10%; top: 68%; height: 12%;
     background: #C9A063;
     border-radius: 10px;
     box-shadow: 0 4px 0 rgba(0,0,0,0.2);
   }
+  .counter-label {
+    position: absolute; left: 50%; top: 62%; transform: translateX(-50%);
+    font-size: 0.55rem; font-weight: bold; color: #444;
+    background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 8px;
+  }
 
   .clerk {
-    position: absolute; left: 50%; top: 78%;
-    transform: translate(-50%, -50%);
+    position: absolute;
     font-size: 2.4rem;
+    transform: translate(-50%, -50%);
+    z-index: 6;
   }
 
   .customer {
     position: absolute;
     font-size: 2.4rem;
     transform: translate(-50%, -50%);
-    transition: left 0.9s ease-in-out, opacity 0.4s ease;
+    transition: left 0.8s ease-in-out, top 0.8s ease-in-out, opacity 0.4s ease;
   }
   .customer.hide { display: none; }
+  .customer-item {
+    position: absolute;
+    font-size: 1.1rem;
+    transform: translate(-50%, -180%);
+  }
+
+  .angry-bubble {
+    position: absolute;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #fff;
+    background: #FF3B3B;
+    padding: 4px 10px;
+    border-radius: 999px;
+    transform: translate(-50%, -260%);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .angry-bubble.show { opacity: 1; animation: angryShake 0.4s ease-in-out infinite; }
+  @keyframes angryShake { 0%,100% { transform: translate(-50%, -260%) rotate(-3deg); } 50% { transform: translate(-50%, -260%) rotate(3deg); } }
 
   .reaction-msg {
     position: absolute;
@@ -130,16 +169,35 @@
   }
   .toilet-msg.show { animation: reactPop 1.4s ease-out forwards; }
 
-  .action-row {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
     margin-top: 16px;
   }
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(3, 56px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.3rem;
+    border: none; border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .action-col { display: flex; flex-direction: column; gap: 10px; }
   .action-btn {
-    font-size: 1rem; font-weight: bold; padding: 16px 22px; border: none; border-radius: 16px;
+    font-size: 0.9rem; font-weight: bold; padding: 12px 18px; border: none; border-radius: 14px;
     color: #fff; cursor: pointer; user-select: none;
   }
   .register-btn { background: #4CAF50; box-shadow: 0 5px 0 #357a38; }
   .phone-btn { background: #FF6B6B; box-shadow: 0 5px 0 #b33a3a; }
+  .restock-btn { background: #999; box-shadow: 0 5px 0 #666; }
+  .restock-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
   .action-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
   .action-btn:disabled { opacity: 0.5; cursor: default; }
 
@@ -168,13 +226,21 @@
   <div class="stage-wrap">
     <div class="arena" id="arena">
       <span class="store-sign">🏪 24じかん コンビニ</span>
-      <div class="shelf-row">
-        <span>🍫</span><span>🍪</span><span>🥤</span><span>🍙</span><span>🥪</span><span>📖</span><span>🧃</span><span>🍩</span>
-      </div>
+      <div class="shelf-bg"></div>
+      <div id="shelfLayer"></div>
       <span class="door-label">🚪 いりぐち</span>
       <div class="counter"></div>
-      <span class="clerk">🧑‍💼</span>
+      <span class="counter-label">💰 レジ</span>
+
+      <div class="box-spot" id="boxSpot">
+        <span class="x-emoji">📦</span>
+        <span class="x-label">しなもの ばこ</span>
+      </div>
+
+      <span class="clerk" id="clerk">🧑‍💼</span>
       <span class="customer hide" id="customer">🧑</span>
+      <span class="customer-item hide" id="customerItem"></span>
+      <span class="angry-bubble" id="angryBubble">💢 はやく しろ！</span>
       <span class="reaction-msg" id="reactionMsg"></span>
       <span class="toilet-msg" id="toiletMsg">🚻 きゅうけいちゅう…</span>
 
@@ -186,9 +252,9 @@
       <div class="overlay" id="startOverlay">
         <h2>🏪 コンビニバイト</h2>
         <p>
-          おきゃくさんが きたら、ふつうの ひとには「💰 レジをする」を、<br>
-          あやしい 🥷わるものが きたら「📞 でんわする」を おそう！<br>
-          まちがえないように がんばろう！トイレも あるよ。
+          やじるしで うごいて、レジの ちかくで おきゃくさんに たいおうしよう。<br>
+          ふつうの ひとには「💰 レジをする」、あやしい 🥷わるものには「📞 でんわする」！<br>
+          しなものが なくなったら、しなものばこの ちかくで「🔄 ほじゅう」を おそう。
         </p>
         <button class="big-btn" id="startBtn">▶ スタート</button>
       </div>
@@ -201,9 +267,23 @@
     </div>
   </div>
 
-  <div class="action-row">
-    <button class="action-btn register-btn" id="registerBtn" disabled>💰 レジをする</button>
-    <button class="action-btn phone-btn" id="phoneBtn" disabled>📞 でんわする</button>
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+    <div class="action-col">
+      <button class="action-btn register-btn" id="registerBtn" disabled>💰 レジをする</button>
+      <button class="action-btn phone-btn" id="phoneBtn" disabled>📞 でんわする</button>
+      <button class="action-btn restock-btn" id="restockBtn" disabled>🔄 ほじゅう</button>
+    </div>
   </div>
 
   <script src="../../audio.js?v=9"></script>
@@ -215,23 +295,34 @@
       muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
 
+    const PRODUCT_EMOJIS = ['🍫', '🍪', '🥤', '🍙', '🥪', '📖', '🧃', '🍩'];
     const NORMAL_CUSTOMERS = ['🧑', '👩', '👦', '👧', '👴', '👵', '🧒', '👨'];
     const BAD_CUSTOMER = '🥷';
     const BAD_CHANCE = 0.28;
     const GAME_TIME = 60;
-    const DOOR_X = 6, DOOR_Y = 55;
-    const COUNTER_X = 50, COUNTER_Y = 55;
+    const DOOR_POS = { x: 6, y: 55 };
+    const COUNTER_STAND_POS = { x: 50, y: 78 };
+    const BOX_POS = { x: 10, y: 88 };
+    const PLAYER_HOME = { x: 50, y: 78 };
+    const PROXIMITY = 55;
     const CUSTOMER_GAP_MS = 700;
 
+    const arenaEl = document.getElementById('arena');
     const hudEl = document.getElementById('hud');
     const scoreEl = document.getElementById('scoreEl');
     const timeLeftEl = document.getElementById('timeLeft');
+    const shelfLayerEl = document.getElementById('shelfLayer');
+    const boxSpotEl = document.getElementById('boxSpot');
+    const clerkEl = document.getElementById('clerk');
     const customerEl = document.getElementById('customer');
+    const customerItemEl = document.getElementById('customerItem');
+    const angryBubbleEl = document.getElementById('angryBubble');
     const reactionMsgEl = document.getElementById('reactionMsg');
     const toiletMsgEl = document.getElementById('toiletMsg');
     const toiletSpotEl = document.getElementById('toiletSpot');
     const registerBtn = document.getElementById('registerBtn');
     const phoneBtn = document.getElementById('phoneBtn');
+    const restockBtn = document.getElementById('restockBtn');
     const startOverlay = document.getElementById('startOverlay');
     const endOverlay = document.getElementById('endOverlay');
     const endTextEl = document.getElementById('endText');
@@ -241,13 +332,52 @@
     let playing = false;
     let countdownTimer = null;
     let spawnTimer = null;
-    let currentCustomer = null; // { isBad, emoji }
+    let currentCustomer = null; // { isBad, emoji, slotIndex }
     let awaitingAction = false;
+    let customerBusy = false;
 
-    function pxOf(pctX, pctY, arenaEl) {
+    let shelf = [];
+    let shelfEls = [];
+    let clerkX = 0, clerkY = 0;
+    let input = { up: false, down: false, left: false, right: false };
+    let nearCounter = false;
+    let nearBox = false;
+    let lastFrame = 0;
+
+    function pxOf(pctX, pctY) {
       return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
     }
-    const arenaEl = document.getElementById('arena');
+
+    function slotPos(i) {
+      return { x: 10 + i * (80 / (PRODUCT_EMOJIS.length - 1)), y: 14 };
+    }
+
+    function buildShelf() {
+      shelfLayerEl.innerHTML = '';
+      shelf = PRODUCT_EMOJIS.map(emoji => ({ emoji, stocked: true }));
+      shelfEls = shelf.map((item, i) => {
+        const el = document.createElement('span');
+        el.className = 'shelf-slot';
+        el.textContent = item.emoji;
+        const p = slotPos(i);
+        el.style.left = p.x + '%';
+        el.style.top = p.y + '%';
+        shelfLayerEl.appendChild(el);
+        return el;
+      });
+    }
+
+    function renderShelf() {
+      shelf.forEach((item, i) => {
+        shelfEls[i].classList.toggle('empty', !item.stocked);
+      });
+    }
+
+    function stockedSlotIndexes() {
+      const arr = [];
+      shelf.forEach((s, i) => { if (s.stocked) arr.push(i); });
+      return arr;
+    }
 
     function showReaction(text) {
       reactionMsgEl.textContent = text;
@@ -264,42 +394,143 @@
       hudEl.classList.remove('urgent');
       currentCustomer = null;
       awaitingAction = false;
+      customerBusy = false;
       customerEl.classList.add('hide');
+      customerItemEl.classList.add('hide');
+      angryBubbleEl.classList.remove('show');
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
+      restockBtn.disabled = true;
+      buildShelf();
+      renderShelf();
+      const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+      clerkX = home.x; clerkY = home.y;
+      clerkEl.style.left = clerkX + 'px';
+      clerkEl.style.top = clerkY + 'px';
     }
 
-    function spawnCustomer() {
+    function updateProximity() {
+      const cp = pxOf(COUNTER_STAND_POS.x, COUNTER_STAND_POS.y);
+      nearCounter = Math.hypot(clerkX - cp.x, clerkY - cp.y) < PROXIMITY;
+      const bp = pxOf(BOX_POS.x, BOX_POS.y);
+      nearBox = Math.hypot(clerkX - bp.x, clerkY - bp.y) < PROXIMITY;
+      boxSpotEl.classList.toggle('near', nearBox);
+      restockBtn.disabled = !nearBox;
+      restockBtn.classList.toggle('ready', nearBox);
+      registerBtn.disabled = !(awaitingAction && nearCounter);
+      phoneBtn.disabled = !(awaitingAction && nearCounter);
+    }
+
+    function update(dt) {
       if (!playing) return;
+      const speed = 150;
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      clerkX = Math.max(14, Math.min(arenaEl.clientWidth - 14, clerkX + dx * speed * dt));
+      clerkY = Math.max(14, Math.min(arenaEl.clientHeight - 14, clerkY + dy * speed * dt));
+      clerkEl.style.left = clerkX + 'px';
+      clerkEl.style.top = clerkY + 'px';
+      updateProximity();
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function setDir(dir, value) { input[dir] = value; }
+    ['Up', 'Down', 'Left', 'Right'].forEach(dir => {
+      const key = dir.toLowerCase();
+      const btn = document.getElementById('btn' + dir);
+      btn.addEventListener('pointerdown', () => setDir(key, true));
+      btn.addEventListener('pointerup', () => setDir(key, false));
+      btn.addEventListener('pointerleave', () => setDir(key, false));
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    function spawnCustomer() {
+      if (!playing || customerBusy) return;
+      customerBusy = true;
       const isBad = Math.random() < BAD_CHANCE;
       const emoji = isBad ? BAD_CUSTOMER : NORMAL_CUSTOMERS[Math.floor(Math.random() * NORMAL_CUSTOMERS.length)];
-      currentCustomer = { isBad, emoji };
+      const stocked = stockedSlotIndexes();
+      const slotIndex = stocked.length > 0 ? stocked[Math.floor(Math.random() * stocked.length)] : null;
+      currentCustomer = { isBad, emoji, slotIndex };
 
       customerEl.textContent = emoji;
       customerEl.classList.remove('hide');
       customerEl.style.transition = 'none';
-      customerEl.style.left = DOOR_X + '%';
-      customerEl.style.top = DOOR_Y + '%';
+      customerEl.style.left = pxOf(DOOR_POS.x, DOOR_POS.y).x + 'px';
+      customerEl.style.top = pxOf(DOOR_POS.x, DOOR_POS.y).y + 'px';
+      customerEl.style.left = DOOR_POS.x + '%';
+      customerEl.style.top = DOOR_POS.y + '%';
       customerEl.style.opacity = '1';
       void customerEl.offsetWidth;
       customerEl.style.transition = '';
-      customerEl.style.left = COUNTER_X + '%';
-      customerEl.style.top = COUNTER_Y + '%';
 
       GameAudio.playClickTick();
+
+      if (slotIndex !== null) {
+        const sp = slotPos(slotIndex);
+        customerEl.style.left = sp.x + '%';
+        customerEl.style.top = (sp.y + 8) + '%';
+        setTimeout(() => {
+          if (!playing) return;
+          shelf[slotIndex].stocked = false;
+          renderShelf();
+          customerItemEl.textContent = PRODUCT_EMOJIS[slotIndex];
+          customerItemEl.classList.remove('hide');
+          customerItemEl.style.left = sp.x + '%';
+          customerItemEl.style.top = (sp.y + 8) + '%';
+          GameAudio.playClickTick();
+          setTimeout(() => walkToCounter(), 500);
+        }, 850);
+      } else {
+        walkToCounter();
+      }
+    }
+
+    function walkToCounter() {
+      if (!playing) return;
+      customerEl.style.left = COUNTER_STAND_POS.x + '%';
+      customerEl.style.top = (COUNTER_STAND_POS.y - 16) + '%';
+      customerItemEl.style.left = COUNTER_STAND_POS.x + '%';
+      customerItemEl.style.top = (COUNTER_STAND_POS.y - 16) + '%';
       setTimeout(() => {
-        if (!playing) return;
+        if (!playing || !currentCustomer) return;
         awaitingAction = true;
-        registerBtn.disabled = false;
-        phoneBtn.disabled = false;
-      }, 950);
+        updateProximity();
+        if (currentCustomer.isBad) {
+          angryBubbleEl.style.left = COUNTER_STAND_POS.x + '%';
+          angryBubbleEl.style.top = (COUNTER_STAND_POS.y - 16) + '%';
+          angryBubbleEl.classList.add('show');
+        }
+      }, 850);
     }
 
     function resolveCustomer(action) {
-      if (!playing || !awaitingAction || !currentCustomer) return;
+      if (!playing || !awaitingAction || !currentCustomer || !nearCounter) return;
       awaitingAction = false;
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
+      angryBubbleEl.classList.remove('show');
 
       const correct = (action === 'phone' && currentCustomer.isBad) || (action === 'register' && !currentCustomer.isBad);
       if (correct) {
@@ -326,9 +557,13 @@
       scoreEl.textContent = score;
 
       customerEl.style.opacity = '0';
+      customerItemEl.style.opacity = '0';
       setTimeout(() => {
         customerEl.classList.add('hide');
+        customerItemEl.classList.add('hide');
+        customerItemEl.style.opacity = '1';
         currentCustomer = null;
+        customerBusy = false;
         if (playing) {
           clearTimeout(spawnTimer);
           spawnTimer = setTimeout(spawnCustomer, CUSTOMER_GAP_MS);
@@ -336,8 +571,17 @@
       }, 400);
     }
 
+    function doRestock() {
+      if (!playing || !nearBox) return;
+      shelf.forEach(s => { s.stocked = true; });
+      renderShelf();
+      GameAudio.playClearFanfare();
+      showReaction('🔄 しなものを ほじゅうしたよ！');
+    }
+
     registerBtn.addEventListener('click', () => resolveCustomer('register'));
     phoneBtn.addEventListener('click', () => resolveCustomer('phone'));
+    restockBtn.addEventListener('click', doRestock);
 
     toiletSpotEl.addEventListener('click', () => {
       if (!playing) return;
@@ -368,6 +612,7 @@
 
       clearTimeout(spawnTimer);
       spawnTimer = setTimeout(spawnCustomer, 500);
+      lastFrame = performance.now();
     }
 
     function endGame() {
@@ -377,6 +622,7 @@
       awaitingAction = false;
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
+      angryBubbleEl.classList.remove('show');
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
       endTextEl.textContent = `スコア ${score}てんで バイト しゅうりょう！ おつかれさま！`;
@@ -386,6 +632,15 @@
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    buildShelf();
+    renderShelf();
+    const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+    clerkX = home.x; clerkY = home.y;
+    clerkEl.style.left = clerkX + 'px';
+    clerkEl.style.top = clerkY + 'px';
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
