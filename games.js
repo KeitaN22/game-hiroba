@@ -332,4 +332,12 @@ const GAMES = [
     path: 'games/grandma-escape/index.html?v=3',
     desc: 'はこや れいぞうこなど おばあちゃんちの なかを さがして 🔑かぎを みつけ、げんかんから にげよう！',
   },
+  {
+    id: 'would-you-rather',
+    title: 'そうすけの あなたは どっち？',
+    emoji: '🍫',
+    color: '#FFC1E3',
+    path: 'games/would-you-rather/index.html',
+    desc: 'やじるしで たべものに ちかづいて あじみ、「どちらが いい？」に こたえよう！ぜんぶで 10ステージ！',
+  },
 ];

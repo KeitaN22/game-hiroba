@@ -525,6 +525,31 @@
       osc.stop(now + 0.2);
     },
 
+    // かりっ、という かるい ひとくちの おと
+    playKariBite() {
+      if (muted) return;
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      beep(1300, now, 0.06, 'square', 0.13);
+      const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.17, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 2000;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.08);
+    },
+
     // ジャーっと ながれる トイレの みずおと
     playToiletFlush() {
       if (muted) return;

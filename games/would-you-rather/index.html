@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの あなたは どっち？</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE985 0%, #FFC1E3 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    background: linear-gradient(#FFF8E7 0%, #FFE9C2 100%);
+  }
+
+  .target-food {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer;
+  }
+  .target-food .tf-emoji {
+    font-size: 3rem;
+    background: rgba(255,255,255,0.6);
+    border-radius: 16px;
+    padding: 8px 12px;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .target-food.near .tf-emoji { box-shadow: 0 0 0 4px #FFD166; }
+  .target-food.bite .tf-emoji { animation: biteWiggle 0.3s ease-out; }
+  @keyframes biteWiggle {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.85) rotate(-6deg); }
+    100% { transform: scale(1); }
+  }
+  .target-food .tf-name { font-size: 0.6rem; font-weight: bold; color: #444; background: rgba(255,255,255,0.85); border-radius: 8px; padding: 1px 6px; }
+
+  .player {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+  }
+
+  .bite-pop {
+    position: absolute;
+    top: 20%; left: 50%;
+    transform: translate(-50%, 0) scale(0.5);
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #FF5D8F;
+    -webkit-text-stroke: 2px #fff;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .bite-pop.show { animation: bitePopAnim 0.6s ease-out forwards; }
+  @keyframes bitePopAnim {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+    30% { opacity: 1; transform: translate(-50%, -10px) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+  }
+
+  .choice-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    gap: 18px;
+  }
+  .choice-overlay.hide { display: none !important; }
+  .choice-q { font-size: 1.1rem; font-weight: bold; }
+  .choice-row { display: flex; gap: 18px; justify-content: center; }
+  .choice-btn {
+    border: none; border-radius: 18px;
+    padding: 20px 18px;
+    background: #fff; color: #333;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 100px;
+  }
+  .choice-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .choice-btn.picked { background: #C8F7C5; box-shadow: 0 5px 0 #4CAF50; }
+  .choice-btn .cemoji { font-size: 2.6rem; }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
+    margin-top: 16px;
+  }
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(3, 58px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.4rem;
+    border: none; border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+  .summary-card {
+    background: rgba(255,255,255,0.15); border-radius: 14px; padding: 10px; text-align: center;
+  }
+  .summary-card .semoji { font-size: 1.8rem; display: block; }
+  .summary-card .sname { font-size: 0.7rem; font-weight: bold; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🍫 そうすけの あなたは どっち？</h1>
+
+  <div class="hud">
+    <span>ステージ 📖 <span id="stageCount">1</span>/<span id="stageTotal">10</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <div class="target-food" id="targetFood">
+        <span class="tf-emoji" id="targetEmoji">🍫</span>
+        <span class="tf-name" id="targetName">チョコレート</span>
+      </div>
+      <span class="player" id="player">🧑</span>
+      <span class="bite-pop" id="bitePop">かりっ！</span>
+
+      <div class="choice-overlay hide" id="choiceOverlay">
+        <div class="choice-q" id="choiceQ">チョコレートと レモン、どちらが いい？</div>
+        <div class="choice-row" id="choiceRow"></div>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🍫 あなたは どっち？</h2>
+        <p>
+          やじるしで うごいて、たべものの ところへ いこう。<br>
+          たべものを タップすると「かりっ」と あじみ できるよ。<br>
+          そのあと「どちらが いい？」の しつもんに こたえよう！10ステージ あるよ。
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 おわり！ 🎉</h2>
+        <p>そうすけの こたえ、ぜんぶ おぼえたよ！</p>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <button class="big-btn" id="retryBtn" style="margin-top:16px;">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=12"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const STAGES = [
+      { target: { emoji: '🍫', name: 'チョコレート' }, pair: { emoji: '🍋', name: 'レモン' } },
+      { target: { emoji: '🍦', name: 'アイスクリーム' }, pair: { emoji: '🌶️', name: 'からいもの' } },
+      { target: { emoji: '🍭', name: 'あめ' }, pair: { emoji: '🥦', name: 'ブロッコリー' } },
+      { target: { emoji: '🍩', name: 'ドーナツ' }, pair: { emoji: '🥕', name: 'にんじん' } },
+      { target: { emoji: '🍰', name: 'ケーキ' }, pair: { emoji: '🍅', name: 'トマト' } },
+      { target: { emoji: '🍿', name: 'ポップコーン' }, pair: { emoji: '🥬', name: 'キャベツ' } },
+      { target: { emoji: '🍉', name: 'スイカ' }, pair: { emoji: '🍆', name: 'なす' } },
+      { target: { emoji: '🍪', name: 'クッキー' }, pair: { emoji: '🥒', name: 'きゅうり' } },
+      { target: { emoji: '🍇', name: 'ぶどう' }, pair: { emoji: '🧅', name: 'たまねぎ' } },
+      { target: { emoji: '🍓', name: 'いちご' }, pair: { emoji: '🍄', name: 'きのこ' } },
+    ];
+    const PLAYER_HOME = { x: 50, y: 85 };
+    const PROXIMITY = 55;
+
+    const arenaEl = document.getElementById('arena');
+    const stageCountEl = document.getElementById('stageCount');
+    const stageTotalEl = document.getElementById('stageTotal');
+    const targetFoodEl = document.getElementById('targetFood');
+    const targetEmojiEl = document.getElementById('targetEmoji');
+    const targetNameEl = document.getElementById('targetName');
+    const playerEl = document.getElementById('player');
+    const bitePopEl = document.getElementById('bitePop');
+    const choiceOverlay = document.getElementById('choiceOverlay');
+    const choiceQEl = document.getElementById('choiceQ');
+    const choiceRowEl = document.getElementById('choiceRow');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const summaryGridEl = document.getElementById('summaryGrid');
+
+    stageTotalEl.textContent = STAGES.length;
+
+    const TARGET_POS = { x: 50, y: 30 };
+    let stageIndex = 0;
+    let answers = [];
+    let playerX = 0, playerY = 0;
+    let input = { up: false, down: false, left: false, right: false };
+    let playing = false;
+    let nearTarget = false;
+    let tasted = false;
+    let lastFrame = 0;
+
+    function pxOf(pctX, pctY) {
+      return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
+    }
+
+    function loadStage() {
+      const s = STAGES[stageIndex];
+      stageCountEl.textContent = stageIndex + 1;
+      targetEmojiEl.textContent = s.target.emoji;
+      targetNameEl.textContent = s.target.name;
+      targetFoodEl.style.left = TARGET_POS.x + '%';
+      targetFoodEl.style.top = TARGET_POS.y + '%';
+      tasted = false;
+      choiceOverlay.classList.add('hide');
+      const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+      playerX = home.x; playerY = home.y;
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+    }
+
+    function updateProximity() {
+      const p = pxOf(TARGET_POS.x, TARGET_POS.y);
+      nearTarget = Math.hypot(playerX - p.x, playerY - p.y) < PROXIMITY;
+      targetFoodEl.classList.toggle('near', nearTarget);
+    }
+
+    function update(dt) {
+      if (!playing || tasted) return;
+      const speed = 150;
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      playerX = Math.max(14, Math.min(arenaEl.clientWidth - 14, playerX + dx * speed * dt));
+      playerY = Math.max(14, Math.min(arenaEl.clientHeight - 14, playerY + dy * speed * dt));
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      updateProximity();
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function setDir(dir, value) { input[dir] = value; }
+    ['Up', 'Down', 'Left', 'Right'].forEach(dir => {
+      const key = dir.toLowerCase();
+      const btn = document.getElementById('btn' + dir);
+      btn.addEventListener('pointerdown', () => setDir(key, true));
+      btn.addEventListener('pointerup', () => setDir(key, false));
+      btn.addEventListener('pointerleave', () => setDir(key, false));
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    function tasteFood() {
+      if (!playing || tasted || !nearTarget) return;
+      tasted = true;
+      GameAudio.playKariBite();
+      targetFoodEl.classList.remove('bite');
+      void targetFoodEl.offsetWidth;
+      targetFoodEl.classList.add('bite');
+      bitePopEl.classList.remove('show');
+      void bitePopEl.offsetWidth;
+      bitePopEl.classList.add('show');
+
+      setTimeout(() => {
+        if (!playing) return;
+        showChoice();
+      }, 600);
+    }
+    targetFoodEl.addEventListener('click', tasteFood);
+
+    function showChoice() {
+      const s = STAGES[stageIndex];
+      choiceQEl.textContent = `${s.target.name}と ${s.pair.name}、どちらが いい？`;
+      choiceRowEl.innerHTML = '';
+      [s.target, s.pair].forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.innerHTML = `<span class="cemoji">${opt.emoji}</span><span>${opt.name}</span>`;
+        btn.addEventListener('click', () => pickChoice(btn, opt));
+        choiceRowEl.appendChild(btn);
+      });
+      choiceOverlay.classList.remove('hide');
+    }
+
+    function pickChoice(btn, opt) {
+      Array.from(choiceRowEl.children).forEach(c => c.classList.remove('picked'));
+      btn.classList.add('picked');
+      GameAudio.playClickTick();
+      answers.push(opt);
+      setTimeout(() => {
+        stageIndex++;
+        if (stageIndex >= STAGES.length) {
+          finishGame();
+        } else {
+          loadStage();
+        }
+      }, 550);
+    }
+
+    function finishGame() {
+      playing = false;
+      GameAudio.playClearFanfare();
+      summaryGridEl.innerHTML = '';
+      answers.forEach(a => {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        card.innerHTML = `<span class="semoji">${a.emoji}</span><span class="sname">${a.name}</span>`;
+        summaryGridEl.appendChild(card);
+      });
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'would-you-rather', score: STAGES.length, higherIsBetter: true, unit: 'ステージ', title: '🍫 あなたは どっち？ ランキング' });
+    }
+
+    function startGame() {
+      stageIndex = 0;
+      answers = [];
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      playing = true;
+      GameAudio.playBGM();
+      loadStage();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    loadStage();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
