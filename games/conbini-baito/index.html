@@ -87,10 +87,24 @@
     border-radius: 10px;
     box-shadow: 0 4px 0 rgba(0,0,0,0.2);
   }
-  .counter-label {
-    position: absolute; left: 50%; top: 62%; transform: translateX(-50%);
-    font-size: 0.55rem; font-weight: bold; color: #444;
-    background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 8px;
+  .register-machine {
+    position: absolute;
+    left: 50%; top: 68%;
+    transform: translate(-50%, -70%);
+    display: flex; flex-direction: column; align-items: center;
+    z-index: 2;
+  }
+  .register-machine .r-emoji {
+    font-size: 1.8rem;
+    background: #444;
+    border-radius: 8px;
+    padding: 3px 8px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.3);
+  }
+  .register-machine .r-label {
+    font-size: 0.5rem; font-weight: bold; color: #444;
+    background: rgba(255,255,255,0.85); padding: 1px 6px; border-radius: 8px;
+    margin-top: 2px;
   }
 
   .clerk {
@@ -205,6 +219,9 @@
   .phone-btn { background: #FF6B6B; box-shadow: 0 5px 0 #b33a3a; }
   .restock-btn { background: #999; box-shadow: 0 5px 0 #666; }
   .restock-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .clover-btn { background: #6FCF97; box-shadow: 0 5px 0 #4a9e6b; }
+  .clover-btn.held { background: #4CAF50; box-shadow: 0 5px 0 #357a38; }
+  .fight-btn { background: #9B59B6; box-shadow: 0 5px 0 #6d3d82; }
   .action-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
   .action-btn:disabled { opacity: 0.5; cursor: default; }
 
@@ -237,7 +254,10 @@
       <div id="shelfLayer"></div>
       <span class="door-label">🚪 いりぐち</span>
       <div class="counter"></div>
-      <span class="counter-label">💰 レジ</span>
+      <div class="register-machine">
+        <span class="r-emoji">🖥️</span>
+        <span class="r-label">💰 レジ</span>
+      </div>
 
       <div class="box-spot" id="boxSpot">
         <span class="x-emoji">📦</span>
@@ -291,6 +311,8 @@
       <button class="action-btn register-btn" id="registerBtn" disabled>💰 レジをする</button>
       <button class="action-btn phone-btn" id="phoneBtn" disabled>📞 でんわする</button>
       <button class="action-btn restock-btn" id="restockBtn" disabled>🔄 ほじゅう</button>
+      <button class="action-btn clover-btn" id="cloverBtn">🍀 クローバーを もつ</button>
+      <button class="action-btn fight-btn" id="fightBtn" disabled>🍀 たたかう</button>
     </div>
   </div>
 
@@ -333,6 +355,8 @@
     const registerBtn = document.getElementById('registerBtn');
     const phoneBtn = document.getElementById('phoneBtn');
     const restockBtn = document.getElementById('restockBtn');
+    const cloverBtn = document.getElementById('cloverBtn');
+    const fightBtn = document.getElementById('fightBtn');
     const startOverlay = document.getElementById('startOverlay');
     const endOverlay = document.getElementById('endOverlay');
     const endTextEl = document.getElementById('endText');
@@ -352,6 +376,7 @@
     let input = { up: false, down: false, left: false, right: false };
     let nearCounter = false;
     let nearBox = false;
+    let holdingClover = false;
     let lastFrame = 0;
 
     function pxOf(pctX, pctY) {
@@ -412,6 +437,10 @@
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
       restockBtn.disabled = true;
+      fightBtn.disabled = true;
+      holdingClover = false;
+      cloverBtn.classList.remove('held');
+      cloverBtn.textContent = '🍀 クローバーを もつ';
       buildShelf();
       renderShelf();
       boxSpotEl.style.left = BOX_POS.x + '%';
@@ -432,6 +461,16 @@
       restockBtn.classList.toggle('ready', nearBox);
       registerBtn.disabled = !(awaitingAction && nearCounter);
       phoneBtn.disabled = !(awaitingAction && nearCounter);
+      fightBtn.disabled = !(awaitingAction && nearCounter && holdingClover && currentCustomer && currentCustomer.isBad);
+    }
+
+    function pickUpClover() {
+      if (!playing || holdingClover) return;
+      holdingClover = true;
+      cloverBtn.classList.add('held');
+      cloverBtn.textContent = '🍀 もっている';
+      GameAudio.playClickTick();
+      updateProximity();
     }
 
     function update(dt) {
@@ -551,13 +590,18 @@
       awaitingAction = false;
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
+      fightBtn.disabled = true;
       angryBubbleEl.classList.remove('show');
 
-      const correct = (action === 'phone' && currentCustomer.isBad) || (action === 'register' && !currentCustomer.isBad);
+      const correct = ((action === 'phone' || action === 'fight') && currentCustomer.isBad) || (action === 'register' && !currentCustomer.isBad);
       if (correct) {
         if (currentCustomer.isBad) {
           score += 15;
-          showReaction('🚓 つうほう せいこう！ わるものを たいほ！');
+          if (action === 'fight') {
+            showReaction('🍀 クローバーで やっつけた！ わるものを げきたい！');
+          } else {
+            showReaction('🚓 つうほう せいこう！ わるものを たいほ！');
+          }
           GameAudio.playClearFanfare();
         } else {
           score += 10;
@@ -608,6 +652,8 @@
     registerBtn.addEventListener('click', () => resolveCustomer('register'));
     phoneBtn.addEventListener('click', () => resolveCustomer('phone'));
     restockBtn.addEventListener('click', doRestock);
+    cloverBtn.addEventListener('click', pickUpClover);
+    fightBtn.addEventListener('click', () => resolveCustomer('fight'));
 
     toiletSpotEl.addEventListener('click', () => {
       if (!playing) return;
@@ -648,6 +694,7 @@
       awaitingAction = false;
       registerBtn.disabled = true;
       phoneBtn.disabled = true;
+      fightBtn.disabled = true;
       angryBubbleEl.classList.remove('show');
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
