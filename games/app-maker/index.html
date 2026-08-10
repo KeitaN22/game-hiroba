@@ -56,13 +56,20 @@
 
   .app-el { border-radius: 10px; padding: 8px 10px; font-size: 0.78rem; }
   .app-btn { background: #4C7BF3; color: #fff; font-weight: bold; text-align: center; border: none; }
-  .app-text { background: #fff; color: #333; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-text {
+    background: #fff; color: #333; box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+    outline: none; cursor: text; min-height: 1.2em;
+  }
+  .app-text:empty::before { content: attr(data-placeholder); color: #aaa; }
+  .app-text:focus { box-shadow: 0 0 0 2px #4C7BF3, 0 2px 0 rgba(0,0,0,0.08); }
   .app-image { background: #fff; font-size: 1.8rem; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
   .app-rating { background: #fff; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
   .app-notif { background: #FFF3CD; color: #7a5c00; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
-  .app-graph { background: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-graph { background: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.08); cursor: pointer; user-select: none; }
+  .graph-title { display: flex; justify-content: space-between; align-items: center; }
+  .graph-diff { font-weight: bold; }
   .graph-bars { display: flex; align-items: flex-end; gap: 4px; height: 40px; margin-top: 4px; }
-  .graph-bars span { flex: 1; background: #6FCF97; border-radius: 3px 3px 0 0; }
+  .graph-bars span { flex: 1; border-radius: 3px 3px 0 0; transition: height 0.2s ease, background 0.2s ease; }
   .app-music { background: #333; color: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
   .app-search { background: #eee; color: #666; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
 
@@ -174,15 +181,59 @@
       refreshEmptyHint();
       appCanvasEl.scrollTop = appCanvasEl.scrollHeight;
       GameAudio.playClickTick();
+      return el;
+    }
+
+    const DIFFICULTIES = [
+      { label: '🟢 かんたん', color: '#6FCF97' },
+      { label: '🟡 ふつう', color: '#FFD93D' },
+      { label: '🔴 むずかしい', color: '#FF6B6B' },
+    ];
+
+    function rollBars(diff) {
+      return Array.from({ length: 4 }, () => {
+        const base = diff === 0 ? 15 : diff === 1 ? 25 : 38;
+        return Math.round(base + Math.random() * 12);
+      });
+    }
+
+    function makeGraphElement() {
+      const el = addElement('<div class="app-el app-graph"><div class="graph-title"><span>📊 グラフ</span><span class="graph-diff"></span></div><div class="graph-bars"><span></span><span></span><span></span><span></span></div></div>');
+      el.dataset.diff = '0';
+      function render() {
+        const d = Number(el.dataset.diff);
+        const info = DIFFICULTIES[d];
+        el.querySelector('.graph-diff').textContent = info.label;
+        const bars = rollBars(d);
+        const barEls = el.querySelectorAll('.graph-bars span');
+        bars.forEach((h, i) => {
+          barEls[i].style.height = h + 'px';
+          barEls[i].style.background = info.color;
+        });
+      }
+      render();
+      el.addEventListener('click', () => {
+        el.dataset.diff = (Number(el.dataset.diff) + 1) % DIFFICULTIES.length;
+        render();
+        GameAudio.playClickTick();
+      });
+    }
+
+    function makeTextElement() {
+      const el = addElement(`<div class="app-el app-text" contenteditable="true" data-placeholder="タップして かいてね"></div>`);
+      el.textContent = TEXT_SAMPLES[Math.floor(Math.random() * TEXT_SAMPLES.length)];
+      el.addEventListener('focus', () => {
+        GameAudio.playClickTick();
+      }, { once: false });
     }
 
     const TOOLS = [
       { id: 'button', name: 'ボタン', emoji: '🔲', action: () => addElement('<button class="app-el app-btn">ボタン</button>') },
-      { id: 'text', name: 'テキスト', emoji: '📝', action: () => addElement(`<div class="app-el app-text">${TEXT_SAMPLES[Math.floor(Math.random() * TEXT_SAMPLES.length)]}</div>`) },
+      { id: 'text', name: 'テキスト', emoji: '📝', action: () => makeTextElement() },
       { id: 'image', name: 'がぞう', emoji: '🖼️', action: () => addElement(`<div class="app-el app-image">${IMAGE_EMOJIS[Math.floor(Math.random() * IMAGE_EMOJIS.length)]}</div>`) },
       { id: 'rating', name: 'ひょうか', emoji: '⭐', action: () => addElement('<div class="app-el app-rating">⭐⭐⭐⭐⭐</div>') },
       { id: 'notif', name: 'つうち', emoji: '🔔', action: () => addElement('<div class="app-el app-notif">🔔 あたらしい つうちが あります</div>') },
-      { id: 'graph', name: 'グラフ', emoji: '📊', action: () => addElement(`<div class="app-el app-graph">📊 グラフ<div class="graph-bars"><span style="height:${20 + Math.random()*20}px"></span><span style="height:${20 + Math.random()*20}px"></span><span style="height:${20 + Math.random()*20}px"></span><span style="height:${20 + Math.random()*20}px"></span></div></div>`) },
+      { id: 'graph', name: 'グラフ', emoji: '📊', action: () => makeGraphElement() },
       { id: 'music', name: 'おんがく', emoji: '🎵', action: () => addElement('<div class="app-el app-music">🎵 おんがくを さいせいちゅう</div>') },
       { id: 'search', name: 'けんさく', emoji: '🔍', action: () => addElement('<div class="app-el app-search">🔍 けんさく...</div>') },
       { id: 'icon', name: 'アイコン', emoji: '🖌️', action: () => {
