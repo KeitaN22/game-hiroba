@@ -62,9 +62,29 @@
   }
   .app-text:empty::before { content: attr(data-placeholder); color: #aaa; }
   .app-text:focus { box-shadow: 0 0 0 2px #4C7BF3, 0 2px 0 rgba(0,0,0,0.08); }
-  .app-image { background: #fff; font-size: 1.8rem; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
-  .app-rating { background: #fff; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
-  .app-notif { background: #FFF3CD; color: #7a5c00; box-shadow: 0 2px 0 rgba(0,0,0,0.08); }
+  .app-image { background: #fff; font-size: 1.8rem; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); cursor: pointer; user-select: none; }
+  .app-image.flash { animation: photoFlash 0.35s ease-out; }
+  @keyframes photoFlash {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0), 0 2px 0 rgba(0,0,0,0.08); }
+    30% { box-shadow: 0 0 0 8px rgba(255,255,255,0.9), 0 2px 0 rgba(0,0,0,0.08); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0), 0 2px 0 rgba(0,0,0,0.08); }
+  }
+  .app-rating { background: #fff; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,0.08); cursor: pointer; user-select: none; }
+  .app-rating .star.off { opacity: 0.25; }
+  .app-notif { background: #FFF3CD; color: #7a5c00; box-shadow: 0 2px 0 rgba(0,0,0,0.08); cursor: pointer; user-select: none; }
+  .app-notif.poof { animation: notifPoof 0.3s ease-out; }
+  @keyframes notifPoof {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.9) rotate(-2deg); }
+    100% { transform: scale(1); }
+  }
+  .app-music { cursor: pointer; user-select: none; }
+  .app-music.playing { animation: musicPulse 0.6s ease-in-out infinite; }
+  @keyframes musicPulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.4); }
+  }
+  .app-search { cursor: pointer; user-select: none; }
   .app-graph { background: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.08); cursor: pointer; user-select: none; }
   .graph-title { display: flex; justify-content: space-between; align-items: center; }
   .graph-diff { font-weight: bold; }
@@ -151,7 +171,14 @@
     });
 
     const ICONS = ['📱', '🎮', '🎨', '🎵', '🏀', '⚽', '🐶', '🐱', '🚀', '⭐', '🍕', '🌈'];
-    const BG_COLORS = ['#FFF8E7', '#E0F7FA', '#FCE4EC', '#E8F5E9', '#F3E5F5', '#FFF3E0'];
+    const BG_COLORS = [
+      'linear-gradient(180deg, #FFE9B0 0%, #FFB88C 60%, #FF8A65 100%)',
+      'linear-gradient(180deg, #AEE1FF 0%, #E0F7FA 100%)',
+      'linear-gradient(180deg, #C8F5D0 0%, #6FCF8F 100%)',
+      'linear-gradient(180deg, #0B1B3A 0%, #1B3A6B 60%, #3F5C9E 100%)',
+      'linear-gradient(180deg, #FFDDE1 0%, #FCE4EC 100%)',
+      'linear-gradient(180deg, #FFF3E0 0%, #FFE0B2 100%)',
+    ];
     const IMAGE_EMOJIS = ['🖼️', '📷', '🌄', '🐾', '🌟'];
     const TEXT_SAMPLES = ['テキストです', 'いらっしゃいませ！', 'せつめい ぶんしょう', 'よろしくね！'];
 
@@ -219,6 +246,82 @@
       });
     }
 
+    function makeImageElement() {
+      const el = addElement(`<div class="app-el app-image">${IMAGE_EMOJIS[Math.floor(Math.random() * IMAGE_EMOJIS.length)]}</div>`);
+      el.addEventListener('click', () => {
+        el.classList.remove('flash');
+        void el.offsetWidth;
+        el.classList.add('flash');
+        el.textContent = IMAGE_EMOJIS[Math.floor(Math.random() * IMAGE_EMOJIS.length)];
+        GameAudio.playClickTick();
+      });
+    }
+
+    function makeRatingElement() {
+      const el = addElement('<div class="app-el app-rating"></div>');
+      el.dataset.stars = '5';
+      function render() {
+        const n = Number(el.dataset.stars);
+        el.innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="star${i < n ? '' : ' off'}">⭐</span>`).join('');
+      }
+      render();
+      el.addEventListener('click', () => {
+        el.dataset.stars = (Number(el.dataset.stars) % 5) + 1;
+        render();
+        GameAudio.playClickTick();
+      });
+    }
+
+    const NOTIF_MESSAGES = [
+      '🔔 あたらしい メッセージが あります',
+      '🔔 いいねが つきました！',
+      '🔔 アップデートが あります',
+      '🔔 リマインダー：わすれものは ない？',
+    ];
+    function makeNotifElement() {
+      const el = addElement(`<div class="app-el app-notif">${NOTIF_MESSAGES[0]}</div>`);
+      el.dataset.idx = '0';
+      el.addEventListener('click', () => {
+        el.dataset.idx = (Number(el.dataset.idx) + 1) % NOTIF_MESSAGES.length;
+        el.textContent = NOTIF_MESSAGES[el.dataset.idx];
+        el.classList.remove('poof');
+        void el.offsetWidth;
+        el.classList.add('poof');
+        GameAudio.playClickTick();
+      });
+    }
+
+    function makeMusicElement() {
+      const el = addElement('<div class="app-el app-music">🎵 タップして さいせい</div>');
+      el.dataset.playing = '0';
+      el.addEventListener('click', () => {
+        const playing = el.dataset.playing === '1';
+        if (playing) {
+          el.dataset.playing = '0';
+          el.textContent = '🎵 タップして さいせい';
+          el.classList.remove('playing');
+          GameAudio.stopBGM();
+        } else {
+          el.dataset.playing = '1';
+          el.textContent = '⏸️ さいせい ちゅう…';
+          el.classList.add('playing');
+          GameAudio.playBGM();
+        }
+      });
+    }
+
+    function makeSearchElement() {
+      const el = addElement('<div class="app-el app-search">🔍 タップして けんさく</div>');
+      el.addEventListener('click', () => {
+        el.textContent = '🔍 けんさく ちゅう…';
+        GameAudio.playClickTick();
+        setTimeout(() => {
+          el.textContent = '✅ みつかりました！';
+          setTimeout(() => { el.textContent = '🔍 タップして けんさく'; }, 900);
+        }, 500);
+      });
+    }
+
     function makeTextElement() {
       const el = addElement(`<div class="app-el app-text" contenteditable="true" data-placeholder="タップして かいてね"></div>`);
       el.textContent = TEXT_SAMPLES[Math.floor(Math.random() * TEXT_SAMPLES.length)];
@@ -230,12 +333,12 @@
     const TOOLS = [
       { id: 'button', name: 'ボタン', emoji: '🔲', action: () => addElement('<button class="app-el app-btn">ボタン</button>') },
       { id: 'text', name: 'テキスト', emoji: '📝', action: () => makeTextElement() },
-      { id: 'image', name: 'がぞう', emoji: '🖼️', action: () => addElement(`<div class="app-el app-image">${IMAGE_EMOJIS[Math.floor(Math.random() * IMAGE_EMOJIS.length)]}</div>`) },
-      { id: 'rating', name: 'ひょうか', emoji: '⭐', action: () => addElement('<div class="app-el app-rating">⭐⭐⭐⭐⭐</div>') },
-      { id: 'notif', name: 'つうち', emoji: '🔔', action: () => addElement('<div class="app-el app-notif">🔔 あたらしい つうちが あります</div>') },
+      { id: 'image', name: 'がぞう', emoji: '🖼️', action: () => makeImageElement() },
+      { id: 'rating', name: 'ひょうか', emoji: '⭐', action: () => makeRatingElement() },
+      { id: 'notif', name: 'つうち', emoji: '🔔', action: () => makeNotifElement() },
       { id: 'graph', name: 'グラフ', emoji: '📊', action: () => makeGraphElement() },
-      { id: 'music', name: 'おんがく', emoji: '🎵', action: () => addElement('<div class="app-el app-music">🎵 おんがくを さいせいちゅう</div>') },
-      { id: 'search', name: 'けんさく', emoji: '🔍', action: () => addElement('<div class="app-el app-search">🔍 けんさく...</div>') },
+      { id: 'music', name: 'おんがく', emoji: '🎵', action: () => makeMusicElement() },
+      { id: 'search', name: 'けんさく', emoji: '🔍', action: () => makeSearchElement() },
       { id: 'icon', name: 'アイコン', emoji: '🖌️', action: () => {
         iconIndex = (iconIndex + 1) % ICONS.length;
         appIconEl.textContent = ICONS[iconIndex];
