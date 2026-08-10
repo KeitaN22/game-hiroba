@@ -132,6 +132,20 @@
   .celebrate-msg {
     font-size: 1rem; font-weight: bold; color: #4CAF50; min-height: 24px; text-align: center;
   }
+
+  .phone-screen.closed .app-header,
+  .phone-screen.closed .app-canvas { display: none; }
+  .app-closed-overlay {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 14px;
+  }
+  .phone-screen.closed .app-closed-overlay { display: flex; }
+  .replay-btn {
+    background: #2196F3; color: #fff; border: none; border-radius: 14px;
+    padding: 14px 22px; font-size: 1rem; font-weight: bold;
+    box-shadow: 0 4px 0 #1565C0; cursor: pointer;
+  }
+  .replay-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #1565C0; }
 </style>
 </head>
 <body class="game-body">
@@ -148,6 +162,10 @@
         </div>
         <div class="app-canvas" id="appCanvas">
           <div class="empty-hint-text" id="emptyHint">したの どうぐで アプリを つくろう！</div>
+        </div>
+        <div class="app-closed-overlay" id="appClosedOverlay">
+          <div style="font-size:2.5rem;">📴</div>
+          <button class="replay-btn" id="replayBtn">🔵 また あそぶ</button>
         </div>
       </div>
     </div>
@@ -246,6 +264,21 @@
       });
     }
 
+    const phoneScreenClosedEl = phoneScreenEl;
+    const replayBtnEl = document.getElementById('replayBtn');
+    replayBtnEl.addEventListener('click', () => {
+      phoneScreenClosedEl.classList.remove('closed');
+      GameAudio.playClickTick();
+    });
+
+    function makeAppButtonElement() {
+      const el = addElement('<button class="app-el app-btn">ボタン</button>');
+      el.addEventListener('click', () => {
+        phoneScreenClosedEl.classList.add('closed');
+        GameAudio.playClickTick();
+      });
+    }
+
     function makeImageElement() {
       const el = addElement(`<div class="app-el app-image">${IMAGE_EMOJIS[Math.floor(Math.random() * IMAGE_EMOJIS.length)]}</div>`);
       el.addEventListener('click', () => {
@@ -331,7 +364,7 @@
     }
 
     const TOOLS = [
-      { id: 'button', name: 'ボタン', emoji: '🔲', action: () => addElement('<button class="app-el app-btn">ボタン</button>') },
+      { id: 'button', name: 'ボタン', emoji: '🔲', action: () => makeAppButtonElement() },
       { id: 'text', name: 'テキスト', emoji: '📝', action: () => makeTextElement() },
       { id: 'image', name: 'がぞう', emoji: '🖼️', action: () => makeImageElement() },
       { id: 'rating', name: 'ひょうか', emoji: '⭐', action: () => makeRatingElement() },

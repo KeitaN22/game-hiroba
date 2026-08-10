@@ -345,7 +345,7 @@ const GAMES = [
     title: 'そうすけの アプリづくり',
     emoji: '📱',
     color: '#7EC8E3',
-    path: 'games/app-maker/index.html?v=3',
+    path: 'games/app-maker/index.html?v=4',
     desc: 'ボタンや テキスト、グラフなど いろんな どうぐを つかって、じぶんだけの アプリを つくろう！',
   },
 ];
