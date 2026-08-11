@@ -113,7 +113,8 @@
 
     const TARGET_SEC = 10;
     const SHUTTER_CLOSE_MS = 2000;
-    const SUCCESS_TOLERANCE = 0.3;
+    const SUCCESS_MIN = 10;
+    const SUCCESS_MAX = 11;
 
     const timerDisplayEl = document.getElementById('timerDisplay');
     const shutterEl = document.getElementById('shutter');
@@ -165,7 +166,7 @@
       const elapsed = (performance.now() - startTime) / 1000;
       timerDisplayEl.textContent = elapsed.toFixed(2);
       const diff = Math.abs(elapsed - TARGET_SEC);
-      const success = diff <= SUCCESS_TOLERANCE;
+      const success = elapsed >= SUCCESS_MIN && elapsed < SUCCESS_MAX;
       if (success) {
         GameAudio.playClearFanfare();
         resultTitleEl.textContent = '🎉 せいこう！';

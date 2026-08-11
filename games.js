@@ -361,7 +361,7 @@ const GAMES = [
     title: 'そうすけの 10びょう ストップ',
     emoji: '⏱️',
     color: '#FFD966',
-    path: 'games/timer-stop/index.html',
+    path: 'games/timer-stop/index.html?v=2',
     desc: 'タイマーが みえなくなっても、あたまの なかで かぞえて ちょうど 10びょうで ストップしよう！',
   },
 ];
