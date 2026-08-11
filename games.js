@@ -364,4 +364,12 @@ const GAMES = [
     path: 'games/timer-stop/index.html?v=2',
     desc: 'タイマーが みえなくなっても、あたまの なかで かぞえて ちょうど 10びょうで ストップしよう！',
   },
+  {
+    id: 'country-quiz',
+    title: 'そうすけの どこの くに クイズ',
+    emoji: '🌍',
+    color: '#AEE1FF',
+    path: 'games/country-quiz/index.html',
+    desc: 'こっきを みて、どこの くにか あてよう！かんたん→ノーマル→ハードと むずかしく なるよ。',
+  },
 ];

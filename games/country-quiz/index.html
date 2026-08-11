@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの どこの くに クイズ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #AEE1FF 0%, #C8F7C5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+  .level-badge {
+    padding: 3px 14px; border-radius: 999px; font-size: 0.9rem; font-weight: bold; color: #fff;
+  }
+  .level-badge.easy { background: #4CAF50; }
+  .level-badge.normal { background: #FF9A56; }
+  .level-badge.hard { background: #E05353; }
+
+  .quiz-box {
+    position: relative;
+    background: #fff;
+    border-radius: 24px;
+    min-height: 380px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.12), 0 12px 24px rgba(0,0,0,0.15);
+    padding: 24px 18px;
+    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+
+  .question-title { font-size: 1.15rem; font-weight: bold; color: #333; text-align: center; }
+  .flag-display { font-size: 5rem; line-height: 1; }
+  .hint-emoji { font-size: 1.8rem; opacity: 0.8; }
+
+  .choices-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;
+  }
+  .choice-btn {
+    font-size: 1rem; font-weight: bold; padding: 16px 8px; border: none; border-radius: 16px;
+    background: #FFF6D8; color: #333; cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+  }
+  .choice-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .choice-btn:disabled { cursor: default; }
+  .choice-btn.correct { background: #A6E8A0; box-shadow: 0 5px 0 #5cb85c; }
+  .choice-btn.wrong { background: #FFB3B3; box-shadow: 0 5px 0 #d9534f; }
+
+  .feedback-msg { font-size: 1.05rem; font-weight: bold; min-height: 26px; text-align: center; }
+  .feedback-msg.correct { color: #4CAF50; }
+  .feedback-msg.wrong { color: #E05353; }
+
+  .next-btn {
+    font-size: 1.05rem; font-weight: bold; padding: 14px 30px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #c73f6a;
+  }
+  .next-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #c73f6a; }
+  .next-btn.hide { display: none; }
+
+  .level-banner {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    color: #fff; z-index: 5;
+  }
+  .level-banner.hide { display: none; }
+  .level-banner h2 { font-size: 1.6rem; margin: 0; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🌍 これは どこの くにでしょう？</h1>
+
+  <div class="hud">
+    <span class="level-badge" id="levelBadge">かんたん</span>
+    <span>もんだい <span id="qCount">1</span>/<span id="qTotal">12</span></span>
+    <span>せいかい 🎯 <span id="scoreCount">0</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="quiz-box" id="quizBox">
+      <div class="question-title">これは どこの くにの こっきかな？</div>
+      <div class="flag-display" id="flagDisplay">🏳️</div>
+      <div class="hint-emoji" id="hintEmoji"></div>
+      <div class="choices-grid" id="choicesGrid"></div>
+      <div class="feedback-msg" id="feedbackMsg">&nbsp;</div>
+      <button class="next-btn hide" id="nextBtn">▶ つぎへ</button>
+
+      <div class="level-banner hide" id="levelBanner">
+        <h2 id="levelBannerText">-</h2>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🌍 どこの くに クイズ</h2>
+        <p>
+          こっきを みて、どこの くにか あてよう！<br>
+          さいしょは かんたん、つぎは ノーマル、さいごは ハードに なるよ。
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 クイズ おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const LEVELS = [
+      {
+        key: 'easy', label: 'かんたん', bannerText: '🟢 かんたん スタート！',
+        questions: [
+          { flag: '🇯🇵', hint: '🍣', answer: 'にほん', choices: ['にほん', 'かんこく', 'ちゅうごく', 'タイ'] },
+          { flag: '🇺🇸', hint: '🗽', answer: 'アメリカ', choices: ['アメリカ', 'カナダ', 'イギリス', 'ドイツ'] },
+          { flag: '🇫🇷', hint: '🗼', answer: 'フランス', choices: ['フランス', 'イタリア', 'スペイン', 'ドイツ'] },
+          { flag: '🇮🇹', hint: '🍕', answer: 'イタリア', choices: ['イタリア', 'フランス', 'ギリシャ', 'トルコ'] },
+        ],
+      },
+      {
+        key: 'normal', label: 'ノーマル', bannerText: '🟠 ノーマルに すすむよ！',
+        questions: [
+          { flag: '🇧🇷', hint: '⚽', answer: 'ブラジル', choices: ['ブラジル', 'アルゼンチン', 'ペルー', 'メキシコ'] },
+          { flag: '🇦🇺', hint: '🦘', answer: 'オーストラリア', choices: ['オーストラリア', 'ニュージーランド', 'アメリカ', 'カナダ'] },
+          { flag: '🇪🇬', hint: '🐫', answer: 'エジプト', choices: ['エジプト', 'モロッコ', 'サウジアラビア', 'トルコ'] },
+          { flag: '🇮🇳', hint: '🐘', answer: 'インド', choices: ['インド', 'タイ', 'ベトナム', 'インドネシア'] },
+        ],
+      },
+      {
+        key: 'hard', label: 'ハード', bannerText: '🔴 ハードに ちょうせん！',
+        questions: [
+          { flag: '🇨🇭', hint: '🏔️', answer: 'スイス', choices: ['スイス', 'オーストリア', 'ドイツ', 'ベルギー'] },
+          { flag: '🇰🇪', hint: '🦁', answer: 'ケニア', choices: ['ケニア', 'ナイジェリア', 'エチオピア', 'タンザニア'] },
+          { flag: '🇳🇴', hint: '🐟', answer: 'ノルウェー', choices: ['ノルウェー', 'スウェーデン', 'フィンランド', 'デンマーク'] },
+          { flag: '🇲🇽', hint: '🌮', answer: 'メキシコ', choices: ['メキシコ', 'ブラジル', 'キューバ', 'ペルー'] },
+        ],
+      },
+    ];
+    const ALL_QUESTIONS = LEVELS.flatMap(level => level.questions.map(q => ({ ...q, levelKey: level.key, levelLabel: level.label })));
+
+    const levelBadgeEl = document.getElementById('levelBadge');
+    const qCountEl = document.getElementById('qCount');
+    const qTotalEl = document.getElementById('qTotal');
+    const scoreCountEl = document.getElementById('scoreCount');
+    const flagDisplayEl = document.getElementById('flagDisplay');
+    const hintEmojiEl = document.getElementById('hintEmoji');
+    const choicesGridEl = document.getElementById('choicesGrid');
+    const feedbackMsgEl = document.getElementById('feedbackMsg');
+    const nextBtn = document.getElementById('nextBtn');
+    const levelBanner = document.getElementById('levelBanner');
+    const levelBannerText = document.getElementById('levelBannerText');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    qTotalEl.textContent = ALL_QUESTIONS.length;
+
+    let qIndex = 0;
+    let score = 0;
+    let answered = false;
+    let lastLevelKey = null;
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function loadQuestion() {
+      const q = ALL_QUESTIONS[qIndex];
+      answered = false;
+      qCountEl.textContent = qIndex + 1;
+      scoreCountEl.textContent = score;
+      levelBadgeEl.textContent = q.levelLabel;
+      levelBadgeEl.className = 'level-badge ' + q.levelKey;
+      flagDisplayEl.textContent = q.flag;
+      hintEmojiEl.textContent = q.hint;
+      feedbackMsgEl.textContent = ' ';
+      feedbackMsgEl.className = 'feedback-msg';
+      nextBtn.classList.add('hide');
+
+      choicesGridEl.innerHTML = '';
+      shuffle(q.choices).forEach(choiceText => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = choiceText;
+        btn.addEventListener('click', () => selectChoice(btn, choiceText, q.answer));
+        choicesGridEl.appendChild(btn);
+      });
+
+      if (q.levelKey !== lastLevelKey) {
+        lastLevelKey = q.levelKey;
+        showLevelBanner(LEVELS.find(l => l.key === q.levelKey).bannerText);
+      }
+    }
+
+    function showLevelBanner(text) {
+      levelBannerText.textContent = text;
+      levelBanner.classList.remove('hide');
+      GameAudio.playClickTick();
+      setTimeout(() => levelBanner.classList.add('hide'), 1300);
+    }
+
+    function selectChoice(btn, choiceText, answer) {
+      if (answered) return;
+      answered = true;
+      const correct = choiceText === answer;
+      Array.from(choicesGridEl.children).forEach(b => {
+        b.disabled = true;
+        if (b.textContent === answer) b.classList.add('correct');
+      });
+      if (correct) {
+        score++;
+        scoreCountEl.textContent = score;
+        feedbackMsgEl.textContent = '🎉 せいかい！';
+        feedbackMsgEl.classList.add('correct');
+        GameAudio.playClearFanfare();
+      } else {
+        btn.classList.add('wrong');
+        feedbackMsgEl.textContent = `😢 ざんねん！ こたえは「${answer}」だよ`;
+        feedbackMsgEl.classList.add('wrong');
+        GameAudio.playFailBuzz();
+      }
+      nextBtn.classList.remove('hide');
+    }
+
+    function goNext() {
+      qIndex++;
+      if (qIndex >= ALL_QUESTIONS.length) {
+        finishGame();
+        return;
+      }
+      loadQuestion();
+    }
+
+    function finishGame() {
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = `${ALL_QUESTIONS.length}もんちゅう ${score}もん せいかいしたよ！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'country-quiz', score: score, higherIsBetter: true, unit: 'もん', title: '🌍 どこの くに クイズ ランキング' });
+    }
+
+    function startGame() {
+      qIndex = 0;
+      score = 0;
+      lastLevelKey = null;
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      loadQuestion();
+    }
+
+    nextBtn.addEventListener('click', goNext);
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>
