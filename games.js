@@ -348,4 +348,12 @@ const GAMES = [
     path: 'games/app-maker/index.html?v=4',
     desc: 'ボタンや テキスト、グラフなど いろんな どうぐを つかって、じぶんだけの アプリを つくろう！',
   },
+  {
+    id: 'brazil-explore',
+    title: 'そうすけの ブラジルたんけん',
+    emoji: '🇧🇷',
+    color: '#4CAF50',
+    path: 'games/brazil-explore/index.html',
+    desc: 'やじるしで あるいて、ブラジルの おみせを 6つ たんけんしよう！パン・デ・ケイジョや アサイーも あるよ！',
+  },
 ];

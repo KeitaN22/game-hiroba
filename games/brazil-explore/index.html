@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ブラジルたんけん</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE066 0%, #4CAF50 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 16px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.85); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 460px;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    transition: background 0.4s ease;
+  }
+
+  .spot-label {
+    position: absolute; top: 4%; left: 50%; transform: translateX(-50%);
+    font-size: 0.7rem; font-weight: bold; color: #444;
+    background: rgba(255,255,255,0.85); padding: 3px 14px; border-radius: 999px;
+    white-space: nowrap;
+    z-index: 5;
+  }
+
+  .deco {
+    position: absolute;
+    font-size: 2rem;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .building {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    transition: box-shadow 0.15s ease;
+  }
+  .building .b-emoji {
+    font-size: 3.2rem;
+    background: rgba(255,255,255,0.55);
+    border-radius: 16px;
+    padding: 6px 10px;
+  }
+  .building.near .b-emoji { box-shadow: 0 0 0 4px #FFD166; border-radius: 16px; }
+  .building .b-name { font-size: 0.55rem; font-weight: bold; color: #333; background: rgba(255,255,255,0.85); border-radius: 8px; padding: 1px 6px; }
+
+  .npc {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+  }
+
+  .player {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
+    margin-top: 16px;
+  }
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(3, 58px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.4rem;
+    border: none; border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .enter-btn, .next-btn {
+    font-size: 1rem; font-weight: bold; padding: 16px 22px; border: none; border-radius: 16px;
+    color: #fff; cursor: pointer; user-select: none;
+    background: #999; box-shadow: 0 5px 0 #666;
+  }
+  .enter-btn.ready, .next-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .enter-btn:active:not(:disabled), .next-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .enter-btn:disabled, .next-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* みせの なか */
+  .indoor-panel {
+    position: absolute; inset: 0;
+    background: #FFF8ED;
+    border-radius: 20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  .indoor-panel.hide { display: none; }
+  .indoor-scene { display: flex; align-items: flex-end; gap: 28px; }
+  .indoor-npc { font-size: 3.4rem; }
+  .indoor-furniture { font-size: 4.2rem; position: relative; }
+  .indoor-player { font-size: 3rem; }
+  .indoor-title { font-size: 1.1rem; font-weight: bold; color: #333; text-align: center; }
+  .indoor-fact { font-size: 0.85rem; color: #555; text-align: center; max-width: 90%; line-height: 1.5; }
+  .indoor-msg { font-size: 1rem; font-weight: bold; color: #4CAF50; min-height: 24px; text-align: center; }
+  .action-btn {
+    font-size: 1.05rem; font-weight: bold; padding: 14px 26px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #c73f6a;
+  }
+  .action-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #c73f6a; }
+  .action-btn:disabled { opacity: 0.5; cursor: default; }
+  .indoor-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .back-btn {
+    font-size: 0.95rem; font-weight: bold; padding: 10px 20px; border: none; border-radius: 999px;
+    background: #999; color: #fff; cursor: pointer;
+  }
+  .back-btn:active { transform: translateY(2px); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🇧🇷 そうすけの ブラジルたんけん</h1>
+
+  <div class="hud">
+    <span>おみせ 🗺️ <span id="stageCount">1</span>/<span id="stageTotal">6</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <span class="spot-label" id="spotLabel">-</span>
+      <div id="decoLayer"></div>
+      <div class="building" id="building">
+        <span class="b-emoji" id="buildingEmoji">🏠</span>
+        <span class="b-name" id="buildingName">-</span>
+      </div>
+      <span class="npc" id="npc">🧑</span>
+      <span class="player" id="player">🧑‍🦱</span>
+
+      <div class="indoor-panel hide" id="indoorPanel">
+        <div class="indoor-title" id="indoorTitle">-</div>
+        <div class="indoor-scene">
+          <span class="indoor-npc" id="indoorNpc">🧑</span>
+          <span class="indoor-furniture" id="indoorFurniture">🪑</span>
+          <span class="indoor-player" id="indoorPlayer">🧑‍🦱</span>
+        </div>
+        <div class="indoor-fact" id="indoorFact"></div>
+        <div class="indoor-msg" id="indoorMsg">&nbsp;</div>
+        <div class="indoor-row">
+          <button class="action-btn" id="actionBtn">-</button>
+          <button class="back-btn" id="backBtn">🚪 まちに もどる</button>
+        </div>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🇧🇷 ブラジルたんけん</h2>
+        <p>
+          やじるしで あるいて、おみせに ちかづくと「はいる」ボタンが おせるよ。<br>
+          ブラジルの いろんな おみせを めぐって みよう！6つの おみせが あるよ。
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 たんけん かんりょう！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+    <button class="enter-btn" id="enterBtn" disabled>🚪 はいる</button>
+    <button class="next-btn hide" id="nextBtn" disabled>▶ つぎの おみせへ</button>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const SPOTS = [
+      {
+        name: 'パン・デ・ケイジョや', bg: 'linear-gradient(#FFE0B2 0%, #FFCC80 100%)',
+        buildingEmoji: '🧀', buildingName: 'パンや', npc: '👩‍🍳',
+        indoorTitle: '🧀 パン・デ・ケイジョ の おみせ', indoorNpc: '👩‍🍳', furniture: '🥐',
+        fact: 'パン・デ・ケイジョは、チーズが はいった もちもちパン。ブラジルの あさごはんの ていばんだよ。',
+        actionLabel: '😋 たべる', actionMsg: 'あつあつの パン・デ・ケイジョを たべた！ もちもち チーズで おいしい！',
+        sound: 'playChewCookie',
+      },
+      {
+        name: 'アサイーや', bg: 'linear-gradient(#D6C7F0 0%, #B3A0DE 100%)',
+        buildingEmoji: '🍇', buildingName: 'アサイーや', npc: '🧑‍🦱',
+        indoorTitle: '🍨 アサイーボウル の おみせ', indoorNpc: '🧑‍🦱', furniture: '🍨',
+        fact: 'アサイーは アマゾンの むらさきの みで できた ひんやりデザート。バナナや グラノーラを のせて たべるよ。',
+        actionLabel: '😋 たべる', actionMsg: 'つめたい アサイーボウルを たべた！ あまくて ひんやり きもちいい！',
+        sound: 'playChewDonut',
+      },
+      {
+        name: 'シュラスカリア', bg: 'linear-gradient(#FFC1B3 0%, #FF9E7A 100%)',
+        buildingEmoji: '🍖', buildingName: 'シュラスコや', npc: '👨‍🍳',
+        indoorTitle: '🍖 シュラスカリア（おにくやさん）', indoorNpc: '👨‍🍳', furniture: '🔥',
+        fact: 'シュラスコは おおきな くしに さした おにくを たき火で やく ブラジルの ごちそうだよ。',
+        actionLabel: '😋 たべる', actionMsg: 'じゅうじゅう やけた おにくを たべた！ とっても ジューシー！',
+        sound: 'playChewBurger',
+      },
+      {
+        name: 'カーニバルの おみせ', bg: 'linear-gradient(#FFD6EC 0%, #FF9ECF 100%)',
+        buildingEmoji: '🎭', buildingName: 'カーニバルや', npc: '💃',
+        indoorTitle: '🎭 カーニバル いしょうてん', indoorNpc: '💃', furniture: '👑',
+        fact: 'カーニバルは ブラジルいちばんの おまつり。カラフルな いしょうと はねの かんむりで おどるよ。',
+        actionLabel: '👑 いしょうを きる', actionMsg: 'キラキラの いしょうと はねの かんむりを つけた！ サンバを おどりたくなる！',
+        sound: 'playClearFanfare',
+      },
+      {
+        name: 'ビーチの やたい', bg: 'linear-gradient(#AEE1FF 0%, #FFF3B0 100%)',
+        buildingEmoji: '🥥', buildingName: 'ココナッツや', npc: '🧑‍🦲',
+        indoorTitle: '🥥 ココナッツの やたい', indoorNpc: '🧑‍🦲', furniture: '🏖️',
+        fact: 'コパカバーナの ビーチでは、ココナッツに ストローを さして のむのが にんきだよ。',
+        actionLabel: '🥤 のむ', actionMsg: 'つめたい ココナッツジュースを のんだ！ ビーチの かぜが きもちいい！',
+        sound: 'playFruitDrop',
+      },
+      {
+        name: 'サッカーショップ', bg: 'linear-gradient(#C8F7C5 0%, #A6E8A0 100%)',
+        buildingEmoji: '⚽', buildingName: 'サッカーや', npc: '🧑‍🦳',
+        indoorTitle: '⚽ サッカーショップ', indoorNpc: '🧑‍🦳', furniture: '👕',
+        fact: 'ブラジルは サッカーが だいすきな くに。おうえんする チームの ユニフォームを きて おうえんするよ。',
+        actionLabel: '⚽ ける', actionMsg: 'あたらしい ボールを ける れんしゅうを した！ シュート きまった！',
+        sound: 'playKickImpact',
+      },
+    ];
+    const BUILDING_POS = { x: 50, y: 30 };
+    const NPC_POS = { x: 66, y: 34 };
+    const PLAYER_HOME = { x: 50, y: 85 };
+    const PROXIMITY = 60;
+
+    const DECO_POSITIONS = [
+      { x: 10, y: 18, emoji: '🌴' }, { x: 90, y: 18, emoji: '🌴' },
+      { x: 8, y: 80, emoji: '🌺' }, { x: 92, y: 80, emoji: '🦜' },
+      { x: 20, y: 92, emoji: '🌞' }, { x: 80, y: 92, emoji: '🥭' },
+    ];
+
+    const arenaEl = document.getElementById('arena');
+    const spotLabelEl = document.getElementById('spotLabel');
+    const buildingEl = document.getElementById('building');
+    const buildingEmojiEl = document.getElementById('buildingEmoji');
+    const buildingNameEl = document.getElementById('buildingName');
+    const npcEl = document.getElementById('npc');
+    const playerEl = document.getElementById('player');
+    const enterBtn = document.getElementById('enterBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const stageCountEl = document.getElementById('stageCount');
+    const stageTotalEl = document.getElementById('stageTotal');
+
+    const indoorPanel = document.getElementById('indoorPanel');
+    const indoorTitleEl = document.getElementById('indoorTitle');
+    const indoorNpcEl = document.getElementById('indoorNpc');
+    const indoorFurnitureEl = document.getElementById('indoorFurniture');
+    const indoorFactEl = document.getElementById('indoorFact');
+    const indoorMsgEl = document.getElementById('indoorMsg');
+    const actionBtn = document.getElementById('actionBtn');
+    const backBtn = document.getElementById('backBtn');
+
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    const decoLayerEl = document.getElementById('decoLayer');
+
+    stageTotalEl.textContent = SPOTS.length;
+
+    let spotIndex = 0;
+    let playerX = 0, playerY = 0;
+    let input = { up: false, down: false, left: false, right: false };
+    let playing = false;
+    let indoors = false;
+    let actionDone = false;
+    let nearBuilding = false;
+    let lastFrame = 0;
+
+    function pxOf(pctX, pctY) {
+      return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
+    }
+
+    function renderEnvironment() {
+      decoLayerEl.innerHTML = '';
+      DECO_POSITIONS.forEach(d => {
+        const el = document.createElement('span');
+        el.className = 'deco';
+        el.textContent = d.emoji;
+        el.style.left = d.x + '%';
+        el.style.top = d.y + '%';
+        decoLayerEl.appendChild(el);
+      });
+    }
+
+    function loadSpot() {
+      const s = SPOTS[spotIndex];
+      arenaEl.style.background = s.bg;
+      spotLabelEl.textContent = `🗺️ ${s.name}`;
+      buildingEmojiEl.textContent = s.buildingEmoji;
+      buildingNameEl.textContent = s.buildingName;
+      npcEl.textContent = s.npc;
+      buildingEl.style.left = BUILDING_POS.x + '%';
+      buildingEl.style.top = BUILDING_POS.y + '%';
+      npcEl.style.left = NPC_POS.x + '%';
+      npcEl.style.top = NPC_POS.y + '%';
+      stageCountEl.textContent = spotIndex + 1;
+
+      indoorTitleEl.textContent = s.indoorTitle;
+      indoorNpcEl.textContent = s.indoorNpc;
+      indoorFurnitureEl.textContent = s.furniture;
+      indoorFactEl.textContent = s.fact;
+      actionBtn.textContent = s.actionLabel;
+
+      actionDone = false;
+      nextBtn.disabled = true;
+      nextBtn.classList.remove('ready');
+
+      const home = pxOf(PLAYER_HOME.x, PLAYER_HOME.y);
+      playerX = home.x; playerY = home.y;
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      updateNearBuilding();
+    }
+
+    function updateNearBuilding() {
+      const p = pxOf(BUILDING_POS.x, BUILDING_POS.y);
+      const dist = Math.hypot(playerX - p.x, playerY - p.y);
+      nearBuilding = dist < PROXIMITY;
+      buildingEl.classList.toggle('near', nearBuilding);
+      enterBtn.disabled = !nearBuilding;
+      enterBtn.classList.toggle('ready', nearBuilding);
+    }
+
+    function update(dt) {
+      if (!playing || indoors) return;
+      const speed = 150;
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      playerX = Math.max(14, Math.min(arenaEl.clientWidth - 14, playerX + dx * speed * dt));
+      playerY = Math.max(14, Math.min(arenaEl.clientHeight - 14, playerY + dy * speed * dt));
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      updateNearBuilding();
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function setDir(dir, value) { input[dir] = value; }
+    ['Up', 'Down', 'Left', 'Right'].forEach(dir => {
+      const key = dir.toLowerCase();
+      const btn = document.getElementById('btn' + dir);
+      btn.addEventListener('pointerdown', () => setDir(key, true));
+      btn.addEventListener('pointerup', () => setDir(key, false));
+      btn.addEventListener('pointerleave', () => setDir(key, false));
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    function enterBuilding() {
+      if (!playing || indoors || !nearBuilding) return;
+      indoors = true;
+      input = { up: false, down: false, left: false, right: false };
+      indoorMsgEl.textContent = '';
+      actionBtn.disabled = false;
+      indoorPanel.classList.remove('hide');
+      GameAudio.playClickTick();
+    }
+
+    function doAction() {
+      if (!indoors || actionDone) return;
+      actionDone = true;
+      actionBtn.disabled = true;
+      const s = SPOTS[spotIndex];
+      indoorMsgEl.textContent = s.actionMsg;
+      const soundFn = GameAudio[s.sound];
+      if (soundFn) soundFn.call(GameAudio);
+      else GameAudio.playClearFanfare();
+    }
+
+    function leaveBuilding() {
+      if (!indoors) return;
+      indoors = false;
+      indoorPanel.classList.add('hide');
+      if (actionDone) {
+        nextBtn.disabled = false;
+        nextBtn.classList.add('ready');
+      }
+      updateNearBuilding();
+    }
+
+    function goNextSpot() {
+      if (!actionDone) return;
+      spotIndex++;
+      if (spotIndex >= SPOTS.length) {
+        finishGame();
+        return;
+      }
+      loadSpot();
+      GameAudio.playClickTick();
+    }
+
+    function finishGame() {
+      playing = false;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = `ブラジルの 6つの おみせを ぜんぶ たんけんしたね！すごい！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'brazil-explore', score: SPOTS.length, higherIsBetter: true, unit: 'おみせ', title: '🇧🇷 たんけんした おみせ ランキング' });
+    }
+
+    enterBtn.addEventListener('click', enterBuilding);
+    actionBtn.addEventListener('click', doAction);
+    backBtn.addEventListener('click', leaveBuilding);
+    nextBtn.addEventListener('click', goNextSpot);
+
+    function startGame() {
+      spotIndex = 0;
+      playing = true;
+      indoors = false;
+      indoorPanel.classList.add('hide');
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      GameAudio.playBGM();
+      loadSpot();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    renderEnvironment();
+    loadSpot();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
