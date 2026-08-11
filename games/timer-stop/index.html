@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの 10びょう ストップ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFD966 0%, #FF9A56 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .timer-box {
+    position: relative;
+    background: #222;
+    border-radius: 24px;
+    height: 220px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .timer-display {
+    font-size: 3.2rem; font-weight: bold; color: #7CFF7C;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+  }
+  .shutter {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, #888 0 14px, #999 14px 28px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem;
+    transform: translateY(-100%);
+    transition: transform 0.5s ease-in;
+  }
+  .shutter.closed { transform: translateY(0); }
+
+  .hint-text {
+    text-align: center; font-size: 0.95rem; color: #333; font-weight: bold;
+    margin-bottom: 14px; min-height: 24px;
+  }
+
+  .stop-btn {
+    display: block; margin: 0 auto;
+    font-size: 1.3rem; font-weight: bold; padding: 20px 60px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 6px 0 #c73f6a;
+  }
+  .stop-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+  .stop-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+  .result-num { font-size: 2.4rem; font-weight: bold; margin: 8px 0; }
+  .result-num.success { color: #7CFF7C; }
+  .result-num.fail { color: #FF8A8A; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">⏱️ そうすけの 10びょう ストップ</h1>
+
+  <div class="stage-wrap">
+    <div class="timer-box" id="timerBox">
+      <span class="timer-display" id="timerDisplay">0.0</span>
+      <div class="shutter" id="shutter">🚪 みえない！</div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>⏱️ 10びょう ストップ</h2>
+        <p>
+          スタートすると タイマーが うごきだすよ。<br>
+          2びょうぐらいで シャッターが しまって タイマーが みえなくなるよ。<br>
+          あたまの なかで かぞえて、ちょうど 10びょうだと おもったら<br>
+          「ストップ」ボタンを おそう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="resultOverlay">
+        <h2 id="resultTitle">-</h2>
+        <div class="result-num" id="resultNum">-</div>
+        <p id="resultText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+
+    <div class="hint-text" id="hintText">&nbsp;</div>
+
+    <button class="stop-btn" id="stopBtn" disabled>🛑 ストップ</button>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const TARGET_SEC = 10;
+    const SHUTTER_CLOSE_MS = 2000;
+    const SUCCESS_TOLERANCE = 0.3;
+
+    const timerDisplayEl = document.getElementById('timerDisplay');
+    const shutterEl = document.getElementById('shutter');
+    const stopBtn = document.getElementById('stopBtn');
+    const hintTextEl = document.getElementById('hintText');
+    const startOverlay = document.getElementById('startOverlay');
+    const resultOverlay = document.getElementById('resultOverlay');
+    const resultTitleEl = document.getElementById('resultTitle');
+    const resultNumEl = document.getElementById('resultNum');
+    const resultTextEl = document.getElementById('resultText');
+
+    let startTime = 0;
+    let running = false;
+    let shutterTimer = null;
+    let rafId = null;
+
+    function updateDisplay() {
+      if (!running) return;
+      const elapsed = (performance.now() - startTime) / 1000;
+      timerDisplayEl.textContent = elapsed.toFixed(1);
+      rafId = requestAnimationFrame(updateDisplay);
+    }
+
+    function startGame() {
+      startOverlay.classList.add('hide');
+      resultOverlay.classList.add('hide');
+      shutterEl.classList.remove('closed');
+      hintTextEl.textContent = 'いまなら みえるよ。よく みておいてね！';
+      timerDisplayEl.textContent = '0.0';
+      startTime = performance.now();
+      running = true;
+      stopBtn.disabled = false;
+      GameAudio.playClickTick();
+      updateDisplay();
+      clearTimeout(shutterTimer);
+      shutterTimer = setTimeout(() => {
+        shutterEl.classList.add('closed');
+        hintTextEl.textContent = 'あたまの なかで かぞえよう…！ 10びょうで ストップ！';
+      }, SHUTTER_CLOSE_MS);
+    }
+
+    function stopGame() {
+      if (!running) return;
+      running = false;
+      stopBtn.disabled = true;
+      cancelAnimationFrame(rafId);
+      clearTimeout(shutterTimer);
+      shutterEl.classList.remove('closed');
+      const elapsed = (performance.now() - startTime) / 1000;
+      timerDisplayEl.textContent = elapsed.toFixed(2);
+      const diff = Math.abs(elapsed - TARGET_SEC);
+      const success = diff <= SUCCESS_TOLERANCE;
+      if (success) {
+        GameAudio.playClearFanfare();
+        resultTitleEl.textContent = '🎉 せいこう！';
+        resultNumEl.className = 'result-num success';
+      } else {
+        GameAudio.playFailBuzz();
+        resultTitleEl.textContent = '😢 しっかく…';
+        resultNumEl.className = 'result-num fail';
+      }
+      resultNumEl.textContent = elapsed.toFixed(2) + ' びょう';
+      resultTextEl.textContent = success
+        ? `10びょうに とても ちかかったよ！すごい！`
+        : `10びょうを めざしたけど、${diff.toFixed(2)}びょう ずれちゃった。もういちど ちょうせん しよう！`;
+      resultOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'timer-stop', score: diff, higherIsBetter: false, unit: 'びょうさ', title: '⏱️ 10びょう ストップ ランキング' });
+    }
+
+    stopBtn.addEventListener('click', stopGame);
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

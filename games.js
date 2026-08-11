@@ -356,4 +356,12 @@ const GAMES = [
     path: 'games/brazil-explore/index.html',
     desc: 'やじるしで あるいて、ブラジルの おみせを 6つ たんけんしよう！パン・デ・ケイジョや アサイーも あるよ！',
   },
+  {
+    id: 'timer-stop',
+    title: 'そうすけの 10びょう ストップ',
+    emoji: '⏱️',
+    color: '#FFD966',
+    path: 'games/timer-stop/index.html',
+    desc: 'タイマーが みえなくなっても、あたまの なかで かぞえて ちょうど 10びょうで ストップしよう！',
+  },
 ];
