@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ブロッククラフト</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #8FCB6B 0%, #5B9BD5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .inv-bar {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 14px;
+    margin-bottom: 14px; font-size: 0.95rem; font-weight: bold;
+  }
+  .inv-item { display: flex; align-items: center; gap: 3px; }
+  .inv-item .icon { font-size: 1.3rem; }
+
+  .world-box {
+    position: relative;
+    background: rgba(255,255,255,0.85);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    min-height: 320px;
+  }
+
+  .world-title { font-size: 0.95rem; font-weight: bold; color: #333; text-align: center; margin-bottom: 12px; }
+
+  .gather-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .gather-node {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: #FFF6D8; border: none; border-radius: 16px;
+    padding: 14px 6px; cursor: pointer; user-select: none;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+  }
+  .gather-node:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .gather-node .g-emoji { font-size: 2.4rem; }
+  .gather-node .g-name { font-size: 0.65rem; font-weight: bold; color: #333; }
+  .gather-node.pop .g-emoji { animation: gatherPop 0.3s ease-out; }
+  @keyframes gatherPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  .j-btn-wrap { display: flex; justify-content: center; margin-top: 18px; }
+  .j-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-weight: bold; border: none; border-radius: 20px;
+    background: #333; color: #fff; cursor: pointer;
+    padding: 14px 34px;
+    box-shadow: 0 6px 0 #111;
+  }
+  .j-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #111; }
+  .j-btn .j-letter { font-size: 1.8rem; }
+  .j-btn .j-sub { font-size: 0.65rem; }
+
+  .craft-overlay {
+    position: absolute; inset: 0; background: rgba(20,20,20,0.95);
+    border-radius: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px; box-sizing: border-box;
+    color: #fff; z-index: 10;
+    overflow-y: auto;
+  }
+  .craft-overlay.hide { display: none; }
+  .craft-header { display: flex; justify-content: space-between; align-items: center; }
+  .craft-header h2 { font-size: 1.1rem; margin: 0; }
+  .close-btn {
+    font-size: 0.9rem; font-weight: bold; padding: 8px 16px; border: none; border-radius: 999px;
+    background: #E05353; color: #fff; cursor: pointer;
+  }
+  .close-btn:active { transform: translateY(2px); }
+
+  .recipe-list { display: flex; flex-direction: column; gap: 8px; }
+  .recipe-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: #2b2b2b; border-radius: 12px; padding: 10px 12px;
+  }
+  .recipe-card.made { background: #1f3a1f; }
+  .recipe-left { display: flex; align-items: center; gap: 8px; }
+  .recipe-emoji { font-size: 1.8rem; }
+  .recipe-name { font-size: 0.85rem; font-weight: bold; }
+  .recipe-cost { font-size: 0.7rem; color: #ccc; }
+  .made-badge { font-size: 0.65rem; color: #7CFF7C; font-weight: bold; }
+  .craft-btn {
+    font-size: 0.85rem; font-weight: bold; padding: 10px 16px; border: none; border-radius: 999px;
+    background: #4CAF50; color: #fff; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .craft-btn:disabled { background: #666; opacity: 0.6; cursor: default; }
+  .craft-btn:active:not(:disabled) { transform: translateY(2px); }
+
+  .flash-msg {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(76,175,80,0.95); color: #fff; font-weight: bold;
+    padding: 10px 20px; border-radius: 999px; font-size: 0.95rem;
+    opacity: 0; pointer-events: none; z-index: 50;
+  }
+  .flash-msg.show { animation: flashPop 1.4s ease-out; }
+  @keyframes flashPop {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+
+  .complete-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 20; padding: 20px;
+  }
+  .complete-overlay.hide { display: none; }
+  .complete-overlay h2 { font-size: 1.5rem; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🧱 そうすけの ブロッククラフト</h1>
+
+  <div class="inv-bar" id="invBar"></div>
+
+  <div class="stage-wrap">
+    <div class="world-box" id="worldBox">
+      <div class="world-title">タップして ざいりょうを あつめよう！</div>
+      <div class="gather-grid" id="gatherGrid"></div>
+
+      <div class="j-btn-wrap">
+        <button class="j-btn" id="jBtn">
+          <span class="j-letter">🅙</span>
+          <span class="j-sub">どうぐを つくる</span>
+        </button>
+      </div>
+
+      <div class="craft-overlay hide" id="craftOverlay">
+        <div class="craft-header">
+          <h2>🛠️ クラフトメニュー</h2>
+          <button class="close-btn" id="closeCraftBtn">✖ とじる</button>
+        </div>
+        <div class="recipe-list" id="recipeList"></div>
+      </div>
+
+      <div class="complete-overlay hide" id="completeOverlay">
+        <h2>🎉 ぜんぶ つくったね！ 🎉</h2>
+        <p id="completeText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="flash-msg" id="flashMsg"></div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const MATERIALS = [
+      { id: 'wood', name: 'もくざい', emoji: '🪵' },
+      { id: 'stone', name: 'いし', emoji: '🪨' },
+      { id: 'iron', name: 'てつ', emoji: '🔩' },
+      { id: 'diamond', name: 'ダイヤ', emoji: '💎' },
+      { id: 'wool', name: 'ウール', emoji: '🧶' },
+      { id: 'string', name: 'いと', emoji: '🧵' },
+    ];
+
+    const RECIPES = [
+      { id: 'table', name: 'さぎょうだい', emoji: '🏗️', cost: { wood: 4 } },
+      { id: 'stick', name: 'ぼう', emoji: '🪄', cost: { wood: 2 } },
+      { id: 'torch', name: 'たいまつ', emoji: '🔥', cost: { wood: 1, stone: 1 } },
+      { id: 'wood_pick', name: 'きの つるはし', emoji: '⛏️', cost: { wood: 3 } },
+      { id: 'stone_pick', name: 'いしの つるはし', emoji: '⛏️', cost: { stone: 3 } },
+      { id: 'iron_pick', name: 'てつの つるはし', emoji: '⛏️', cost: { iron: 3 } },
+      { id: 'iron_sword', name: 'てつの けん', emoji: '⚔️', cost: { iron: 2 } },
+      { id: 'diamond_sword', name: 'ダイヤの けん', emoji: '🗡️', cost: { diamond: 2 } },
+      { id: 'bed', name: 'ベッド', emoji: '🛏️', cost: { wool: 3, wood: 3 } },
+      { id: 'door', name: 'とびら', emoji: '🚪', cost: { wood: 6 } },
+      { id: 'chest', name: 'チェスト', emoji: '📦', cost: { wood: 8 } },
+      { id: 'boat', name: 'ボート', emoji: '🛶', cost: { wood: 5 } },
+      { id: 'furnace', name: 'かまど', emoji: '🔲', cost: { stone: 8 } },
+      { id: 'bow', name: 'ゆみ', emoji: '🏹', cost: { wood: 3, string: 3 } },
+    ];
+
+    const invBarEl = document.getElementById('invBar');
+    const gatherGridEl = document.getElementById('gatherGrid');
+    const jBtn = document.getElementById('jBtn');
+    const craftOverlay = document.getElementById('craftOverlay');
+    const closeCraftBtn = document.getElementById('closeCraftBtn');
+    const recipeListEl = document.getElementById('recipeList');
+    const flashMsgEl = document.getElementById('flashMsg');
+    const completeOverlay = document.getElementById('completeOverlay');
+    const completeTextEl = document.getElementById('completeText');
+    const retryBtn = document.getElementById('retryBtn');
+
+    let inventory = {};
+    let madeItems = {};
+
+    function resetGame() {
+      inventory = {};
+      madeItems = {};
+      MATERIALS.forEach(m => { inventory[m.id] = 0; });
+      RECIPES.forEach(r => { madeItems[r.id] = 0; });
+      completeOverlay.classList.add('hide');
+      craftOverlay.classList.add('hide');
+      renderInv();
+      renderRecipes();
+    }
+
+    function renderInv() {
+      invBarEl.innerHTML = '';
+      MATERIALS.forEach(m => {
+        const span = document.createElement('span');
+        span.className = 'inv-item';
+        span.innerHTML = `<span class="icon">${m.emoji}</span><span id="invCount_${m.id}">${inventory[m.id]}</span>`;
+        invBarEl.appendChild(span);
+      });
+    }
+
+    function renderGather() {
+      gatherGridEl.innerHTML = '';
+      MATERIALS.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = 'gather-node';
+        btn.innerHTML = `<span class="g-emoji">${m.emoji}</span><span class="g-name">${m.name}</span>`;
+        btn.addEventListener('click', () => gather(m, btn));
+        gatherGridEl.appendChild(btn);
+      });
+    }
+
+    function gather(material, btn) {
+      inventory[material.id]++;
+      document.getElementById('invCount_' + material.id).textContent = inventory[material.id];
+      btn.classList.remove('pop');
+      void btn.offsetWidth;
+      btn.classList.add('pop');
+      GameAudio.playClickTick();
+      updateRecipeButtons();
+    }
+
+    function canAfford(cost) {
+      return Object.entries(cost).every(([matId, amt]) => inventory[matId] >= amt);
+    }
+
+    function costText(cost) {
+      return Object.entries(cost).map(([matId, amt]) => {
+        const mat = MATERIALS.find(m => m.id === matId);
+        return `${mat.emoji}${amt}`;
+      }).join(' ');
+    }
+
+    function renderRecipes() {
+      recipeListEl.innerHTML = '';
+      RECIPES.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'recipe-card' + (madeItems[r.id] > 0 ? ' made' : '');
+        card.id = 'recipeCard_' + r.id;
+        card.innerHTML = `
+          <div class="recipe-left">
+            <span class="recipe-emoji">${r.emoji}</span>
+            <div>
+              <div class="recipe-name">${r.name} ${madeItems[r.id] > 0 ? `<span class="made-badge">✔ ${madeItems[r.id]}こ</span>` : ''}</div>
+              <div class="recipe-cost">ひつよう： ${costText(r.cost)}</div>
+            </div>
+          </div>
+          <button class="craft-btn" id="craftBtn_${r.id}">つくる</button>
+        `;
+        recipeListEl.appendChild(card);
+        document.getElementById('craftBtn_' + r.id).addEventListener('click', () => craftItem(r));
+      });
+      updateRecipeButtons();
+    }
+
+    function updateRecipeButtons() {
+      RECIPES.forEach(r => {
+        const btn = document.getElementById('craftBtn_' + r.id);
+        if (btn) btn.disabled = !canAfford(r.cost);
+      });
+    }
+
+    function showFlash(text) {
+      flashMsgEl.textContent = text;
+      flashMsgEl.classList.remove('show');
+      void flashMsgEl.offsetWidth;
+      flashMsgEl.classList.add('show');
+    }
+
+    function craftItem(recipe) {
+      if (!canAfford(recipe.cost)) {
+        GameAudio.playFailBuzz();
+        return;
+      }
+      Object.entries(recipe.cost).forEach(([matId, amt]) => { inventory[matId] -= amt; });
+      madeItems[recipe.id]++;
+      renderInv();
+      const card = document.getElementById('recipeCard_' + recipe.id);
+      card.classList.add('made');
+      card.querySelector('.recipe-name').innerHTML = `${recipe.name} <span class="made-badge">✔ ${madeItems[recipe.id]}こ</span>`;
+      GameAudio.playClearFanfare();
+      showFlash(`${recipe.emoji} ${recipe.name}を つくったよ！`);
+      updateRecipeButtons();
+      checkComplete();
+    }
+
+    function checkComplete() {
+      const allMade = RECIPES.every(r => madeItems[r.id] > 0);
+      if (allMade) {
+        const totalCrafted = Object.values(madeItems).reduce((a, b) => a + b, 0);
+        completeTextEl.textContent = `${RECIPES.length}しゅるいの どうぐを ぜんぶ つくったよ！すごい！`;
+        completeOverlay.classList.remove('hide');
+        Leaderboard.showRankFlow({ gameId: 'block-craft', score: totalCrafted, higherIsBetter: true, unit: 'こ', title: '🧱 ブロッククラフト ランキング' });
+      }
+    }
+
+    jBtn.addEventListener('click', () => {
+      craftOverlay.classList.remove('hide');
+      GameAudio.playClickTick();
+    });
+    closeCraftBtn.addEventListener('click', () => {
+      craftOverlay.classList.add('hide');
+      GameAudio.playClickTick();
+    });
+    retryBtn.addEventListener('click', resetGame);
+
+    renderGather();
+    resetGame();
+  </script>
+</body>
+</html>

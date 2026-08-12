@@ -372,4 +372,12 @@ const GAMES = [
     path: 'games/country-quiz/index.html',
     desc: 'こっきを みて、どこの くにか あてよう！かんたん→ノーマル→ハードと むずかしく なるよ。',
   },
+  {
+    id: 'block-craft',
+    title: 'そうすけの ブロッククラフト',
+    emoji: '🧱',
+    color: '#8FCB6B',
+    path: 'games/block-craft/index.html',
+    desc: 'ざいりょうを あつめて、Jボタンで どうぐを クラフトしよう！つるはしや けんなど いろいろ つくれるよ。',
+  },
 ];
