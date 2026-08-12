@@ -123,6 +123,51 @@
   }
   .complete-overlay.hide { display: none; }
   .complete-overlay h2 { font-size: 1.5rem; }
+
+  .explore-btn-wrap { display: flex; justify-content: center; margin-top: 10px; }
+  .explore-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-weight: bold; border: none; border-radius: 20px;
+    background: #6B4A2E; color: #fff; cursor: pointer;
+    padding: 14px 34px;
+    box-shadow: 0 6px 0 #40290f;
+  }
+  .explore-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #40290f; }
+  .explore-btn .e-letter { font-size: 1.6rem; }
+  .explore-btn .e-sub { font-size: 0.65rem; }
+
+  .explore-overlay {
+    position: absolute; inset: 0; background: #2b1d10;
+    border-radius: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px; box-sizing: border-box;
+    color: #fff; z-index: 10;
+    overflow-y: auto;
+    transition: background 0.4s ease;
+  }
+  .explore-overlay.lit { background: #4a3520; }
+  .explore-overlay.hide { display: none; }
+  .explore-header { display: flex; justify-content: space-between; align-items: center; }
+  .explore-header h2 { font-size: 1.1rem; margin: 0; }
+
+  .spot-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .spot-card {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: rgba(255,255,255,0.1); border: none; border-radius: 14px;
+    padding: 12px 6px; cursor: pointer; user-select: none;
+    color: #fff;
+  }
+  .spot-card:active { transform: translateY(2px); }
+  .spot-card.locked { opacity: 0.45; cursor: default; }
+  .spot-card .s-emoji { font-size: 2.2rem; }
+  .spot-card .s-name { font-size: 0.7rem; font-weight: bold; text-align: center; }
+  .spot-card .s-status { font-size: 0.6rem; color: #FFD966; text-align: center; min-height: 14px; }
+  .spot-card.shake .s-emoji { animation: spotShake 0.3s ease-out; }
+  @keyframes spotShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px) rotate(-4deg); }
+    75% { transform: translateX(4px) rotate(4deg); }
+  }
 </style>
 </head>
 <body class="game-body">
@@ -143,6 +188,12 @@
           <span class="j-sub">どうぐを つくる</span>
         </button>
       </div>
+      <div class="explore-btn-wrap">
+        <button class="explore-btn" id="exploreBtn">
+          <span class="e-letter">🕳️</span>
+          <span class="e-sub">どうぐを もって たんけんに いく</span>
+        </button>
+      </div>
 
       <div class="craft-overlay hide" id="craftOverlay">
         <div class="craft-header">
@@ -150,6 +201,14 @@
           <button class="close-btn" id="closeCraftBtn">✖ とじる</button>
         </div>
         <div class="recipe-list" id="recipeList"></div>
+      </div>
+
+      <div class="explore-overlay hide" id="exploreOverlay">
+        <div class="explore-header">
+          <h2>🕳️ ちかの たんけん</h2>
+          <button class="close-btn" id="closeExploreBtn">🔙 もどる</button>
+        </div>
+        <div class="spot-grid" id="spotGrid"></div>
       </div>
 
       <div class="complete-overlay hide" id="completeOverlay">
@@ -207,17 +266,183 @@
     const completeOverlay = document.getElementById('completeOverlay');
     const completeTextEl = document.getElementById('completeText');
     const retryBtn = document.getElementById('retryBtn');
+    const exploreBtn = document.getElementById('exploreBtn');
+    const exploreOverlay = document.getElementById('exploreOverlay');
+    const closeExploreBtn = document.getElementById('closeExploreBtn');
+    const spotGridEl = document.getElementById('spotGrid');
 
     let inventory = {};
     let madeItems = {};
+    let mineTaps = 0;
+    const MINE_TAPS_NEEDED = 4;
+    let caveLit = false;
+
+    function bestPickaxeTier() {
+      if (madeItems.iron_pick > 0) return 'iron';
+      if (madeItems.stone_pick > 0) return 'stone';
+      if (madeItems.wood_pick > 0) return 'wood';
+      return null;
+    }
+    function bestSwordTier() {
+      if (madeItems.diamond_sword > 0) return 'diamond';
+      if (madeItems.iron_sword > 0) return 'iron';
+      return null;
+    }
+    function randomMaterialId() {
+      return MATERIALS[Math.floor(Math.random() * MATERIALS.length)].id;
+    }
+    function matInfo(id) { return MATERIALS.find(m => m.id === id); }
+
+    const SPOTS = [
+      {
+        id: 'mine', emoji: '🪨', name: 'こうみゃく',
+        locked: () => !bestPickaxeTier(),
+        lockedMsg: 'つるはしが ないよ！',
+        statusText: () => `コン ${mineTaps}/${MINE_TAPS_NEEDED}`,
+        action(card) {
+          mineTaps++;
+          GameAudio.playClickTick();
+          card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+          if (mineTaps >= MINE_TAPS_NEEDED) {
+            mineTaps = 0;
+            const tier = bestPickaxeTier();
+            const yieldId = tier === 'iron' ? 'diamond' : tier === 'stone' ? 'iron' : 'stone';
+            inventory[yieldId]++;
+            renderInv();
+            GameAudio.playClearFanfare();
+            showFlash(`${matInfo(yieldId).emoji} ${matInfo(yieldId).name}を ほったよ！`);
+          }
+          card.querySelector('.s-status').textContent = this.statusText();
+        },
+      },
+      {
+        id: 'fight', emoji: '🧟', name: 'モンスター',
+        locked: () => !bestSwordTier(),
+        lockedMsg: 'けんが ないよ！',
+        statusText: () => 'たたかう',
+        action(card) {
+          card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+          GameAudio.playBladeSwish();
+          const tier = bestSwordTier();
+          const reward = tier === 'diamond' ? 2 : 1;
+          inventory.string += reward;
+          renderInv();
+          showFlash(`⚔️ モンスターを たおした！ 🧵いと×${reward} ゲット！`);
+        },
+      },
+      {
+        id: 'sleep', emoji: '🛏️', name: 'ベッド',
+        locked: () => !(madeItems.bed > 0),
+        lockedMsg: 'ベッドが ないよ！',
+        statusText: () => 'ねる',
+        action(card) {
+          GameAudio.playClearFanfare();
+          showFlash('😴 ぐっすり ねむって げんきに なった！');
+        },
+      },
+      {
+        id: 'torch', emoji: '🔥', name: 'たいまつ',
+        locked: () => !(madeItems.torch > 0),
+        lockedMsg: 'たいまつが ないよ！',
+        statusText: () => caveLit ? 'あかるい' : 'つける',
+        action(card) {
+          caveLit = !caveLit;
+          exploreOverlay.classList.toggle('lit', caveLit);
+          GameAudio.playClickTick();
+          showFlash(caveLit ? '🔥 ほらあなが あかるく なった！' : '🌑 たいまつを けした');
+          card.querySelector('.s-status').textContent = this.statusText();
+        },
+      },
+      {
+        id: 'chest', emoji: '📦', name: 'チェスト',
+        locked: () => !(madeItems.chest > 0),
+        lockedMsg: 'チェストが ないよ！',
+        statusText: () => 'あける',
+        action() {
+          const bonusId = randomMaterialId();
+          inventory[bonusId] += 2;
+          renderInv();
+          GameAudio.playClearFanfare();
+          showFlash(`📦 たからものを みつけた！ ${matInfo(bonusId).emoji}×2`);
+        },
+      },
+      {
+        id: 'furnace', emoji: '🔲', name: 'かまど',
+        locked: () => !(madeItems.furnace > 0),
+        lockedMsg: 'かまどが ないよ！',
+        statusText: () => 'とかす',
+        action() {
+          GameAudio.playClearFanfare();
+          showFlash('🔲 こうせきを とかして ぴかぴかに した！');
+        },
+      },
+      {
+        id: 'boat', emoji: '🛶', name: 'ボート',
+        locked: () => !(madeItems.boat > 0),
+        lockedMsg: 'ボートが ないよ！',
+        statusText: () => 'こぐ',
+        action() {
+          GameAudio.playClickTick();
+          showFlash('🛶 みずうみを ボートで すすんだ！');
+        },
+      },
+      {
+        id: 'bow', emoji: '🎯', name: 'まと',
+        locked: () => !(madeItems.bow > 0),
+        lockedMsg: 'ゆみが ないよ！',
+        statusText: () => 'いる',
+        action() {
+          GameAudio.playKickImpact();
+          showFlash('🏹 まとに めいちゅう！');
+        },
+      },
+      {
+        id: 'door', emoji: '🚪', name: 'とびら',
+        locked: () => !(madeItems.door > 0),
+        lockedMsg: 'とびらが ないよ！',
+        statusText: () => 'あける',
+        action() {
+          GameAudio.playClickTick();
+          showFlash('🚪 とびらを あけて すすんだ！');
+        },
+      },
+    ];
+
+    function renderSpots() {
+      spotGridEl.innerHTML = '';
+      SPOTS.forEach(spot => {
+        const isLocked = spot.locked();
+        const card = document.createElement('button');
+        card.className = 'spot-card' + (isLocked ? ' locked' : '');
+        card.id = 'spotCard_' + spot.id;
+        card.innerHTML = `
+          <span class="s-emoji">${spot.emoji}</span>
+          <span class="s-name">${spot.name}</span>
+          <span class="s-status">${isLocked ? spot.lockedMsg : spot.statusText()}</span>
+        `;
+        card.addEventListener('click', () => {
+          if (spot.locked()) {
+            GameAudio.playFailBuzz();
+            showFlash(`🔙 ${spot.lockedMsg} クラフトメニューで つくろう！`);
+            return;
+          }
+          spot.action(card);
+        });
+        spotGridEl.appendChild(card);
+      });
+    }
 
     function resetGame() {
       inventory = {};
       madeItems = {};
+      mineTaps = 0;
+      caveLit = false;
       MATERIALS.forEach(m => { inventory[m.id] = 0; });
       RECIPES.forEach(r => { madeItems[r.id] = 0; });
       completeOverlay.classList.add('hide');
       craftOverlay.classList.add('hide');
+      exploreOverlay.classList.add('hide');
+      exploreOverlay.classList.remove('lit');
       renderInv();
       renderRecipes();
     }
@@ -333,6 +558,15 @@
     });
     closeCraftBtn.addEventListener('click', () => {
       craftOverlay.classList.add('hide');
+      GameAudio.playClickTick();
+    });
+    exploreBtn.addEventListener('click', () => {
+      exploreOverlay.classList.remove('hide');
+      GameAudio.playClickTick();
+      renderSpots();
+    });
+    closeExploreBtn.addEventListener('click', () => {
+      exploreOverlay.classList.add('hide');
       GameAudio.playClickTick();
     });
     retryBtn.addEventListener('click', resetGame);
