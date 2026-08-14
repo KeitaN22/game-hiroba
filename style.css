@@ -17,6 +17,27 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 24px 16px 60px;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.95) 1.5px, transparent 2px),
+    radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(255,255,255,0.9) 1.8px, transparent 2.4px);
+  background-size: 140px 140px, 90px 90px, 200px 200px;
+  background-position: 0 0, 45px 70px, 110px 20px;
+  animation: sparkleTwinkle 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes sparkleTwinkle {
+  0% { opacity: 0.3; }
+  100% { opacity: 0.95; }
 }
 
 .hero {
@@ -118,6 +139,36 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+.card::before {
+  content: '✨';
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 1.3rem;
+  animation: sparkleTwinkle 2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.55) 50%, transparent 75%);
+  background-size: 250% 250%;
+  background-position: -120% -120%;
+  animation: cardShimmer 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes cardShimmer {
+  0% { background-position: -120% -120%; }
+  45% { background-position: 220% 220%; }
+  100% { background-position: 220% 220%; }
 }
 
 .number-badge {
