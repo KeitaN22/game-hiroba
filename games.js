@@ -385,7 +385,7 @@ const GAMES = [
     title: 'そうすけの タブレットこわし',
     emoji: '📱',
     color: '#444444',
-    path: 'games/tablet-smash/index.html?v=2',
+    path: 'games/tablet-smash/index.html?v=3',
     desc: 'おかねで どうぐを かって、タブレットを バンバン こわそう！いちばん つよい どうぐは いっぱつで こわせるよ。',
   },
 ];

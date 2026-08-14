@@ -201,6 +201,7 @@
         btn.addEventListener('click', () => {
           selectedToolId = t.id;
           renderTools();
+          resetTablet();
           GameAudio.playClickTick();
         });
         toolBarEl.appendChild(btn);
@@ -247,9 +248,9 @@
       saveOwned(owned);
       refreshMoneyDisplay();
       renderShop();
-      renderTools();
       selectedToolId = t.id;
       renderTools();
+      resetTablet();
       GameAudio.playClearFanfare();
       showFlash(`${t.emoji} ${t.name}を かったよ！`);
     }
