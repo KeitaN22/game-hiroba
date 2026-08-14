@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ソウスケゲーム広場</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <div class="hero">
@@ -13,6 +13,7 @@
       あそびたい ゲームを えらんでね！
       <span class="snack-badge">🍬 <span id="snackCount">0</span></span>
       <span class="money-badge">💰 <span id="moneyCount">0</span></span>
+      <button class="atm-badge" id="atmBtn">🏧 ATM</button>
     </p>
   </div>
 
@@ -45,6 +46,14 @@
       return next;
     }
     moneyCountEl.textContent = getMoneyCount();
+
+    const atmBtn = document.getElementById('atmBtn');
+    atmBtn.addEventListener('click', () => {
+      moneyCountEl.textContent = bumpMoneyCount(20);
+      atmBtn.classList.remove('pop');
+      void atmBtn.offsetWidth;
+      atmBtn.classList.add('pop');
+    });
 
     if (GAMES.length === 0) {
       grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';

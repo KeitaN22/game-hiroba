@@ -73,6 +73,28 @@ body {
   box-shadow: 0 4px 0 rgba(0,0,0,0.15);
 }
 
+.atm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #4CAF50;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #2e7d32;
+  cursor: pointer;
+}
+.atm-badge:active { transform: translateY(3px); box-shadow: 0 1px 0 #2e7d32; }
+.atm-badge.pop { animation: atmPop 0.3s ease-out; }
+@keyframes atmPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
 .grid {
   width: 100%;
   max-width: 1000px;
