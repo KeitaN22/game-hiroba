@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの タブレットこわし</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #444 0%, #222 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .tablet-box {
+    position: relative;
+    background: #333;
+    border-radius: 24px;
+    height: 260px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.3);
+    margin-bottom: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tablet-emoji { font-size: 6rem; transition: transform 0.1s ease; }
+  .tablet-box.hit .tablet-emoji { animation: tabletHit 0.2s ease-out; }
+  @keyframes tabletHit {
+    0% { transform: scale(1) rotate(0deg); }
+    40% { transform: scale(0.85) rotate(-6deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .hp-bar-wrap {
+    position: absolute; top: 10px; left: 10px; right: 10px;
+    height: 14px; background: rgba(255,255,255,0.2); border-radius: 999px; overflow: hidden;
+  }
+  .hp-bar-fill { height: 100%; background: #FF5D5D; transition: width 0.2s ease; }
+  .break-count-badge {
+    position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+    font-size: 0.75rem; color: #fff; opacity: 0.7;
+  }
+
+  .tool-bar {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 16px;
+  }
+  .tool-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    border: none; border-radius: 14px;
+    background: #FFF6D8; color: #333; cursor: pointer;
+    padding: 10px 12px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  }
+  .tool-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+  .tool-btn.selected { background: #FFD166; box-shadow: 0 0 0 3px #FF9A56, 0 4px 0 rgba(0,0,0,0.2); }
+  .tool-btn .t-emoji { font-size: 1.6rem; }
+  .tool-btn .t-name { font-size: 0.6rem; font-weight: bold; }
+
+  .shop-box {
+    background: rgba(255,255,255,0.92); border-radius: 20px; padding: 16px;
+    box-sizing: border-box;
+  }
+  .shop-title { font-size: 0.95rem; font-weight: bold; color: #333; text-align: center; margin-bottom: 10px; }
+  .shop-list { display: flex; flex-direction: column; gap: 8px; }
+  .shop-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: #F5F5F5; border-radius: 12px; padding: 10px 12px;
+  }
+  .shop-item.owned { background: #E3F5E1; }
+  .shop-left { display: flex; align-items: center; gap: 8px; }
+  .shop-emoji { font-size: 1.7rem; }
+  .shop-name { font-size: 0.85rem; font-weight: bold; color: #333; }
+  .shop-hits { font-size: 0.65rem; color: #888; }
+  .buy-btn {
+    font-size: 0.8rem; font-weight: bold; padding: 8px 14px; border: none; border-radius: 999px;
+    background: #FFD166; color: #7a5c00; cursor: pointer; flex-shrink: 0;
+  }
+  .buy-btn.owned-badge { background: #4CAF50; color: #fff; cursor: default; }
+  .buy-btn:disabled:not(.owned-badge) { opacity: 0.5; cursor: default; }
+  .buy-btn:active:not(:disabled) { transform: translateY(2px); }
+
+  .flash-msg {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,93,93,0.95); color: #fff; font-weight: bold;
+    padding: 10px 20px; border-radius: 999px; font-size: 0.95rem;
+    opacity: 0; pointer-events: none; z-index: 50;
+  }
+  .flash-msg.show { animation: flashPop 1.2s ease-out; }
+  @keyframes flashPop {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">📱💥 そうすけの タブレットこわし</h1>
+
+  <div class="hud">
+    <span>💰 <span id="moneyDisplay">0</span></span>
+    <span>💥 こわした かず <span id="breakCountDisplay">0</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="tablet-box" id="tabletBox">
+      <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hpBarFill"></div></div>
+      <span class="tablet-emoji" id="tabletEmoji">📱</span>
+    </div>
+
+    <div class="tool-bar" id="toolBar"></div>
+
+    <div class="shop-box">
+      <div class="shop-title">🛒 どうぐを かおう</div>
+      <div class="shop-list" id="shopList"></div>
+    </div>
+  </div>
+
+  <div class="flash-msg" id="flashMsg"></div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const MONEY_KEY = 'soutaMoneyCount';
+    function getMoney() { return parseInt(localStorage.getItem(MONEY_KEY) || '0', 10); }
+    function setMoney(v) { localStorage.setItem(MONEY_KEY, String(v)); }
+
+    const OWNED_KEY = 'soutaTabletSmashOwnedTools';
+    function getOwned() {
+      try { return JSON.parse(localStorage.getItem(OWNED_KEY) || '["punch"]'); }
+      catch (e) { return ['punch']; }
+    }
+    function saveOwned(list) { localStorage.setItem(OWNED_KEY, JSON.stringify(list)); }
+
+    const BREAK_KEY = 'soutaTabletSmashBreakCount';
+    function getBreakCount() { return parseInt(localStorage.getItem(BREAK_KEY) || '0', 10); }
+    function bumpBreakCount() {
+      const next = getBreakCount() + 1;
+      localStorage.setItem(BREAK_KEY, String(next));
+      return next;
+    }
+
+    const TOOLS = [
+      { id: 'punch', name: 'パンチ', emoji: '👊', price: 0, hits: 20 },
+      { id: 'slap', name: 'ビンタ', emoji: '🖐️', price: 10, hits: 15 },
+      { id: 'hammer', name: 'ハンマー', emoji: '🔨', price: 20, hits: 8 },
+      { id: 'bat', name: 'バット', emoji: '⚾', price: 40, hits: 4 },
+      { id: 'rock', name: 'おおいわ', emoji: '🪨', price: 80, hits: 2 },
+      { id: 'lightning', name: 'かみなり', emoji: '⚡', price: 150, hits: 1 },
+    ];
+
+    const moneyDisplayEl = document.getElementById('moneyDisplay');
+    const breakCountDisplayEl = document.getElementById('breakCountDisplay');
+    const tabletBox = document.getElementById('tabletBox');
+    const tabletEmoji = document.getElementById('tabletEmoji');
+    const hpBarFill = document.getElementById('hpBarFill');
+    const toolBarEl = document.getElementById('toolBar');
+    const shopListEl = document.getElementById('shopList');
+    const flashMsgEl = document.getElementById('flashMsg');
+
+    let owned = getOwned();
+    let selectedToolId = owned[owned.length - 1] || 'punch';
+    let tabletMaxHp = toolById(selectedToolId).hits;
+    let tabletHp = tabletMaxHp;
+
+    function toolById(id) { return TOOLS.find(t => t.id === id); }
+
+    function showFlash(text) {
+      flashMsgEl.textContent = text;
+      flashMsgEl.classList.remove('show');
+      void flashMsgEl.offsetWidth;
+      flashMsgEl.classList.add('show');
+    }
+
+    function refreshMoneyDisplay() {
+      moneyDisplayEl.textContent = getMoney();
+    }
+
+    function renderTools() {
+      toolBarEl.innerHTML = '';
+      TOOLS.filter(t => owned.includes(t.id)).forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'tool-btn' + (t.id === selectedToolId ? ' selected' : '');
+        btn.innerHTML = `<span class="t-emoji">${t.emoji}</span><span class="t-name">${t.name}</span>`;
+        btn.addEventListener('click', () => {
+          selectedToolId = t.id;
+          renderTools();
+          GameAudio.playClickTick();
+        });
+        toolBarEl.appendChild(btn);
+      });
+    }
+
+    function renderShop() {
+      shopListEl.innerHTML = '';
+      TOOLS.forEach(t => {
+        const isOwned = owned.includes(t.id);
+        const row = document.createElement('div');
+        row.className = 'shop-item' + (isOwned ? ' owned' : '');
+        row.innerHTML = `
+          <div class="shop-left">
+            <span class="shop-emoji">${t.emoji}</span>
+            <div>
+              <div class="shop-name">${t.name}</div>
+              <div class="shop-hits">${t.hits}かい たたくと こわれる</div>
+            </div>
+          </div>
+          <button class="buy-btn ${isOwned ? 'owned-badge' : ''}" id="buyBtn_${t.id}">
+            ${isOwned ? '✔ もってる' : (t.price === 0 ? 'むりょう' : `💰${t.price}`)}
+          </button>
+        `;
+        shopListEl.appendChild(row);
+        const buyBtn = document.getElementById('buyBtn_' + t.id);
+        if (isOwned) {
+          buyBtn.disabled = true;
+        } else {
+          buyBtn.disabled = getMoney() < t.price;
+          buyBtn.addEventListener('click', () => buyTool(t));
+        }
+      });
+    }
+
+    function buyTool(t) {
+      const money = getMoney();
+      if (money < t.price) {
+        GameAudio.playFailBuzz();
+        return;
+      }
+      setMoney(money - t.price);
+      owned.push(t.id);
+      saveOwned(owned);
+      refreshMoneyDisplay();
+      renderShop();
+      renderTools();
+      selectedToolId = t.id;
+      renderTools();
+      GameAudio.playClearFanfare();
+      showFlash(`${t.emoji} ${t.name}を かったよ！`);
+    }
+
+    function resetTablet() {
+      const t = toolById(selectedToolId);
+      tabletMaxHp = t.hits;
+      tabletHp = tabletMaxHp;
+      hpBarFill.style.width = '100%';
+      tabletEmoji.textContent = '📱';
+    }
+
+    function hitTablet() {
+      const t = toolById(selectedToolId);
+      tabletHp = Math.max(0, tabletHp - 1);
+      hpBarFill.style.width = (tabletHp / tabletMaxHp * 100) + '%';
+      tabletBox.classList.remove('hit');
+      void tabletBox.offsetWidth;
+      tabletBox.classList.add('hit');
+      GameAudio.playPunchImpact();
+      if (tabletHp <= 0) {
+        tabletEmoji.textContent = '💥';
+        GameAudio.playClearFanfare();
+        const total = bumpBreakCount();
+        breakCountDisplayEl.textContent = total;
+        showFlash(`${t.emoji} ${t.name}で タブレットを こわした！`);
+        Leaderboard.showRankFlow({ gameId: 'tablet-smash', score: total, higherIsBetter: true, unit: 'だい', title: '📱💥 タブレットこわし ランキング' });
+        setTimeout(resetTablet, 700);
+      }
+    }
+
+    tabletBox.addEventListener('click', hitTablet);
+
+    breakCountDisplayEl.textContent = getBreakCount();
+    refreshMoneyDisplay();
+    renderTools();
+    renderShop();
+    resetTablet();
+  </script>
+</body>
+</html>

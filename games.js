@@ -380,4 +380,12 @@ const GAMES = [
     path: 'games/block-craft/index.html?v=3',
     desc: 'ざいりょうを あつめて、Jボタンで どうぐを クラフトしよう！つるはしや けんなど いろいろ つくれるよ。',
   },
+  {
+    id: 'tablet-smash',
+    title: 'そうすけの タブレットこわし',
+    emoji: '📱',
+    color: '#444444',
+    path: 'games/tablet-smash/index.html',
+    desc: 'おかねで どうぐを かって、タブレットを バンバン こわそう！いちばん つよい どうぐは いっぱつで こわせるよ。',
+  },
 ];

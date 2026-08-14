@@ -60,6 +60,19 @@ body {
   box-shadow: 0 4px 0 rgba(0,0,0,0.15);
 }
 
+.money-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFF6D8;
+  color: #7a5c00;
+  font-size: 1.1rem;
+  font-weight: bold;
+  padding: 6px 16px;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+}
+
 .grid {
   width: 100%;
   max-width: 1000px;
