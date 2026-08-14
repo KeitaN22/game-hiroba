@@ -377,7 +377,7 @@ const GAMES = [
     title: 'そうすけの ブロッククラフト',
     emoji: '🧱',
     color: '#8FCB6B',
-    path: 'games/block-craft/index.html?v=2',
+    path: 'games/block-craft/index.html?v=3',
     desc: 'ざいりょうを あつめて、Jボタンで どうぐを クラフトしよう！つるはしや けんなど いろいろ つくれるよ。',
   },
 ];

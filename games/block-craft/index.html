@@ -276,6 +276,8 @@
     let mineTaps = 0;
     const MINE_TAPS_NEEDED = 4;
     let caveLit = false;
+    let spotUses = {};
+    let allCraftedAnnounced = false;
 
     function bestPickaxeTier() {
       if (madeItems.iron_pick > 0) return 'iron';
@@ -427,6 +429,8 @@
             return;
           }
           spot.action(card);
+          spotUses[spot.id] = (spotUses[spot.id] || 0) + 1;
+          checkAdventureComplete();
         });
         spotGridEl.appendChild(card);
       });
@@ -437,6 +441,8 @@
       madeItems = {};
       mineTaps = 0;
       caveLit = false;
+      spotUses = {};
+      allCraftedAnnounced = false;
       MATERIALS.forEach(m => { inventory[m.id] = 0; });
       RECIPES.forEach(r => { madeItems[r.id] = 0; });
       completeOverlay.classList.add('hide');
@@ -539,14 +545,24 @@
       GameAudio.playClearFanfare();
       showFlash(`${recipe.emoji} ${recipe.name}を つくったよ！`);
       updateRecipeButtons();
-      checkComplete();
+      announceAllCraftedIfReady();
+      checkAdventureComplete();
     }
 
-    function checkComplete() {
+    function announceAllCraftedIfReady() {
       const allMade = RECIPES.every(r => madeItems[r.id] > 0);
-      if (allMade) {
+      if (allMade && !allCraftedAnnounced) {
+        allCraftedAnnounced = true;
+        setTimeout(() => showFlash('🎉 どうぐが ぜんぶ できた！ こんどは たんけんに いこう！'), 1500);
+      }
+    }
+
+    function checkAdventureComplete() {
+      const allMade = RECIPES.every(r => madeItems[r.id] > 0);
+      const allExplored = SPOTS.every(s => (spotUses[s.id] || 0) > 0);
+      if (allMade && allExplored) {
         const totalCrafted = Object.values(madeItems).reduce((a, b) => a + b, 0);
-        completeTextEl.textContent = `${RECIPES.length}しゅるいの どうぐを ぜんぶ つくったよ！すごい！`;
+        completeTextEl.textContent = `どうぐも ぜんぶ つくって、ぼうけんも ぜんぶ おわったよ！すごい！`;
         completeOverlay.classList.remove('hide');
         Leaderboard.showRankFlow({ gameId: 'block-craft', score: totalCrafted, higherIsBetter: true, unit: 'こ', title: '🧱 ブロッククラフト ランキング' });
       }
