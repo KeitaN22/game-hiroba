@@ -11,7 +11,7 @@
   .stage-wrap {
     position: relative;
     width: 100%;
-    max-width: 500px;
+    max-width: 720px;
   }
 
   .hud {
@@ -34,11 +34,11 @@
   .arena {
     position: relative;
     width: 100%;
-    height: 480px;
+    height: 680px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 6px;
+    gap: 12px;
     background: #6B4A2E;
     border-radius: 10px;
     overflow: hidden;
@@ -52,9 +52,9 @@
   }
   .room-zone.near { box-shadow: inset 0 0 0 5px #FFD166; }
   .room-zone.done { opacity: 0.7; }
-  .room-emoji { font-size: 2.1rem; }
-  .room-name { font-size: 0.6rem; font-weight: bold; color: #333; margin-top: 2px; text-align: center; padding: 0 4px; }
-  .room-check { font-size: 0.85rem; margin-top: 2px; }
+  .room-emoji { font-size: 3rem; }
+  .room-name { font-size: 0.8rem; font-weight: bold; color: #333; margin-top: 4px; text-align: center; padding: 0 4px; }
+  .room-check { font-size: 1.1rem; margin-top: 4px; }
 
   .room-zone.floor-tile { background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 22px), repeating-linear-gradient(90deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 22px); }
   .room-zone.floor-wood { background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 3px, transparent 3px 30px); }
@@ -62,7 +62,7 @@
 
   .player {
     position: absolute;
-    font-size: 2.1rem;
+    font-size: 3rem;
     transform: translate(-50%, -50%);
     z-index: 6;
     filter: drop-shadow(0 3px 2px rgba(0,0,0,0.3));
@@ -184,7 +184,7 @@
       { id: 'game', row: 2, col: 2, emoji: '🎮', name: 'ゲームルーム', floor: 'carpet', bg: '#FFC1E3', msg: '🎮 ゲームが たのしかったね！', sound: 'playClearFanfare' },
     ];
     const PLAYER_START = { x: 50, y: 50 };
-    const PROXIMITY = 55;
+    const PROXIMITY = 90;
 
     const arenaEl = document.getElementById('arena');
     const playerEl = document.getElementById('player');

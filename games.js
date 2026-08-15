@@ -401,7 +401,7 @@ const GAMES = [
     title: 'そうすけの おうちで なにする？',
     emoji: '🏠',
     color: '#FFD9A0',
-    path: 'games/home-life/index.html?v=2',
+    path: 'games/home-life/index.html?v=3',
     desc: 'やじるしで おうちの マップを うごいて、キッチンや おふろなど 9つの おへやで いろんな ことを やってみよう！',
   },
 ];
