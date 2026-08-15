@@ -11,7 +11,7 @@
   .stage-wrap {
     position: relative;
     width: 100%;
-    max-width: 480px;
+    max-width: 500px;
   }
 
   .hud {
@@ -20,39 +20,52 @@
     margin-bottom: 14px;
   }
 
+  .house-frame {
+    background: #8B5E3C;
+    border-radius: 20px;
+    padding: 10px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 12px 24px rgba(0,0,0,0.25);
+  }
+  .roof-label {
+    text-align: center; color: #fff; font-weight: bold; font-size: 0.85rem;
+    padding-bottom: 8px;
+  }
+
   .arena {
     position: relative;
     width: 100%;
-    height: 460px;
-    background: #F5EDE0;
-    border-radius: 20px;
-    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    height: 480px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 6px;
+    background: #6B4A2E;
+    border-radius: 10px;
     overflow: hidden;
   }
 
   .room-zone {
-    position: absolute;
-    width: 46%; height: 46%;
-    border-radius: 16px;
+    position: relative;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     padding-top: 10px; box-sizing: border-box;
     transition: box-shadow 0.15s ease;
   }
   .room-zone.near { box-shadow: inset 0 0 0 5px #FFD166; }
-  .room-zone.done { opacity: 0.75; }
-  .room-zone.kitchen { left: 2%; top: 2%; background: #FFE0B2; }
-  .room-zone.game { right: 2%; top: 2%; background: #D6C7F0; }
-  .room-zone.toilet { left: 2%; bottom: 2%; background: #B3E0F2; }
-  .room-zone.tv { right: 2%; bottom: 2%; background: #C8F7C5; }
-  .room-emoji { font-size: 2.6rem; }
-  .room-name { font-size: 0.7rem; font-weight: bold; color: #333; margin-top: 2px; }
-  .room-check { font-size: 0.9rem; margin-top: 2px; }
+  .room-zone.done { opacity: 0.7; }
+  .room-emoji { font-size: 2.1rem; }
+  .room-name { font-size: 0.6rem; font-weight: bold; color: #333; margin-top: 2px; text-align: center; padding: 0 4px; }
+  .room-check { font-size: 0.85rem; margin-top: 2px; }
+
+  .room-zone.floor-tile { background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 22px), repeating-linear-gradient(90deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 22px); }
+  .room-zone.floor-wood { background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 3px, transparent 3px 30px); }
+  .room-zone.floor-carpet { background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px); background-size: 8px 8px; }
 
   .player {
     position: absolute;
-    font-size: 2.2rem;
+    font-size: 2.1rem;
     transform: translate(-50%, -50%);
     z-index: 6;
+    filter: drop-shadow(0 3px 2px rgba(0,0,0,0.3));
   }
 
   .controls-row {
@@ -91,12 +104,12 @@
 
   .overlay {
     position: absolute; inset: 0; background: rgba(0,0,0,0.65);
-    border-radius: 20px;
+    border-radius: 10px;
     display: flex; align-items: center; justify-content: center; flex-direction: column;
     color: #fff; text-align: center; z-index: 10; padding: 20px;
   }
   .overlay.hide { display: none !important; }
-  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
   .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
 </style>
 </head>
@@ -106,47 +119,29 @@
   <h1 class="game-title">🏠 そうすけの おうちで なにする？</h1>
 
   <div class="hud">
-    <span>やった かず <span id="doneCount">0</span>/4</span>
+    <span>やった かず <span id="doneCount">0</span>/9</span>
   </div>
 
   <div class="stage-wrap">
-    <div class="arena" id="arena">
-      <div class="room-zone kitchen" id="zone_kitchen">
-        <span class="room-emoji">🍳</span>
-        <span class="room-name">キッチンで やく</span>
-        <span class="room-check" id="check_kitchen">&nbsp;</span>
-      </div>
-      <div class="room-zone game" id="zone_game">
-        <span class="room-emoji">🎮</span>
-        <span class="room-name">ゲームする</span>
-        <span class="room-check" id="check_game">&nbsp;</span>
-      </div>
-      <div class="room-zone toilet" id="zone_toilet">
-        <span class="room-emoji">🚽</span>
-        <span class="room-name">トイレに いく</span>
-        <span class="room-check" id="check_toilet">&nbsp;</span>
-      </div>
-      <div class="room-zone tv" id="zone_tv">
-        <span class="room-emoji">📺</span>
-        <span class="room-name">テレビを みる</span>
-        <span class="room-check" id="check_tv">&nbsp;</span>
-      </div>
+    <div class="house-frame">
+      <div class="roof-label">🏠 そうすけの おうち マップ</div>
+      <div class="arena" id="arena">
+        <span class="player" id="player">🧑‍🦱</span>
 
-      <span class="player" id="player">🧑‍🦱</span>
+        <div class="overlay" id="startOverlay">
+          <h2>🏠 おうちで なにする？</h2>
+          <p>
+            やじるしで うごいて、おへやに ちかづくと「やる」ボタンが おせるよ。<br>
+            9つの おへやで いろんな ことを してみよう！
+          </p>
+          <button class="big-btn" id="startBtn">▶ スタート</button>
+        </div>
 
-      <div class="overlay" id="startOverlay">
-        <h2>🏠 おうちで なにする？</h2>
-        <p>
-          やじるしで うごいて、おへやに ちかづくと「やる」ボタンが おせるよ。<br>
-          4つの おへやで いろんな ことを してみよう！
-        </p>
-        <button class="big-btn" id="startBtn">▶ スタート</button>
-      </div>
-
-      <div class="overlay hide" id="endOverlay">
-        <h2>🎉 おわり！ 🎉</h2>
-        <p id="endText"></p>
-        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+        <div class="overlay hide" id="endOverlay">
+          <h2>🎉 おわり！ 🎉</h2>
+          <p id="endText"></p>
+          <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+        </div>
       </div>
     </div>
   </div>
@@ -178,13 +173,18 @@
     });
 
     const ROOMS = [
-      { id: 'kitchen', center: { x: 25, y: 25 }, msg: '🍳 おいしそうに やけたよ！ いいにおい！', sound: 'playClearFanfare' },
-      { id: 'game', center: { x: 75, y: 25 }, msg: '🎮 ゲームが たのしかったね！', sound: 'playClearFanfare' },
-      { id: 'toilet', center: { x: 25, y: 75 }, msg: '🚽 うんちが でたよ！ すっきり した！', sound: 'playToiletFlush' },
-      { id: 'tv', center: { x: 75, y: 75 }, msg: '📺 テレビが おもしろかったね！', sound: 'playClearFanfare' },
+      { id: 'genkan', row: 0, col: 0, emoji: '🚪', name: 'げんかんで くつを ぬぐ', floor: 'wood', bg: '#E8D9C0', msg: '🚪 くつを きれいに そろえたよ！', sound: 'playClickTick' },
+      { id: 'kitchen', row: 0, col: 1, emoji: '🍳', name: 'キッチンで やく', floor: 'tile', bg: '#FFE0B2', msg: '🍳 おいしそうに やけたよ！ いいにおい！', sound: 'playClearFanfare' },
+      { id: 'bath', row: 0, col: 2, emoji: '🛁', name: 'おふろに はいる', floor: 'tile', bg: '#B3E0F2', msg: '🛁 あったかい おふろで さっぱり した！', sound: 'playClearFanfare' },
+      { id: 'bedroom', row: 1, col: 0, emoji: '🛏️', name: 'しんしつで おひるね', floor: 'carpet', bg: '#D6C7F0', msg: '🛏️ ぐっすり おひるねしたよ！', sound: 'playClearFanfare' },
+      { id: 'tv', row: 1, col: 1, emoji: '📺', name: 'リビングで テレビ', floor: 'carpet', bg: '#C8F7C5', msg: '📺 テレビが おもしろかったね！', sound: 'playClearFanfare' },
+      { id: 'laundry', row: 1, col: 2, emoji: '🧺', name: 'せんたくを する', floor: 'tile', bg: '#FFF3B0', msg: '🧺 せんたくものが ふわふわに なったよ！', sound: 'playClickTick' },
+      { id: 'toilet', row: 2, col: 0, emoji: '🚽', name: 'トイレで うんち', floor: 'tile', bg: '#AEE1FF', msg: '🚽 うんちが でたよ！ すっきり した！', sound: 'playToiletFlush' },
+      { id: 'study', row: 2, col: 1, emoji: '📚', name: 'べんきょうべや', floor: 'wood', bg: '#FFD9A0', msg: '📚 べんきょうを がんばったね！', sound: 'playClearFanfare' },
+      { id: 'game', row: 2, col: 2, emoji: '🎮', name: 'ゲームルーム', floor: 'carpet', bg: '#FFC1E3', msg: '🎮 ゲームが たのしかったね！', sound: 'playClearFanfare' },
     ];
     const PLAYER_START = { x: 50, y: 50 };
-    const PROXIMITY = 70;
+    const PROXIMITY = 55;
 
     const arenaEl = document.getElementById('arena');
     const playerEl = document.getElementById('player');
@@ -194,6 +194,24 @@
     const startOverlay = document.getElementById('startOverlay');
     const endOverlay = document.getElementById('endOverlay');
     const endTextEl = document.getElementById('endText');
+
+    doneCountEl.parentElement.innerHTML = `やった かず <span id="doneCount">0</span>/${ROOMS.length}`;
+
+    ROOMS.forEach(room => {
+      const zone = document.createElement('div');
+      zone.className = `room-zone floor-${room.floor}`;
+      zone.id = 'zone_' + room.id;
+      zone.style.gridRow = (room.row + 1);
+      zone.style.gridColumn = (room.col + 1);
+      zone.style.background = room.bg;
+      zone.innerHTML = `
+        <span class="room-emoji">${room.emoji}</span>
+        <span class="room-name">${room.name}</span>
+        <span class="room-check" id="check_${room.id}">&nbsp;</span>
+      `;
+      arenaEl.insertBefore(zone, playerEl);
+      room.center = { x: (room.col + 0.5) / 3 * 100, y: (room.row + 0.5) / 3 * 100 };
+    });
 
     let playerX = 0, playerY = 0;
     let input = { up: false, down: false, left: false, right: false };
@@ -275,7 +293,7 @@
       const soundFn = GameAudio[room.sound];
       if (soundFn) soundFn.call(GameAudio);
       const doneTotal = Object.keys(doneRooms).length;
-      doneCountEl.textContent = doneTotal;
+      document.getElementById('doneCount').textContent = doneTotal;
       updateNearRoom();
       if (doneTotal >= ROOMS.length) {
         finishGame();
@@ -286,7 +304,7 @@
       playing = false;
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
-      endTextEl.textContent = 'おうちの 4つの ことを ぜんぶ やったね！すごい！';
+      endTextEl.textContent = `おうちの ${ROOMS.length}つの ことを ぜんぶ やったね！すごい！`;
       endOverlay.classList.remove('hide');
       Leaderboard.showRankFlow({ gameId: 'home-life', score: ROOMS.length, higherIsBetter: true, unit: 'こ', title: '🏠 おうちで なにする？ ランキング' });
     }
@@ -297,7 +315,7 @@
       playing = true;
       doneRooms = {};
       msgBoxEl.textContent = ' ';
-      doneCountEl.textContent = '0';
+      document.getElementById('doneCount').textContent = '0';
       ROOMS.forEach(r => {
         document.getElementById('check_' + r.id).textContent = ' ';
         document.getElementById('zone_' + r.id).classList.remove('done', 'near');
