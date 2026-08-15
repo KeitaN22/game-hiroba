@@ -396,4 +396,12 @@ const GAMES = [
     path: 'games/red-green-light/index.html',
     desc: 'グリーンライトの ときだけ すすんで、レッドライトで とまろう！60メートル さきの ゴールを めざそう！',
   },
+  {
+    id: 'home-life',
+    title: 'そうすけの おうちで なにする？',
+    emoji: '🏠',
+    color: '#FFD9A0',
+    path: 'games/home-life/index.html',
+    desc: 'やじるしで おうちの なかを うごいて、キッチン・ゲーム・トイレ・テレビの 4つを やってみよう！',
+  },
 ];

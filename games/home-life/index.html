@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの おうちで なにする？</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFD9A0 0%, #FFB88C 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 460px;
+    background: #F5EDE0;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+
+  .room-zone {
+    position: absolute;
+    width: 46%; height: 46%;
+    border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding-top: 10px; box-sizing: border-box;
+    transition: box-shadow 0.15s ease;
+  }
+  .room-zone.near { box-shadow: inset 0 0 0 5px #FFD166; }
+  .room-zone.done { opacity: 0.75; }
+  .room-zone.kitchen { left: 2%; top: 2%; background: #FFE0B2; }
+  .room-zone.game { right: 2%; top: 2%; background: #D6C7F0; }
+  .room-zone.toilet { left: 2%; bottom: 2%; background: #B3E0F2; }
+  .room-zone.tv { right: 2%; bottom: 2%; background: #C8F7C5; }
+  .room-emoji { font-size: 2.6rem; }
+  .room-name { font-size: 0.7rem; font-weight: bold; color: #333; margin-top: 2px; }
+  .room-check { font-size: 0.9rem; margin-top: 2px; }
+
+  .player {
+    position: absolute;
+    font-size: 2.2rem;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px;
+    margin-top: 16px;
+  }
+  .dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(3, 58px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    font-size: 1.4rem;
+    border: none; border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .dpad-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .dpad-btn.empty { visibility: hidden; }
+
+  .do-btn {
+    font-size: 1rem; font-weight: bold; padding: 16px 26px; border: none; border-radius: 16px;
+    color: #fff; cursor: pointer; user-select: none;
+    background: #999; box-shadow: 0 5px 0 #666;
+  }
+  .do-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .do-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .do-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .msg-box {
+    text-align: center; font-size: 1.05rem; font-weight: bold; color: #4CAF50;
+    min-height: 26px; margin-top: 10px;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.7rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🏠 そうすけの おうちで なにする？</h1>
+
+  <div class="hud">
+    <span>やった かず <span id="doneCount">0</span>/4</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <div class="room-zone kitchen" id="zone_kitchen">
+        <span class="room-emoji">🍳</span>
+        <span class="room-name">キッチンで やく</span>
+        <span class="room-check" id="check_kitchen">&nbsp;</span>
+      </div>
+      <div class="room-zone game" id="zone_game">
+        <span class="room-emoji">🎮</span>
+        <span class="room-name">ゲームする</span>
+        <span class="room-check" id="check_game">&nbsp;</span>
+      </div>
+      <div class="room-zone toilet" id="zone_toilet">
+        <span class="room-emoji">🚽</span>
+        <span class="room-name">トイレに いく</span>
+        <span class="room-check" id="check_toilet">&nbsp;</span>
+      </div>
+      <div class="room-zone tv" id="zone_tv">
+        <span class="room-emoji">📺</span>
+        <span class="room-name">テレビを みる</span>
+        <span class="room-check" id="check_tv">&nbsp;</span>
+      </div>
+
+      <span class="player" id="player">🧑‍🦱</span>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🏠 おうちで なにする？</h2>
+        <p>
+          やじるしで うごいて、おへやに ちかづくと「やる」ボタンが おせるよ。<br>
+          4つの おへやで いろんな ことを してみよう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="msg-box" id="msgBox">&nbsp;</div>
+
+  <div class="controls-row">
+    <div class="dpad-grid">
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnUp">⬆️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnLeft">⬅️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnRight">➡️</button>
+      <button class="dpad-btn empty"></button>
+      <button class="dpad-btn" id="btnDown">⬇️</button>
+      <button class="dpad-btn empty"></button>
+    </div>
+    <button class="do-btn" id="doBtn" disabled>▶ やる</button>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const ROOMS = [
+      { id: 'kitchen', center: { x: 25, y: 25 }, msg: '🍳 おいしそうに やけたよ！ いいにおい！', sound: 'playClearFanfare' },
+      { id: 'game', center: { x: 75, y: 25 }, msg: '🎮 ゲームが たのしかったね！', sound: 'playClearFanfare' },
+      { id: 'toilet', center: { x: 25, y: 75 }, msg: '🚽 うんちが でたよ！ すっきり した！', sound: 'playToiletFlush' },
+      { id: 'tv', center: { x: 75, y: 75 }, msg: '📺 テレビが おもしろかったね！', sound: 'playClearFanfare' },
+    ];
+    const PLAYER_START = { x: 50, y: 50 };
+    const PROXIMITY = 70;
+
+    const arenaEl = document.getElementById('arena');
+    const playerEl = document.getElementById('player');
+    const doBtn = document.getElementById('doBtn');
+    const msgBoxEl = document.getElementById('msgBox');
+    const doneCountEl = document.getElementById('doneCount');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let playerX = 0, playerY = 0;
+    let input = { up: false, down: false, left: false, right: false };
+    let playing = false;
+    let nearRoomId = null;
+    let doneRooms = {};
+    let lastFrame = 0;
+
+    function pxOf(pctX, pctY) {
+      return { x: arenaEl.clientWidth * pctX / 100, y: arenaEl.clientHeight * pctY / 100 };
+    }
+
+    function updateNearRoom() {
+      let found = null;
+      for (const room of ROOMS) {
+        const p = pxOf(room.center.x, room.center.y);
+        const dist = Math.hypot(playerX - p.x, playerY - p.y);
+        const zoneEl = document.getElementById('zone_' + room.id);
+        const isNear = dist < PROXIMITY;
+        zoneEl.classList.toggle('near', isNear && !doneRooms[room.id]);
+        if (isNear && !doneRooms[room.id]) found = room.id;
+      }
+      nearRoomId = found;
+      doBtn.disabled = !nearRoomId;
+      doBtn.classList.toggle('ready', !!nearRoomId);
+    }
+
+    function update(dt) {
+      if (!playing) return;
+      const speed = 150;
+      let dx = 0, dy = 0;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      playerX = Math.max(14, Math.min(arenaEl.clientWidth - 14, playerX + dx * speed * dt));
+      playerY = Math.max(14, Math.min(arenaEl.clientHeight - 14, playerY + dy * speed * dt));
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      updateNearRoom();
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      update(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function setDir(dir, value) { input[dir] = value; }
+    ['Up', 'Down', 'Left', 'Right'].forEach(dir => {
+      const key = dir.toLowerCase();
+      const btn = document.getElementById('btn' + dir);
+      btn.addEventListener('pointerdown', () => setDir(key, true));
+      btn.addEventListener('pointerup', () => setDir(key, false));
+      btn.addEventListener('pointerleave', () => setDir(key, false));
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') input.up = true;
+      if (e.key === 'ArrowDown') input.down = true;
+      if (e.key === 'ArrowLeft') input.left = true;
+      if (e.key === 'ArrowRight') input.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') input.up = false;
+      if (e.key === 'ArrowDown') input.down = false;
+      if (e.key === 'ArrowLeft') input.left = false;
+      if (e.key === 'ArrowRight') input.right = false;
+    });
+
+    function doActivity() {
+      if (!playing || !nearRoomId || doneRooms[nearRoomId]) return;
+      const room = ROOMS.find(r => r.id === nearRoomId);
+      doneRooms[room.id] = true;
+      document.getElementById('check_' + room.id).textContent = '✔';
+      document.getElementById('zone_' + room.id).classList.add('done');
+      msgBoxEl.textContent = room.msg;
+      const soundFn = GameAudio[room.sound];
+      if (soundFn) soundFn.call(GameAudio);
+      const doneTotal = Object.keys(doneRooms).length;
+      doneCountEl.textContent = doneTotal;
+      updateNearRoom();
+      if (doneTotal >= ROOMS.length) {
+        finishGame();
+      }
+    }
+
+    function finishGame() {
+      playing = false;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = 'おうちの 4つの ことを ぜんぶ やったね！すごい！';
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'home-life', score: ROOMS.length, higherIsBetter: true, unit: 'こ', title: '🏠 おうちで なにする？ ランキング' });
+    }
+
+    doBtn.addEventListener('click', doActivity);
+
+    function startGame() {
+      playing = true;
+      doneRooms = {};
+      msgBoxEl.textContent = ' ';
+      doneCountEl.textContent = '0';
+      ROOMS.forEach(r => {
+        document.getElementById('check_' + r.id).textContent = ' ';
+        document.getElementById('zone_' + r.id).classList.remove('done', 'near');
+      });
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      const home = pxOf(PLAYER_START.x, PLAYER_START.y);
+      playerX = home.x; playerY = home.y;
+      playerEl.style.left = playerX + 'px';
+      playerEl.style.top = playerY + 'px';
+      GameAudio.playBGM();
+      updateNearRoom();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
