@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの レッドライト グリーンライト</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #87CEEB 0%, #C8F7C5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    background: #fff;
+    border-radius: 24px;
+    height: 380px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .doll-area {
+    height: 40%;
+    background: linear-gradient(180deg, #B3E0F2 0%, #E8F5E9 100%);
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .doll-emoji { font-size: 4rem; transition: transform 0.3s ease; }
+  .doll-emoji.turned { transform: scaleX(-1); }
+  .light-indicator {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 1.1rem; font-weight: bold; padding: 6px 20px; border-radius: 999px;
+    color: #fff;
+  }
+  .light-indicator.green { background: #4CAF50; }
+  .light-indicator.red { background: #E05353; }
+
+  .track-area {
+    position: relative;
+    height: 60%;
+    background: repeating-linear-gradient(90deg, #DDD 0 4%, #EEE 4% 8%);
+  }
+  .goal-flag {
+    position: absolute; right: 4%; top: 10%; bottom: 10%;
+    width: 6px; background: repeating-linear-gradient(180deg, #FF5D5D 0 10px, #fff 10px 20px);
+  }
+  .goal-label {
+    position: absolute; right: 2%; top: 2%;
+    font-size: 0.7rem; font-weight: bold; color: #333;
+    background: rgba(255,255,255,0.85); padding: 2px 8px; border-radius: 999px;
+  }
+  .runner {
+    position: absolute; bottom: 12%; left: 4%;
+    font-size: 2.4rem;
+    transition: left 0.1s linear;
+  }
+  .runner.caught { animation: runnerShake 0.4s ease-out; }
+  @keyframes runnerShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px) rotate(-8deg); }
+    75% { transform: translateX(6px) rotate(8deg); }
+  }
+
+  .move-btn-wrap { display: flex; justify-content: center; }
+  .move-btn {
+    font-size: 1.2rem; font-weight: bold; padding: 20px 60px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer; user-select: none; touch-action: none;
+    box-shadow: 0 6px 0 #c73f6a;
+  }
+  .move-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+  .move-btn.holding { background: #FF9A56; box-shadow: 0 6px 0 #c96e2e; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🚦 レッドライト グリーンライト</h1>
+
+  <div class="hud">
+    <span>📏 きょり <span id="distanceDisplay">0</span>/60 m</span>
+    <span>⏱️ <span id="timeDisplay">0.0</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <div class="doll-area">
+        <span class="light-indicator green" id="lightIndicator">グリーンライト</span>
+        <span class="doll-emoji" id="dollEmoji">🧑‍🦰</span>
+      </div>
+      <div class="track-area">
+        <div class="goal-flag"></div>
+        <div class="goal-label">🏁 60m</div>
+        <span class="runner" id="runner">🏃</span>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🚦 レッドライト グリーンライト</h2>
+        <p>
+          「グリーンライト」の あいだだけ ボタンを おして すすもう！<br>
+          「レッドライト」の ときに うごくと アウトだよ。<br>
+          60メートル さきの ゴールを めざそう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="failOverlay">
+        <h2>🚨 アウト！</h2>
+        <p>レッドライトの ときに うごいちゃったよ。もういちど ちょうせん しよう！</p>
+        <button class="big-btn" id="retryFailBtn">🔄 もういちど</button>
+      </div>
+
+      <div class="overlay hide" id="winOverlay">
+        <h2>🎉 ゴール！ 🎉</h2>
+        <p id="winText"></p>
+        <button class="big-btn" id="retryWinBtn">🔄 もういちど</button>
+      </div>
+    </div>
+
+    <div class="move-btn-wrap">
+      <button class="move-btn" id="moveBtn" disabled>🏃 すすむ！</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const GOAL_METERS = 60;
+    const MOVE_SPEED = 20; // meters per second while green + moving
+    const GREEN_MIN_MS = 1400, GREEN_MAX_MS = 3200;
+    const RED_MIN_MS = 1200, RED_MAX_MS = 2600;
+
+    const arenaEl = document.getElementById('arena');
+    const distanceDisplayEl = document.getElementById('distanceDisplay');
+    const timeDisplayEl = document.getElementById('timeDisplay');
+    const dollEmojiEl = document.getElementById('dollEmoji');
+    const lightIndicatorEl = document.getElementById('lightIndicator');
+    const trackAreaEl = document.querySelector('.track-area');
+    const runnerEl = document.getElementById('runner');
+    const moveBtn = document.getElementById('moveBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const failOverlay = document.getElementById('failOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTextEl = document.getElementById('winText');
+
+    let playing = false;
+    let lightState = 'green';
+    let lightTimer = null;
+    let moving = false;
+    let distance = 0;
+    let startTime = 0;
+    let lastFrame = 0;
+    let rafId = null;
+
+    function pxLeftFor(distanceM) {
+      const trackWidth = trackAreaEl.clientWidth;
+      const usable = trackWidth * 0.86; // leave room before goal flag
+      return 4 + (usable * (distanceM / GOAL_METERS)) / trackWidth * 100;
+    }
+
+    function updateRunnerPos() {
+      runnerEl.style.left = pxLeftFor(distance) + '%';
+    }
+
+    function setLight(state) {
+      lightState = state;
+      lightIndicatorEl.textContent = state === 'green' ? 'グリーンライト' : 'レッドライト';
+      lightIndicatorEl.className = 'light-indicator ' + state;
+      dollEmojiEl.classList.toggle('turned', state === 'green');
+      GameAudio.playClickTick();
+      clearTimeout(lightTimer);
+      const dur = state === 'green'
+        ? GREEN_MIN_MS + Math.random() * (GREEN_MAX_MS - GREEN_MIN_MS)
+        : RED_MIN_MS + Math.random() * (RED_MAX_MS - RED_MIN_MS);
+      lightTimer = setTimeout(() => setLight(state === 'green' ? 'red' : 'green'), dur);
+    }
+
+    function startMoving() {
+      if (!playing) return;
+      moving = true;
+      moveBtn.classList.add('holding');
+    }
+    function stopMoving() {
+      moving = false;
+      moveBtn.classList.remove('holding');
+    }
+
+    moveBtn.addEventListener('pointerdown', startMoving);
+    moveBtn.addEventListener('pointerup', stopMoving);
+    moveBtn.addEventListener('pointerleave', stopMoving);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.key === 'ArrowUp') startMoving();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' || e.key === 'ArrowUp') stopMoving();
+    });
+
+    function failGame() {
+      playing = false;
+      clearTimeout(lightTimer);
+      cancelAnimationFrame(rafId);
+      GameAudio.playFailBuzz();
+      runnerEl.classList.add('caught');
+      moveBtn.disabled = true;
+      failOverlay.classList.remove('hide');
+    }
+
+    function winGame() {
+      playing = false;
+      clearTimeout(lightTimer);
+      cancelAnimationFrame(rafId);
+      moveBtn.disabled = true;
+      const elapsed = (performance.now() - startTime) / 1000;
+      GameAudio.playClearFanfare();
+      winTextEl.textContent = `${elapsed.toFixed(1)}びょうで ゴールした！すごい！`;
+      winOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'red-green-light', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🚦 レッドライト グリーンライト ランキング' });
+    }
+
+    function update(dt) {
+      if (!playing) return;
+      if (moving && lightState === 'red') {
+        failGame();
+        return;
+      }
+      if (moving && lightState === 'green') {
+        distance = Math.min(GOAL_METERS, distance + MOVE_SPEED * dt);
+        distanceDisplayEl.textContent = Math.floor(distance);
+        updateRunnerPos();
+        if (distance >= GOAL_METERS) {
+          winGame();
+          return;
+        }
+      }
+      timeDisplayEl.textContent = ((performance.now() - startTime) / 1000).toFixed(1);
+      rafId = requestAnimationFrame((now) => {
+        const d = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        update(d);
+      });
+    }
+
+    function startGame() {
+      playing = true;
+      distance = 0;
+      moving = false;
+      moveBtn.classList.remove('holding');
+      moveBtn.disabled = false;
+      runnerEl.classList.remove('caught');
+      distanceDisplayEl.textContent = '0';
+      timeDisplayEl.textContent = '0.0';
+      startOverlay.classList.add('hide');
+      failOverlay.classList.add('hide');
+      winOverlay.classList.add('hide');
+      updateRunnerPos();
+      startTime = performance.now();
+      lastFrame = performance.now();
+      setLight('green');
+      rafId = requestAnimationFrame((now) => {
+        lastFrame = now;
+        update(0);
+      });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryFailBtn').addEventListener('click', startGame);
+    document.getElementById('retryWinBtn').addEventListener('click', startGame);
+
+    updateRunnerPos();
+  </script>
+</body>
+</html>

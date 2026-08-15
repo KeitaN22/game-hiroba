@@ -388,4 +388,12 @@ const GAMES = [
     path: 'games/tablet-smash/index.html?v=3',
     desc: 'おかねで どうぐを かって、タブレットを バンバン こわそう！いちばん つよい どうぐは いっぱつで こわせるよ。',
   },
+  {
+    id: 'red-green-light',
+    title: 'そうすけの レッドライト グリーンライト',
+    emoji: '🚦',
+    color: '#87CEEB',
+    path: 'games/red-green-light/index.html',
+    desc: 'グリーンライトの ときだけ すすんで、レッドライトで とまろう！60メートル さきの ゴールを めざそう！',
+  },
 ];
