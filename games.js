@@ -404,4 +404,12 @@ const GAMES = [
     path: 'games/home-life/index.html?v=3',
     desc: 'やじるしで おうちの マップを うごいて、キッチンや おふろなど 9つの おへやで いろんな ことを やってみよう！',
   },
+  {
+    id: 'airplane-pack',
+    title: 'そうすけの ひこうきに なにをのせる？',
+    emoji: '✈️',
+    color: '#87CEEB',
+    path: 'games/airplane-pack/index.html',
+    desc: '22このなかから もっていく ものを えらんで、ひこうきの なかで つかってみよう！',
+  },
 ];

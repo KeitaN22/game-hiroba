@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ひこうきに なにをのせる？</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #87CEEB 0%, #FFF3B0 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .panel-box {
+    position: relative;
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 18px;
+    box-sizing: border-box;
+    min-height: 420px;
+  }
+  .panel-box.hide { display: none; }
+
+  .item-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;
+    margin-bottom: 16px;
+  }
+  .item-card {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: #FFF6D8; border: none; border-radius: 14px;
+    padding: 10px 4px; cursor: pointer; user-select: none;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+  }
+  .item-card:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+  .item-card.selected { background: #FFD166; box-shadow: 0 0 0 3px #FF9A56, 0 4px 0 rgba(0,0,0,0.15); }
+  .item-card.packed { background: #C8F7C5; opacity: 0.75; cursor: default; }
+  .item-card .i-emoji { font-size: 1.8rem; }
+  .item-card .i-name { font-size: 0.55rem; font-weight: bold; color: #333; text-align: center; }
+  .item-card .i-check { font-size: 0.7rem; color: #4CAF50; }
+
+  .decide-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .decide-btn {
+    font-size: 1rem; font-weight: bold; padding: 14px 28px; border: none; border-radius: 999px;
+    background: #4CAF50; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #2e7d32;
+  }
+  .decide-btn:disabled { opacity: 0.5; cursor: default; }
+  .decide-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #2e7d32; }
+
+  .board-btn {
+    font-size: 1rem; font-weight: bold; padding: 14px 28px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #c73f6a;
+  }
+  .board-btn:disabled { opacity: 0.5; cursor: default; }
+  .board-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #c73f6a; }
+
+  .cabin-title { text-align: center; font-size: 1rem; font-weight: bold; color: #333; margin-bottom: 12px; }
+  .cabin-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px;
+  }
+  .cabin-card {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: #F0F8FF; border: none; border-radius: 16px;
+    padding: 14px 6px; cursor: pointer; user-select: none;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+  }
+  .cabin-card:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.12); }
+  .cabin-card.used { background: #E3F5E1; }
+  .cabin-card .c-emoji { font-size: 2.2rem; transition: transform 0.15s ease; }
+  .cabin-card.pop .c-emoji { animation: itemPop 0.3s ease-out; }
+  @keyframes itemPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3) rotate(-6deg); }
+    100% { transform: scale(1); }
+  }
+  .cabin-card .c-name { font-size: 0.6rem; font-weight: bold; color: #333; text-align: center; }
+  .cabin-card .c-status { font-size: 0.55rem; color: #888; min-height: 14px; text-align: center; }
+
+  .msg-box {
+    text-align: center; font-size: 1.05rem; font-weight: bold; color: #4CAF50;
+    min-height: 26px; margin-top: 14px;
+  }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">✈️ そうすけの ひこうきに なにをのせる？</h1>
+
+  <div class="hud">
+    <span>🧳 にもつ <span id="packCount">0</span>/<span id="packMax">8</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="panel-box" id="packPanel">
+      <div class="item-grid" id="itemGrid"></div>
+      <div class="decide-row">
+        <button class="decide-btn" id="decideBtn" disabled>🟢 これに きめた！</button>
+        <button class="board-btn" id="boardBtn" disabled>✈️ ひこうきに のる</button>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>✈️ ひこうきに なにをのせる？</h2>
+        <p>
+          22この なかから、もっていく ものを えらぼう！<br>
+          ものを タップして、みどりの「これに きめた！」ボタンを おすと にもつに はいるよ。<br>
+          きめたら「ひこうきに のる」ボタンを おそう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+    </div>
+
+    <div class="panel-box hide" id="cabinPanel">
+      <div class="cabin-title">✈️ きないで つかってみよう！</div>
+      <div class="cabin-grid" id="cabinGrid"></div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 ちゃくりく！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="msg-box" id="msgBox">&nbsp;</div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const PACK_MAX = 8;
+
+    const ITEMS = [
+      { id: 'teddy', emoji: '🧸', name: 'ぬいぐるみ', type: 'play', msg: 'ぎゅっと だっこ した！ あんしんするね！' },
+      { id: 'book', emoji: '📖', name: 'ほん', type: 'read', msg: 'おもしろい おはなしを よんだよ！' },
+      { id: 'headphones', emoji: '🎧', name: 'ヘッドホン', type: 'music', msg: null },
+      { id: 'cookie', emoji: '🍪', name: 'クッキー', type: 'eat', msg: 'さくさく クッキーを たべた！ おいしい！', sound: 'playChewCookie' },
+      { id: 'juice', emoji: '🧃', name: 'ジュース', type: 'drink', msg: 'ジュースを ごくごく のんだよ！' },
+      { id: 'handheld', emoji: '🎮', name: 'ゲームき', type: 'play', msg: 'ゲームで あそんだ！ たのしい！' },
+      { id: 'tablet', emoji: '📱', name: 'タブレット', type: 'watch', msg: 'どうがを みたよ！ おもしろいね！' },
+      { id: 'socks', emoji: '🧦', name: 'くつした', type: 'wear', msg: 'あたらしい くつしたに はきかえた！' },
+      { id: 'jacket', emoji: '🧥', name: 'うわぎ', type: 'wear', msg: 'うわぎを きたよ！ あったかい！' },
+      { id: 'toothbrush', emoji: '🪥', name: 'はぶらし', type: 'use', msg: 'はを みがいたよ！ さっぱり！' },
+      { id: 'cream', emoji: '🧴', name: 'クリーム', type: 'use', msg: 'てに クリームを ぬったよ！ すべすべ！' },
+      { id: 'medicine', emoji: '💊', name: 'よいどめ', type: 'use', msg: 'よいどめを のんだよ！ もう あんしん！' },
+      { id: 'drawbook', emoji: '🎨', name: 'おえかきちょう', type: 'play', msg: 'すきな えを かいたよ！ じょうずに できた！' },
+      { id: 'pencil', emoji: '✏️', name: 'えんぴつ', type: 'play', msg: 'えんぴつで もじを かいたよ！' },
+      { id: 'chocolate', emoji: '🍫', name: 'チョコレート', type: 'eat', msg: 'あまい チョコを たべた！ にっこり！', sound: 'playChewChocolate' },
+      { id: 'puzzle', emoji: '🧩', name: 'パズル', type: 'play', msg: 'パズルを かんせい させたよ！' },
+      { id: 'duck', emoji: '🦆', name: 'あひるちゃん', type: 'play', msg: 'あひるちゃんと あそんだよ！ きゅっきゅっ！' },
+      { id: 'umbrella', emoji: '🌂', name: 'かさ', type: 'use', msg: 'かさを ひらいたり とじたり したよ！' },
+      { id: 'sunglasses', emoji: '🕶️', name: 'サングラス', type: 'wear', msg: 'サングラスを かけたよ！ かっこいい！' },
+      { id: 'camera', emoji: '📷', name: 'カメラ', type: 'photo', msg: null },
+      { id: 'muffler', emoji: '🧣', name: 'マフラー', type: 'wear', msg: 'マフラーを まいたよ！ ぽかぽか！' },
+      { id: 'pillow', emoji: '🐻', name: 'くまの まくら', type: 'sleep', msg: 'まくらを だいて ぐっすり ねむれたよ！' },
+    ];
+
+    const itemGridEl = document.getElementById('itemGrid');
+    const decideBtn = document.getElementById('decideBtn');
+    const boardBtn = document.getElementById('boardBtn');
+    const packCountEl = document.getElementById('packCount');
+    const packMaxEl = document.getElementById('packMax');
+    const packPanel = document.getElementById('packPanel');
+    const cabinPanel = document.getElementById('cabinPanel');
+    const cabinGridEl = document.getElementById('cabinGrid');
+    const msgBoxEl = document.getElementById('msgBox');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    packMaxEl.textContent = PACK_MAX;
+
+    let selectedId = null;
+    let packed = [];
+    let cabinUses = {};
+
+    function renderItemGrid() {
+      itemGridEl.innerHTML = '';
+      ITEMS.forEach(item => {
+        const isPacked = packed.includes(item.id);
+        const btn = document.createElement('button');
+        btn.className = 'item-card' + (item.id === selectedId ? ' selected' : '') + (isPacked ? ' packed' : '');
+        btn.disabled = isPacked;
+        btn.innerHTML = `
+          <span class="i-emoji">${item.emoji}</span>
+          <span class="i-name">${item.name}</span>
+          <span class="i-check">${isPacked ? '✔ にもつ' : ''}</span>
+        `;
+        btn.addEventListener('click', () => {
+          if (isPacked) return;
+          selectedId = item.id;
+          renderItemGrid();
+          decideBtn.disabled = false;
+          GameAudio.playClickTick();
+        });
+        itemGridEl.appendChild(btn);
+      });
+    }
+
+    function decideItem() {
+      if (!selectedId || packed.includes(selectedId)) return;
+      if (packed.length >= PACK_MAX) {
+        GameAudio.playFailBuzz();
+        msgBoxEl.textContent = `🧳 にもつが いっぱいだよ！(${PACK_MAX}こまで)`;
+        return;
+      }
+      packed.push(selectedId);
+      const item = ITEMS.find(i => i.id === selectedId);
+      msgBoxEl.textContent = `${item.emoji} ${item.name}を にもつに いれたよ！`;
+      GameAudio.playClearFanfare();
+      selectedId = null;
+      decideBtn.disabled = true;
+      packCountEl.textContent = packed.length;
+      boardBtn.disabled = packed.length < 1;
+      renderItemGrid();
+    }
+
+    function boardPlane() {
+      if (packed.length < 1) return;
+      packPanel.classList.add('hide');
+      cabinPanel.classList.remove('hide');
+      cabinUses = {};
+      renderCabin();
+      GameAudio.playClickTick();
+      msgBoxEl.textContent = 'もちものを タップして、きないで つかってみよう！';
+    }
+
+    function renderCabin() {
+      cabinGridEl.innerHTML = '';
+      packed.forEach(id => {
+        const item = ITEMS.find(i => i.id === id);
+        const card = document.createElement('button');
+        card.className = 'cabin-card' + (cabinUses[id] ? ' used' : '');
+        card.id = 'cabin_' + id;
+        card.innerHTML = `
+          <span class="c-emoji">${item.emoji}</span>
+          <span class="c-name">${item.name}</span>
+          <span class="c-status" id="cabinStatus_${id}">${cabinUses[id] ? '✔ つかった' : 'タップしてね'}</span>
+        `;
+        card.addEventListener('click', () => useCabinItem(item, card));
+        cabinGridEl.appendChild(card);
+      });
+    }
+
+    function useCabinItem(item, card) {
+      card.classList.remove('pop');
+      void card.offsetWidth;
+      card.classList.add('pop');
+      cabinUses[item.id] = (cabinUses[item.id] || 0) + 1;
+      card.classList.add('used');
+
+      if (item.type === 'music') {
+        const playing = card.dataset.playing === '1';
+        if (playing) {
+          card.dataset.playing = '0';
+          document.getElementById('cabinStatus_' + item.id).textContent = '✔ つかった';
+          GameAudio.stopBGM();
+        } else {
+          card.dataset.playing = '1';
+          document.getElementById('cabinStatus_' + item.id).textContent = '🎵 さいせいちゅう';
+          GameAudio.playBGM();
+        }
+        msgBoxEl.textContent = 'おんがくを きいたよ！ きもちいいね！';
+      } else if (item.type === 'photo') {
+        document.getElementById('cabinStatus_' + item.id).textContent = '✔ つかった';
+        msgBoxEl.textContent = '📷 そらの しゃしんを とったよ！ きれい！';
+        GameAudio.playClickTick();
+      } else {
+        document.getElementById('cabinStatus_' + item.id).textContent = '✔ つかった';
+        msgBoxEl.textContent = item.msg;
+        const soundFn = item.sound ? GameAudio[item.sound] : GameAudio.playClearFanfare;
+        if (soundFn) soundFn.call(GameAudio);
+      }
+
+      checkAllUsed();
+    }
+
+    function checkAllUsed() {
+      const allUsed = packed.every(id => cabinUses[id]);
+      if (allUsed) {
+        endTextEl.textContent = `もっていった ${packed.length}この もちものを ぜんぶ つかったよ！たのしい たびだったね！`;
+        endOverlay.classList.remove('hide');
+        GameAudio.playClearFanfare();
+        Leaderboard.showRankFlow({ gameId: 'airplane-pack', score: packed.length, higherIsBetter: true, unit: 'こ', title: '✈️ ひこうき パッキング ランキング' });
+      }
+    }
+
+    function startGame() {
+      selectedId = null;
+      packed = [];
+      cabinUses = {};
+      packCountEl.textContent = '0';
+      decideBtn.disabled = true;
+      boardBtn.disabled = true;
+      msgBoxEl.textContent = ' ';
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      packPanel.classList.remove('hide');
+      cabinPanel.classList.add('hide');
+      renderItemGrid();
+    }
+
+    decideBtn.addEventListener('click', decideItem);
+    boardBtn.addEventListener('click', boardPlane);
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    renderItemGrid();
+  </script>
+</body>
+</html>
