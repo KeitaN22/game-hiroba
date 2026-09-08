@@ -417,7 +417,7 @@ const GAMES = [
     title: '？？？',
     emoji: '❓',
     color: 'linear-gradient(135deg, #FF5050, #FF9A56, #FFE985, #7CFF7C, #56C6FF, #9A7CFF, #FF7CD8)',
-    path: 'games/sumo-battle/index.html',
+    path: 'games/sumo-battle/index.html?v=2',
     desc: 'なんの ゲームか あそぶまで ひみつ！おしてみてね！',
   },
 ];
