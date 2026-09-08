@@ -419,5 +419,15 @@ const GAMES = [
     color: 'linear-gradient(135deg, #FF5050, #FF9A56, #FFE985, #7CFF7C, #56C6FF, #9A7CFF, #FF7CD8)',
     path: 'games/sumo-battle/index.html?v=2',
     desc: 'なんの ゲームか あそぶまで ひみつ！おしてみてね！',
+    unlockPrice: 2000,
+  },
+  {
+    id: 'sousuke-level2',
+    title: 'そうすけゲーム レベル2',
+    emoji: '🌪️',
+    color: '#6B7B8C',
+    path: 'games/sousuke-level2/index.html',
+    desc: 'たつまきを よけながら 30びょう いきのびよう！レーンを かえて よけるぞ！',
+    unlockPrice: 3000,
   },
 ];

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけゲーム レベル2</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #6B7B8C 0%, #C9CED6 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .arena {
+    position: relative;
+    width: 100%;
+    height: 460px;
+    background: linear-gradient(180deg, #8FA3B8 0%, #DCE3EA 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+
+  .lane-line {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: rgba(255,255,255,0.4);
+  }
+
+  .tornado {
+    position: absolute;
+    font-size: 2.4rem;
+    transform: translate(-50%, -50%);
+  }
+
+  .player {
+    position: absolute;
+    font-size: 2.6rem;
+    top: 85%;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+    transition: left 0.15s ease-out;
+  }
+  .player.hit { animation: playerHit 0.4s ease-out; }
+  @keyframes playerHit {
+    0%, 100% { transform: translate(-50%, -50%); }
+    25% { transform: translate(-50%, -50%) scale(1.3) rotate(-10deg); }
+    75% { transform: translate(-50%, -50%) scale(1.3) rotate(10deg); }
+  }
+
+  .controls-row {
+    display: flex; justify-content: center; gap: 24px;
+    margin-top: 16px;
+  }
+  .lane-btn {
+    font-size: 1.6rem; font-weight: bold; padding: 18px 40px; border: none; border-radius: 16px;
+    background: #fff; color: #333;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .lane-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🌪️ そうすけゲーム レベル2</h1>
+
+  <div class="hud">
+    <span>❤️ <span id="livesDisplay">3</span></span>
+    <span>⏱️ <span id="timeDisplay">0</span>/<span id="timeTargetDisplay">30</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="arena" id="arena">
+      <div class="lane-line" style="left:33.3%;"></div>
+      <div class="lane-line" style="left:66.6%;"></div>
+      <div id="tornadoLayer"></div>
+      <span class="player" id="player">🧒</span>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🌪️ たつまきステージ</h2>
+        <p>
+          ⬅️➡️ボタンで レーンを かえて、たつまきを よけよう！<br>
+          ❤️3こ ある いのちを まもりながら、30びょう いきのびたら クリア！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">-</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <button class="lane-btn" id="btnLeft">⬅️</button>
+    <button class="lane-btn" id="btnRight">➡️</button>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const LANE_X = [20, 50, 80];
+    const PLAYER_Y = 85;
+    const HIT_TOLERANCE = 8;
+    const TIME_TARGET = 30;
+    const TICK_MS = 120;
+    const START_LIVES = 3;
+
+    const arenaEl = document.getElementById('arena');
+    const tornadoLayerEl = document.getElementById('tornadoLayer');
+    const playerEl = document.getElementById('player');
+    const livesDisplayEl = document.getElementById('livesDisplay');
+    const timeDisplayEl = document.getElementById('timeDisplay');
+    const timeTargetDisplayEl = document.getElementById('timeTargetDisplay');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    timeTargetDisplayEl.textContent = TIME_TARGET;
+
+    let playing = false;
+    let laneIndex = 1;
+    let lives = START_LIVES;
+    let elapsedSec = 0;
+    let tornadoes = [];
+    let tornadoEls = {};
+    let nextTornadoId = 1;
+    let spawnCooldown = 0;
+    let tickTimer = null;
+
+    function updatePlayerPos() {
+      playerEl.style.left = LANE_X[laneIndex] + '%';
+    }
+
+    function moveLane(dir) {
+      if (!playing) return;
+      laneIndex = Math.max(0, Math.min(LANE_X.length - 1, laneIndex + dir));
+      updatePlayerPos();
+      GameAudio.playClickTick();
+    }
+
+    document.getElementById('btnLeft').addEventListener('click', () => moveLane(-1));
+    document.getElementById('btnRight').addEventListener('click', () => moveLane(1));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') moveLane(-1);
+      if (e.key === 'ArrowRight') moveLane(1);
+    });
+
+    function difficultySpeed() {
+      // tornado y-advance per tick, grows with elapsed time
+      return 2.2 + elapsedSec * 0.06;
+    }
+    function difficultySpawnGap() {
+      // ticks between spawns, shrinks with elapsed time (min bound)
+      return Math.max(6, 14 - Math.floor(elapsedSec / 4));
+    }
+
+    function spawnTornado() {
+      const lane = Math.floor(Math.random() * LANE_X.length);
+      const t = { id: nextTornadoId++, lane, y: -6 };
+      tornadoes.push(t);
+      const el = document.createElement('span');
+      el.className = 'tornado';
+      el.textContent = '🌪️';
+      el.style.left = LANE_X[lane] + '%';
+      el.style.top = t.y + '%';
+      tornadoLayerEl.appendChild(el);
+      tornadoEls[t.id] = el;
+    }
+
+    function tick() {
+      if (!playing) return;
+      elapsedSec += TICK_MS / 1000;
+      timeDisplayEl.textContent = Math.floor(elapsedSec);
+
+      spawnCooldown -= 1;
+      if (spawnCooldown <= 0) {
+        spawnTornado();
+        spawnCooldown = difficultySpawnGap();
+      }
+
+      const speed = difficultySpeed();
+      tornadoes = tornadoes.filter(t => {
+        t.y += speed;
+        const el = tornadoEls[t.id];
+        el.style.top = t.y + '%';
+        if (t.lane === laneIndex && Math.abs(t.y - PLAYER_Y) < HIT_TOLERANCE) {
+          el.remove();
+          delete tornadoEls[t.id];
+          onHit();
+          return false;
+        }
+        if (t.y > 108) {
+          el.remove();
+          delete tornadoEls[t.id];
+          return false;
+        }
+        return true;
+      });
+
+      if (elapsedSec >= TIME_TARGET) {
+        winGame();
+      }
+    }
+
+    function onHit() {
+      lives--;
+      livesDisplayEl.textContent = lives;
+      playerEl.classList.remove('hit');
+      void playerEl.offsetWidth;
+      playerEl.classList.add('hit');
+      GameAudio.playFailBuzz();
+      if (lives <= 0) {
+        loseGame();
+      }
+    }
+
+    function loseGame() {
+      playing = false;
+      clearInterval(tickTimer);
+      GameAudio.stopBGM();
+      endTitleEl.textContent = '🌪️ やられちゃった…';
+      endTextEl.textContent = `${Math.floor(elapsedSec)}びょう いきのびたよ。もういちど ちょうせん しよう！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'sousuke-level2', score: Math.floor(elapsedSec), higherIsBetter: true, unit: 'びょう', title: '🌪️ たつまきステージ ランキング' });
+    }
+
+    function winGame() {
+      playing = false;
+      clearInterval(tickTimer);
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      endTitleEl.textContent = '🎉 ステージクリア！ 🎉';
+      endTextEl.textContent = `30びょう たつまきを よけきったよ！のこり いのち ${lives}こで クリア！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'sousuke-level2', score: TIME_TARGET, higherIsBetter: true, unit: 'びょう', title: '🌪️ たつまきステージ ランキング' });
+    }
+
+    function startGame() {
+      playing = true;
+      laneIndex = 1;
+      lives = START_LIVES;
+      elapsedSec = 0;
+      spawnCooldown = 3;
+      tornadoes.forEach(t => { if (tornadoEls[t.id]) tornadoEls[t.id].remove(); });
+      tornadoes = [];
+      tornadoEls = {};
+      livesDisplayEl.textContent = lives;
+      timeDisplayEl.textContent = '0';
+      updatePlayerPos();
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      GameAudio.playBGM();
+      clearInterval(tickTimer);
+      tickTimer = setInterval(tick, TICK_MS);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    updatePlayerPos();
+  </script>
+</body>
+</html>

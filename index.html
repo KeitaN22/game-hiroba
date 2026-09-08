@@ -24,7 +24,7 @@
 
   <div class="grid" id="grid"></div>
 
-  <script src="games.js?v=73"></script>
+  <script src="games.js?v=74"></script>
   <script>
     const grid = document.getElementById('grid');
     const snackCountEl = document.getElementById('snackCount');
@@ -52,13 +52,10 @@
     }
     moneyCountEl.textContent = getMoneyCount();
 
-    const UNLOCK_MONEY_TARGET = 2000;
-    const UNLOCKED_GAME_ID = 'sumo-battle';
-    const UNLOCKED_GAME_NUMBER = GAMES.findIndex(g => g.id === UNLOCKED_GAME_ID) + 1;
-
-    function isSumoUnlocked() {
-      return getMoneyCount() >= UNLOCK_MONEY_TARGET;
+    function isGameUnlocked(game) {
+      return !game.unlockPrice || getMoneyCount() >= game.unlockPrice;
     }
+    const lockedGames = GAMES.filter(g => g.unlockPrice);
 
     const unlockToastEl = document.getElementById('unlockToast');
     function showToast(text) {
@@ -68,17 +65,21 @@
       unlockToastEl.classList.add('show');
     }
 
+    let unlockedIdSet = new Set(lockedGames.filter(isGameUnlocked).map(g => g.id));
+
     function handleMoneyChange(newAmount) {
-      const wasUnlocked = handleMoneyChange._lastUnlocked;
-      const nowUnlocked = newAmount >= UNLOCK_MONEY_TARGET;
       moneyCountEl.textContent = newAmount;
-      if (!wasUnlocked && nowUnlocked) {
-        showToast(`🎉 ${UNLOCKED_GAME_NUMBER}ばんが あそべるように なりました！`);
+      const nowUnlocked = lockedGames.filter(isGameUnlocked);
+      const newlyUnlocked = nowUnlocked.filter(g => !unlockedIdSet.has(g.id));
+      if (newlyUnlocked.length > 0) {
+        newlyUnlocked.forEach(g => {
+          const num = GAMES.findIndex(x => x.id === g.id) + 1;
+          showToast(`🎉 ${num}ばんが あそべるように なりました！`);
+        });
+        unlockedIdSet = new Set(nowUnlocked.map(g => g.id));
         renderGrid();
       }
-      handleMoneyChange._lastUnlocked = nowUnlocked;
     }
-    handleMoneyChange._lastUnlocked = isSumoUnlocked();
 
     const atmBtn = document.getElementById('atmBtn');
     atmBtn.addEventListener('click', () => {
@@ -95,7 +96,7 @@
         return;
       }
       GAMES.forEach((game, index) => {
-        const locked = game.id === UNLOCKED_GAME_ID && !isSumoUnlocked();
+        const locked = game.unlockPrice && !isGameUnlocked(game);
         const a = document.createElement('a');
         a.className = 'card' + (locked ? ' locked' : '');
         a.href = game.path;
@@ -104,7 +105,7 @@
           <div class="number-badge">${index + 1}</div>
           <div class="emoji">${locked ? '🔒' : game.emoji}</div>
           <div class="title">${game.title}</div>
-          <div class="desc">${locked ? `🔒 これは アンロックされていません（おかね ${UNLOCK_MONEY_TARGET}で あそべるよ）` : game.desc}</div>
+          <div class="desc">${locked ? `🔒 これは アンロックされていません（おかね ${game.unlockPrice}で あそべるよ）` : game.desc}</div>
           <div class="play-btn">${locked ? 'ロック中' : 'あそぶ ▶'}</div>
         `;
         a.addEventListener('click', (e) => {
