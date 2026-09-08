@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの おすもう たいけつ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #FFE9B0 0%, #FFB88C 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .dohyo-box {
+    position: relative;
+    background: #E8D2A0;
+    border-radius: 24px;
+    height: 320px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .ring {
+    position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%);
+    width: 260px; height: 260px; border-radius: 50%;
+    border: 10px solid #8B5E3C;
+    box-sizing: border-box;
+  }
+  .fighter {
+    position: absolute; top: 55%; transform: translate(-50%, -50%);
+    font-size: 3.6rem;
+    transition: left 0.15s ease-out;
+  }
+  .fighter.shake { animation: pushShake 0.15s ease-out; }
+  @keyframes pushShake {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+  }
+  .vs-label {
+    position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+    font-size: 0.9rem; font-weight: bold; color: #333;
+    background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 999px;
+  }
+  .call-msg {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.6);
+    font-size: 1.6rem; font-weight: bold; color: #FF5D5D;
+    opacity: 0; z-index: 8; white-space: nowrap;
+    text-shadow: 2px 2px 0 #fff;
+  }
+  .call-msg.show { animation: callPop 1s ease-out forwards; }
+  @keyframes callPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  .power-bar-wrap {
+    position: relative;
+    height: 22px; background: #ddd; border-radius: 999px; overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .power-bar-fill {
+    height: 100%; width: 50%;
+    background: linear-gradient(90deg, #FF9A56, #FF5D8F);
+    transition: width 0.12s ease-out;
+  }
+  .power-mid-line {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #333;
+  }
+
+  .push-btn-wrap { display: flex; justify-content: center; }
+  .push-btn {
+    font-size: 1.3rem; font-weight: bold; padding: 22px 64px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer; user-select: none; touch-action: none;
+    box-shadow: 0 6px 0 #c73f6a;
+  }
+  .push-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #c73f6a; }
+  .push-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🤼 そうすけの おすもう たいけつ</h1>
+
+  <div class="hud">
+    <span>🏆 かった かず <span id="winCount">0</span></span>
+    <span>🥋 あいて <span id="roundNum">1</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="dohyo-box" id="dohyoBox">
+      <span class="vs-label">そうすけ 🆚 あいて</span>
+      <div class="ring"></div>
+      <span class="fighter" id="playerFighter" style="left:30%;">🤼</span>
+      <span class="fighter" id="cpuFighter" style="left:70%;">🤼</span>
+      <span class="call-msg" id="callMsg"></span>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🤼 おすもう たいけつ</h2>
+        <p>
+          「おす！」ボタンを れんだで タップして、あいてを どひょうの そとに おしだそう！<br>
+          たくさん かって、よこづなを めざそう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ はっけよい</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">-</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+
+    <div class="power-bar-wrap">
+      <div class="power-mid-line"></div>
+      <div class="power-bar-fill" id="powerBarFill"></div>
+    </div>
+
+    <div class="push-btn-wrap">
+      <button class="push-btn" id="pushBtn" disabled>💪 おす！</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const PUSH_AMOUNT = 4;
+    const WIN_THRESHOLD = 95;
+    const LOSE_THRESHOLD = 5;
+    const CPU_BASE_PULL = 0.5;
+    const CPU_PULL_GROWTH = 0.25;
+
+    const dohyoBox = document.getElementById('dohyoBox');
+    const playerFighterEl = document.getElementById('playerFighter');
+    const cpuFighterEl = document.getElementById('cpuFighter');
+    const callMsgEl = document.getElementById('callMsg');
+    const powerBarFillEl = document.getElementById('powerBarFill');
+    const pushBtn = document.getElementById('pushBtn');
+    const winCountEl = document.getElementById('winCount');
+    const roundNumEl = document.getElementById('roundNum');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    let playing = false;
+    let power = 50; // 0 = player pushed out (lose), 100 = cpu pushed out (win)
+    let round = 1;
+    let wins = 0;
+    let tickTimer = null;
+    let roundOver = false;
+
+    function updateFighterPositions() {
+      // power 0..100 maps to player fighter position 12%..50%, cpu fighter 88%..50%
+      const playerPct = 12 + (power / 100) * 38;
+      const cpuPct = 88 - (power / 100) * 38;
+      playerFighterEl.style.left = playerPct + '%';
+      cpuFighterEl.style.left = cpuPct + '%';
+      powerBarFillEl.style.width = power + '%';
+    }
+
+    function showCall(text) {
+      callMsgEl.textContent = text;
+      callMsgEl.classList.remove('show');
+      void callMsgEl.offsetWidth;
+      callMsgEl.classList.add('show');
+    }
+
+    function pushTick() {
+      if (!playing || roundOver) return;
+      const cpuPull = CPU_BASE_PULL + (round - 1) * CPU_PULL_GROWTH;
+      power -= cpuPull; // constant pull toward cpu winning (player losing) each tick
+      power = Math.max(0, Math.min(100, power));
+      updateFighterPositions();
+      checkRoundEnd();
+    }
+
+    function doPush() {
+      if (!playing || roundOver) return;
+      power = Math.min(100, power + PUSH_AMOUNT);
+      updateFighterPositions();
+      playerFighterEl.classList.remove('shake');
+      void playerFighterEl.offsetWidth;
+      playerFighterEl.classList.add('shake');
+      GameAudio.playPunchImpact();
+      checkRoundEnd();
+    }
+
+    function checkRoundEnd() {
+      if (power >= WIN_THRESHOLD) {
+        roundWin();
+      } else if (power <= LOSE_THRESHOLD) {
+        roundLose();
+      }
+    }
+
+    function roundWin() {
+      roundOver = true;
+      wins++;
+      winCountEl.textContent = wins;
+      GameAudio.playClearFanfare();
+      showCall('🎉 かちー！');
+      pushBtn.disabled = true;
+      clearInterval(tickTimer);
+      setTimeout(() => {
+        if (wins >= 5) {
+          finishGame(true);
+        } else {
+          round++;
+          roundNumEl.textContent = round;
+          startRound();
+        }
+      }, 1300);
+    }
+
+    function roundLose() {
+      roundOver = true;
+      GameAudio.playFailBuzz();
+      showCall('😢 まけた…');
+      pushBtn.disabled = true;
+      clearInterval(tickTimer);
+      setTimeout(() => finishGame(false), 1300);
+    }
+
+    function startRound() {
+      power = 50;
+      roundOver = false;
+      updateFighterPositions();
+      pushBtn.disabled = false;
+      showCall('はっけよい、のこった！');
+      clearInterval(tickTimer);
+      tickTimer = setInterval(pushTick, 100);
+    }
+
+    function finishGame(champion) {
+      playing = false;
+      clearInterval(tickTimer);
+      pushBtn.disabled = true;
+      GameAudio.stopBGM();
+      if (champion) {
+        endTitleEl.textContent = '🏆 よこづな たんじょう！';
+        endTextEl.textContent = `5れんしょうで よこづなに なったよ！すごい！`;
+      } else {
+        endTitleEl.textContent = '🤼 しょうぶ あり';
+        endTextEl.textContent = `${wins}かい かったよ！ もういちど ちょうせん しよう！`;
+      }
+      GameAudio.playClearFanfare();
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'sumo-battle', score: wins, higherIsBetter: true, unit: 'しょう', title: '🤼 おすもう たいけつ ランキング' });
+    }
+
+    pushBtn.addEventListener('click', doPush);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') doPush();
+    });
+
+    function startGame() {
+      playing = true;
+      round = 1;
+      wins = 0;
+      winCountEl.textContent = '0';
+      roundNumEl.textContent = '1';
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      GameAudio.playBGM();
+      startRound();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    updateFighterPositions();
+  </script>
+</body>
+</html>

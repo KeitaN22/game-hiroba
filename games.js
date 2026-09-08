@@ -412,4 +412,12 @@ const GAMES = [
     path: 'games/airplane-pack/index.html',
     desc: '22このなかから もっていく ものを えらんで、ひこうきの なかで つかってみよう！',
   },
+  {
+    id: 'sumo-battle',
+    title: '？？？',
+    emoji: '❓',
+    color: 'linear-gradient(135deg, #FF5050, #FF9A56, #FFE985, #7CFF7C, #56C6FF, #9A7CFF, #FF7CD8)',
+    path: 'games/sumo-battle/index.html',
+    desc: 'なんの ゲームか あそぶまで ひみつ！おしてみてね！',
+  },
 ];
