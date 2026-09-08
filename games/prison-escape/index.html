@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの けいむしょ だっしゅつ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #555 0%, #999 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .cell-box {
+    position: relative;
+    background: #D9CBB0;
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 60px), repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 60px);
+    border-radius: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 12px 24px rgba(0,0,0,0.25);
+    padding: 20px;
+    box-sizing: border-box;
+    min-height: 380px;
+  }
+
+  .spot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+  .spot-card {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: #FFF6D8; border: none; border-radius: 16px;
+    padding: 14px 6px; cursor: pointer; user-select: none;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+  }
+  .spot-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .spot-card:disabled { cursor: default; }
+  .spot-card.empty-found { background: #ddd; opacity: 0.6; }
+  .spot-card.key-found { background: #A6E8A0; }
+  .spot-card .sp-emoji { font-size: 2.2rem; }
+  .spot-card .sp-name { font-size: 0.65rem; font-weight: bold; color: #333; }
+  .spot-card.shake { animation: spotShake 0.3s ease-out; }
+  @keyframes spotShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .door-row { display: flex; justify-content: center; }
+  .door-btn {
+    font-size: 1.1rem; font-weight: bold; padding: 18px 40px; border: none; border-radius: 16px;
+    background: #6B4A2E; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #40290f;
+  }
+  .door-btn.ready { background: #FF9A56; box-shadow: 0 5px 0 #c96e2e; }
+  .door-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .msg-box {
+    text-align: center; font-size: 1.05rem; font-weight: bold; color: #4CAF50;
+    min-height: 26px; margin-top: 14px;
+  }
+  .msg-box.caught { color: #E05353; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🔒 そうすけの けいむしょ だっしゅつ</h1>
+
+  <div class="hud">
+    <span>⏱️ <span id="timeDisplay">0.0</span> びょう</span>
+    <span>🔍 さがした かず <span id="searchCount">0</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="cell-box" id="cellBox">
+      <div class="spot-grid" id="spotGrid"></div>
+      <div class="door-row">
+        <button class="door-btn" id="doorBtn">🚪 ドアを あける</button>
+      </div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🔒 けいむしょ だっしゅつ</h2>
+        <p>
+          へやの なかを さがして、レバーを みつけよう！<br>
+          レバーは どこかに かくれているよ。まいかい ばしょが かわるよ。<br>
+          レバーを もたずに ドアを あけると、かんしゅに みつかっちゃう！<br>
+          レバーを みつけてから ドアを あけて だっしゅつしよう！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2 id="endTitle">-</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="msg-box" id="msgBox">&nbsp;</div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const SPOTS = [
+      { id: 'bed', emoji: '🛏️', name: 'ベッドの した' },
+      { id: 'toilet', emoji: '🚽', name: 'トイレの うしろ' },
+      { id: 'box', emoji: '📦', name: 'だんボール' },
+      { id: 'wall', emoji: '🧱', name: 'かべの あな' },
+      { id: 'bucket', emoji: '🪣', name: 'バケツの なか' },
+      { id: 'shelf', emoji: '📚', name: 'ほんだな' },
+    ];
+
+    const spotGridEl = document.getElementById('spotGrid');
+    const doorBtn = document.getElementById('doorBtn');
+    const msgBoxEl = document.getElementById('msgBox');
+    const timeDisplayEl = document.getElementById('timeDisplay');
+    const searchCountEl = document.getElementById('searchCount');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const endTextEl = document.getElementById('endText');
+
+    let playing = false;
+    let keySpotId = null;
+    let hasKey = false;
+    let searchCount = 0;
+    let startTime = 0;
+    let timerHandle = null;
+    let searchedIds = {};
+
+    function renderSpots() {
+      spotGridEl.innerHTML = '';
+      SPOTS.forEach(spot => {
+        const btn = document.createElement('button');
+        btn.className = 'spot-card';
+        btn.id = 'spot_' + spot.id;
+        btn.innerHTML = `<span class="sp-emoji">${spot.emoji}</span><span class="sp-name">${spot.name}</span>`;
+        btn.addEventListener('click', () => searchSpot(spot, btn));
+        spotGridEl.appendChild(btn);
+      });
+    }
+
+    function searchSpot(spot, btn) {
+      if (!playing || searchedIds[spot.id]) return;
+      searchedIds[spot.id] = true;
+      searchCount++;
+      searchCountEl.textContent = searchCount;
+      btn.disabled = true;
+      btn.classList.remove('shake');
+      void btn.offsetWidth;
+      btn.classList.add('shake');
+
+      if (spot.id === keySpotId) {
+        hasKey = true;
+        btn.classList.add('key-found');
+        btn.querySelector('.sp-emoji').textContent = '🔧';
+        msgBoxEl.className = 'msg-box';
+        msgBoxEl.textContent = '🔧 レバーを みつけた！これで ドアが あけられるよ！';
+        GameAudio.playClearFanfare();
+        doorBtn.classList.add('ready');
+      } else {
+        btn.classList.add('empty-found');
+        msgBoxEl.className = 'msg-box';
+        msgBoxEl.textContent = `${spot.emoji} ${spot.name}を さがしたけど、なにも なかった…`;
+        GameAudio.playClickTick();
+      }
+    }
+
+    function openDoor() {
+      if (!playing) return;
+      if (hasKey) {
+        winGame();
+      } else {
+        caughtByGuard();
+      }
+    }
+
+    function caughtByGuard() {
+      playing = false;
+      clearInterval(timerHandle);
+      GameAudio.stopBGM();
+      GameAudio.playFailBuzz();
+      msgBoxEl.className = 'msg-box caught';
+      msgBoxEl.textContent = '🚨 かんしゅに みつかった！';
+      endTitleEl.textContent = '🚨 みつかっちゃった！';
+      endTextEl.textContent = 'レバーを もたずに ドアを あけたから、かんしゅに みつかっちゃった。もういちど ちょうせん しよう！';
+      endOverlay.classList.remove('hide');
+    }
+
+    function winGame() {
+      playing = false;
+      clearInterval(timerHandle);
+      const elapsed = (performance.now() - startTime) / 1000;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      msgBoxEl.className = 'msg-box';
+      msgBoxEl.textContent = '🎉 だっしゅつ せいこう！';
+      endTitleEl.textContent = '🎉 だっしゅつ せいこう！';
+      endTextEl.textContent = `${searchCount}かい さがして、${elapsed.toFixed(1)}びょうで だっしゅつしたよ！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'prison-escape', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🔒 けいむしょ だっしゅつ ランキング' });
+    }
+
+    doorBtn.addEventListener('click', openDoor);
+
+    function startGame() {
+      playing = true;
+      hasKey = false;
+      searchCount = 0;
+      searchedIds = {};
+      keySpotId = SPOTS[Math.floor(Math.random() * SPOTS.length)].id;
+      searchCountEl.textContent = '0';
+      timeDisplayEl.textContent = '0.0';
+      msgBoxEl.className = 'msg-box';
+      msgBoxEl.textContent = ' ';
+      doorBtn.classList.remove('ready');
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      renderSpots();
+      startTime = performance.now();
+      GameAudio.playBGM();
+      clearInterval(timerHandle);
+      timerHandle = setInterval(() => {
+        if (!playing) return;
+        timeDisplayEl.textContent = ((performance.now() - startTime) / 1000).toFixed(1);
+      }, 100);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    renderSpots();
+  </script>
+</body>
+</html>

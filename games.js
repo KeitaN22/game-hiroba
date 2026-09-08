@@ -430,4 +430,12 @@ const GAMES = [
     desc: 'たつまきを よけながら 30びょう いきのびよう！レーンを かえて よけるぞ！',
     unlockPrice: 3000,
   },
+  {
+    id: 'prison-escape',
+    title: 'そうすけの けいむしょ だっしゅつ',
+    emoji: '🔒',
+    color: '#999999',
+    path: 'games/prison-escape/index.html',
+    desc: 'へやの なかを さがして レバーを みつけて、ドアを あけて だっしゅつしよう！レバーが ないと みつかっちゃうよ。',
+  },
 ];
