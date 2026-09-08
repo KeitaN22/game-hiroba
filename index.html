@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ソウスケゲーム広場</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div class="hero">
@@ -16,6 +16,8 @@
       <button class="atm-badge" id="atmBtn">🏧 ATM</button>
     </p>
   </div>
+
+  <div class="unlock-toast" id="unlockToast"></div>
 
   <div class="grid" id="grid"></div>
 
@@ -47,36 +49,75 @@
     }
     moneyCountEl.textContent = getMoneyCount();
 
+    const UNLOCK_MONEY_TARGET = 2000;
+    const UNLOCKED_GAME_ID = 'sumo-battle';
+    const UNLOCKED_GAME_NUMBER = GAMES.findIndex(g => g.id === UNLOCKED_GAME_ID) + 1;
+
+    function isSumoUnlocked() {
+      return getMoneyCount() >= UNLOCK_MONEY_TARGET;
+    }
+
+    const unlockToastEl = document.getElementById('unlockToast');
+    function showToast(text) {
+      unlockToastEl.textContent = text;
+      unlockToastEl.classList.remove('show');
+      void unlockToastEl.offsetWidth;
+      unlockToastEl.classList.add('show');
+    }
+
+    function handleMoneyChange(newAmount) {
+      const wasUnlocked = handleMoneyChange._lastUnlocked;
+      const nowUnlocked = newAmount >= UNLOCK_MONEY_TARGET;
+      moneyCountEl.textContent = newAmount;
+      if (!wasUnlocked && nowUnlocked) {
+        showToast(`🎉 ${UNLOCKED_GAME_NUMBER}ばんが あそべるように なりました！`);
+        renderGrid();
+      }
+      handleMoneyChange._lastUnlocked = nowUnlocked;
+    }
+    handleMoneyChange._lastUnlocked = isSumoUnlocked();
+
     const atmBtn = document.getElementById('atmBtn');
     atmBtn.addEventListener('click', () => {
-      moneyCountEl.textContent = bumpMoneyCount(20);
+      handleMoneyChange(bumpMoneyCount(20));
       atmBtn.classList.remove('pop');
       void atmBtn.offsetWidth;
       atmBtn.classList.add('pop');
     });
 
-    if (GAMES.length === 0) {
-      grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';
-    } else {
+    function renderGrid() {
+      grid.innerHTML = '';
+      if (GAMES.length === 0) {
+        grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';
+        return;
+      }
       GAMES.forEach((game, index) => {
+        const locked = game.id === UNLOCKED_GAME_ID && !isSumoUnlocked();
         const a = document.createElement('a');
-        a.className = 'card';
+        a.className = 'card' + (locked ? ' locked' : '');
         a.href = game.path;
         a.style.background = game.color;
         a.innerHTML = `
           <div class="number-badge">${index + 1}</div>
-          <div class="emoji">${game.emoji}</div>
+          <div class="emoji">${locked ? '🔒' : game.emoji}</div>
           <div class="title">${game.title}</div>
-          <div class="desc">${game.desc}</div>
-          <div class="play-btn">あそぶ ▶</div>
+          <div class="desc">${locked ? `🔒 これは アンロックされていません（おかね ${UNLOCK_MONEY_TARGET}で あそべるよ）` : game.desc}</div>
+          <div class="play-btn">${locked ? 'ロック中' : 'あそぶ ▶'}</div>
         `;
-        a.addEventListener('click', () => {
+        a.addEventListener('click', (e) => {
+          if (locked) {
+            e.preventDefault();
+            showToast('🔒 これは アンロックされていません');
+            return;
+          }
           bumpSnackCount();
-          bumpMoneyCount(5);
+          handleMoneyChange(bumpMoneyCount(5));
         });
         grid.appendChild(a);
       });
     }
+
+    renderGrid();
   </script>
 </body>
 </html>
