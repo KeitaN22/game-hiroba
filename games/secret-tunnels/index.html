@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの ひみつの トンネル</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #2b2b44 0%, #5c3d7a 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .cave-box {
+    position: relative;
+    background: #1a1a2e;
+    border-radius: 24px;
+    min-height: 400px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.3);
+    padding: 24px 16px;
+    box-sizing: border-box;
+  }
+
+  .tunnel-row {
+    display: flex; justify-content: center; gap: 14px;
+    margin-top: 20px;
+  }
+  .tunnel-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: #2e2e4e; border: none; border-radius: 20px;
+    padding: 20px 14px; cursor: pointer; user-select: none;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+    color: #fff;
+    width: 100px;
+  }
+  .tunnel-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.35); }
+  .tunnel-btn:disabled { opacity: 0.5; cursor: default; }
+  .tunnel-btn.visited { background: #3a5c3a; }
+  .tunnel-btn .t-emoji { font-size: 3rem; }
+  .tunnel-btn .t-label { font-size: 0.85rem; font-weight: bold; }
+  .tunnel-btn .t-check { font-size: 0.75rem; color: #7CFF7C; min-height: 16px; }
+
+  .question-text {
+    text-align: center; color: #fff; font-size: 1.1rem; font-weight: bold;
+  }
+
+  .result-emoji-row { font-size: 3rem; text-align: center; margin: 10px 0; letter-spacing: 4px; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.85);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.5rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🕳️ そうすけの ひみつの トンネル</h1>
+
+  <div class="hud">
+    <span>🔍 みつけた かず <span id="visitedCount">0</span>/3</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="cave-box" id="caveBox">
+      <div class="question-text">どの トンネルに いく？</div>
+      <div class="tunnel-row" id="tunnelRow"></div>
+
+      <div class="overlay hide" id="resultOverlay">
+        <h2 id="resultTitle">-</h2>
+        <div class="result-emoji-row" id="resultEmojiRow"></div>
+        <p id="resultText"></p>
+        <button class="big-btn" id="backBtn">🔙 トンネルせんたくへ</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 ぜんぶ みつけた！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const TUNNELS = [
+      {
+        id: 'left', label: 'ひだり', emoji: '🕳️',
+        resultTitle: '😇 てんごくトンネル！', resultEmoji: '☁️👼🌈🍭',
+        resultMsg: 'ふわふわの くもの うえに ついたよ！てんしさんが おかしを くれた！さいこうの ばしょだね！',
+        sound: 'playClearFanfare',
+      },
+      {
+        id: 'middle', label: 'まんなか', emoji: '🕳️',
+        resultTitle: '🐛 むしむしトンネル！', resultEmoji: '🐛🕷️🪳🦗',
+        resultMsg: 'うわあ！むしが いっぱい！ちょっと きもちわるいけど、みんな げんきに うごいてるよ！',
+        sound: 'playFailBuzz',
+      },
+      {
+        id: 'right', label: 'みぎ', emoji: '🕳️',
+        resultTitle: '🎉 パーティートンネル！', resultEmoji: '🎉🎂🎈🎊',
+        resultMsg: 'わあ！パーティーだ！みんなが おいわい してくれたよ！たのしいね！',
+        sound: 'playClearFanfare',
+      },
+    ];
+
+    const tunnelRowEl = document.getElementById('tunnelRow');
+    const visitedCountEl = document.getElementById('visitedCount');
+    const resultOverlay = document.getElementById('resultOverlay');
+    const resultTitleEl = document.getElementById('resultTitle');
+    const resultEmojiRowEl = document.getElementById('resultEmojiRow');
+    const resultTextEl = document.getElementById('resultText');
+    const backBtn = document.getElementById('backBtn');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let visited = {};
+    let startTime = 0;
+
+    function renderTunnels() {
+      tunnelRowEl.innerHTML = '';
+      TUNNELS.forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'tunnel-btn' + (visited[t.id] ? ' visited' : '');
+        btn.id = 'tunnel_' + t.id;
+        btn.innerHTML = `
+          <span class="t-emoji">${t.emoji}</span>
+          <span class="t-label">${t.label}</span>
+          <span class="t-check">${visited[t.id] ? '✔ はっけん' : ''}</span>
+        `;
+        btn.addEventListener('click', () => openTunnel(t));
+        tunnelRowEl.appendChild(btn);
+      });
+    }
+
+    function openTunnel(t) {
+      visited[t.id] = true;
+      const total = Object.keys(visited).length;
+      visitedCountEl.textContent = total;
+      resultTitleEl.textContent = t.resultTitle;
+      resultEmojiRowEl.textContent = t.resultEmoji;
+      resultTextEl.textContent = t.resultMsg;
+      resultOverlay.classList.remove('hide');
+      renderTunnels();
+      const soundFn = GameAudio[t.sound];
+      if (soundFn) soundFn.call(GameAudio);
+    }
+
+    function closeResult() {
+      resultOverlay.classList.add('hide');
+      const total = Object.keys(visited).length;
+      if (total >= TUNNELS.length) {
+        finishGame();
+      }
+    }
+
+    function finishGame() {
+      const elapsed = (performance.now() - startTime) / 1000;
+      endTextEl.textContent = `3つの トンネルを ぜんぶ みつけたよ！${elapsed.toFixed(1)}びょうで はっけん した！`;
+      endOverlay.classList.remove('hide');
+      GameAudio.playClearFanfare();
+      Leaderboard.showRankFlow({ gameId: 'secret-tunnels', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🕳️ ひみつの トンネル ランキング' });
+    }
+
+    function resetGame() {
+      visited = {};
+      startTime = performance.now();
+      visitedCountEl.textContent = '0';
+      resultOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      renderTunnels();
+    }
+
+    backBtn.addEventListener('click', closeResult);
+    document.getElementById('retryBtn').addEventListener('click', resetGame);
+
+    resetGame();
+  </script>
+</body>
+</html>

@@ -438,4 +438,12 @@ const GAMES = [
     path: 'games/prison-escape/index.html',
     desc: 'へやの なかを さがして レバーを みつけて、ドアを あけて だっしゅつしよう！レバーが ないと みつかっちゃうよ。',
   },
+  {
+    id: 'secret-tunnels',
+    title: 'そうすけの ひみつの トンネル',
+    emoji: '🕳️',
+    color: '#5c3d7a',
+    path: 'games/secret-tunnels/index.html',
+    desc: 'ひだり・まんなか・みぎの トンネルを えらんで、なにが あるか たしかめよう！ぜんぶ はっけんしてね。',
+  },
 ];
