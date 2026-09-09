@@ -446,4 +446,12 @@ const GAMES = [
     path: 'games/secret-tunnels/index.html',
     desc: 'ひだり・まんなか・みぎの トンネルを えらんで、なにが あるか たしかめよう！ぜんぶ はっけんしてね。',
   },
+  {
+    id: 'grow-plant',
+    title: 'そうすけの たねをそだてよう',
+    emoji: '🌱',
+    color: '#8B5E3C',
+    path: 'games/grow-plant/index.html',
+    desc: '💧みずやりと ☀️たいようを つかって、たねを みが なるまで そだてよう！なにが ひつようか よく みてね。',
+  },
 ];

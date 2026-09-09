@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの たねをそだてよう</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #AEE1FF 0%, #C8F7C5 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .garden-box {
+    position: relative;
+    background: linear-gradient(180deg, #FFF6B7 0%, #C8F7C5 60%, #8B5E3C 100%);
+    border-radius: 24px;
+    height: 360px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding-bottom: 30px;
+  }
+
+  .plant-emoji {
+    font-size: 5rem;
+    transition: transform 0.2s ease;
+  }
+  .plant-emoji.pop { animation: plantPop 0.35s ease-out; }
+  @keyframes plantPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3) rotate(-5deg); }
+    100% { transform: scale(1); }
+  }
+  .plant-emoji.shake { animation: plantShake 0.3s ease-out; }
+  @keyframes plantShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .stage-name {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 0.95rem; font-weight: bold; color: #333;
+    background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 999px;
+  }
+
+  .hint-msg {
+    position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+    font-size: 0.9rem; font-weight: bold; color: #E05353;
+    background: rgba(255,255,255,0.9); padding: 4px 14px; border-radius: 999px;
+    opacity: 0; white-space: nowrap;
+  }
+  .hint-msg.show { animation: hintPop 1s ease-out; }
+  @keyframes hintPop {
+    0% { opacity: 0; }
+    15% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .progress-bar-wrap {
+    width: 80%;
+    height: 16px; background: rgba(255,255,255,0.5); border-radius: 999px; overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #7CFF7C);
+    transition: width 0.2s ease-out;
+  }
+
+  .tool-row {
+    display: flex; justify-content: center; gap: 24px;
+    margin-top: 18px;
+  }
+  .tool-btn {
+    font-size: 1.5rem; font-weight: bold; padding: 20px 36px; border: none; border-radius: 999px;
+    background: #fff; color: #333; cursor: pointer; user-select: none;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+  }
+  .tool-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .tool-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🌱 そうすけの たねをそだてよう</h1>
+
+  <div class="hud">
+    <span>🪴 ステージ <span id="stageNumDisplay">1</span>/5</span>
+    <span>⏱️ <span id="timeDisplay">0.0</span> びょう</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="garden-box" id="gardenBox">
+      <span class="stage-name" id="stageNameDisplay">たね</span>
+      <span class="hint-msg" id="hintMsg"></span>
+      <span class="plant-emoji" id="plantEmoji">🌱</span>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBarFill"></div></div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🌱 たねを そだてよう</h2>
+        <p>
+          💧みずやり と ☀️たいようの ボタンで たねを そだてよう！<br>
+          いま なにが ひつようか、メッセージを みてね。<br>
+          さいごまで そだてたら クリア！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 みが なったよ！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <button class="tool-btn" id="waterBtn">💧 みずやり</button>
+      <button class="tool-btn" id="sunBtn">☀️ たいよう</button>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const STAGES = [
+      { name: 'たね', emoji: '🌱', need: 'water', needCount: 3, nextEmoji: '🌿' },
+      { name: 'め', emoji: '🌿', need: 'sun', needCount: 3, nextEmoji: '🌷' },
+      { name: 'つぼみ', emoji: '🌷', need: 'water', needCount: 4, nextEmoji: '🌸' },
+      { name: 'はな', emoji: '🌸', need: 'sun', needCount: 4, nextEmoji: '🍎' },
+    ];
+
+    const plantEmojiEl = document.getElementById('plantEmoji');
+    const stageNameDisplayEl = document.getElementById('stageNameDisplay');
+    const stageNumDisplayEl = document.getElementById('stageNumDisplay');
+    const hintMsgEl = document.getElementById('hintMsg');
+    const progressBarFillEl = document.getElementById('progressBarFill');
+    const waterBtn = document.getElementById('waterBtn');
+    const sunBtn = document.getElementById('sunBtn');
+    const timeDisplayEl = document.getElementById('timeDisplay');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    let playing = false;
+    let stageIndex = 0;
+    let progress = 0;
+    let startTime = 0;
+    let timerHandle = null;
+
+    function showHint(text) {
+      hintMsgEl.textContent = text;
+      hintMsgEl.classList.remove('show');
+      void hintMsgEl.offsetWidth;
+      hintMsgEl.classList.add('show');
+    }
+
+    function loadStage() {
+      const stage = STAGES[stageIndex];
+      stageNameDisplayEl.textContent = stage.name;
+      stageNumDisplayEl.textContent = stageIndex + 1;
+      plantEmojiEl.textContent = stage.emoji;
+      progress = 0;
+      progressBarFillEl.style.width = '0%';
+      const needLabel = stage.need === 'water' ? '💧 みずやりが ひつようだよ！' : '☀️ たいようが ひつようだよ！';
+      showHint(needLabel);
+    }
+
+    function useTool(toolType, btn) {
+      if (!playing) return;
+      const stage = STAGES[stageIndex];
+      if (toolType !== stage.need) {
+        plantEmojiEl.classList.remove('shake');
+        void plantEmojiEl.offsetWidth;
+        plantEmojiEl.classList.add('shake');
+        showHint(stage.need === 'water' ? '💧 みずやりを つかってね' : '☀️ たいようを つかってね');
+        GameAudio.playClickTick();
+        return;
+      }
+      progress++;
+      progressBarFillEl.style.width = (progress / stage.needCount * 100) + '%';
+      plantEmojiEl.classList.remove('pop');
+      void plantEmojiEl.offsetWidth;
+      plantEmojiEl.classList.add('pop');
+      GameAudio.playClearFanfare();
+
+      if (progress >= stage.needCount) {
+        plantEmojiEl.textContent = stage.nextEmoji;
+        stageIndex++;
+        if (stageIndex >= STAGES.length) {
+          winGame();
+        } else {
+          loadStage();
+        }
+      }
+    }
+
+    waterBtn.addEventListener('click', () => useTool('water', waterBtn));
+    sunBtn.addEventListener('click', () => useTool('sun', sunBtn));
+
+    function winGame() {
+      playing = false;
+      clearInterval(timerHandle);
+      const elapsed = (performance.now() - startTime) / 1000;
+      GameAudio.stopBGM();
+      GameAudio.playClearFanfare();
+      stageNameDisplayEl.textContent = 'み';
+      stageNumDisplayEl.textContent = '5';
+      endTextEl.textContent = `${elapsed.toFixed(1)}びょうで りっぱな みに そだったよ！すごい！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'grow-plant', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🌱 たねをそだてよう ランキング' });
+    }
+
+    function startGame() {
+      playing = true;
+      stageIndex = 0;
+      progress = 0;
+      timeDisplayEl.textContent = '0.0';
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      loadStage();
+      startTime = performance.now();
+      GameAudio.playBGM();
+      clearInterval(timerHandle);
+      timerHandle = setInterval(() => {
+        if (!playing) return;
+        timeDisplayEl.textContent = ((performance.now() - startTime) / 1000).toFixed(1);
+      }, 100);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>
