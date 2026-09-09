@@ -451,7 +451,7 @@ const GAMES = [
     title: 'そうすけの たねをそだてよう',
     emoji: '🌱',
     color: '#8B5E3C',
-    path: 'games/grow-plant/index.html',
+    path: 'games/grow-plant/index.html?v=2',
     desc: '💧みずやりと ☀️たいようを つかって、たねを みが なるまで そだてよう！なにが ひつようか よく みてね。',
   },
 ];

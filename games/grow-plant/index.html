@@ -91,6 +91,18 @@
   .tool-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
   .tool-btn:disabled { opacity: 0.5; cursor: default; }
 
+  .seed-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+  .seed-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: #fff; border: none; border-radius: 18px;
+    padding: 16px 18px; cursor: pointer; user-select: none;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+    color: #333;
+  }
+  .seed-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .seed-btn .sd-emoji { font-size: 2.4rem; }
+  .seed-btn .sd-name { font-size: 0.85rem; font-weight: bold; }
+
   .overlay {
     position: absolute; inset: 0; background: rgba(0,0,0,0.7);
     border-radius: 24px;
@@ -120,8 +132,14 @@
       <span class="plant-emoji" id="plantEmoji">🌱</span>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBarFill"></div></div>
 
-      <div class="overlay" id="startOverlay">
-        <h2>🌱 たねを そだてよう</h2>
+      <div class="overlay" id="seedSelectOverlay">
+        <h2>🌱 どの たねに する？</h2>
+        <p>そだてたい たねを えらんでね！</p>
+        <div class="seed-row" id="seedRow"></div>
+      </div>
+
+      <div class="overlay hide" id="startOverlay">
+        <h2 id="startTitle">🌱 たねを そだてよう</h2>
         <p>
           💧みずやり と ☀️たいようの ボタンで たねを そだてよう！<br>
           いま なにが ひつようか、メッセージを みてね。<br>
@@ -131,7 +149,7 @@
       </div>
 
       <div class="overlay hide" id="endOverlay">
-        <h2>🎉 みが なったよ！ 🎉</h2>
+        <h2>🎉 さいたよ！ 🎉</h2>
         <p id="endText"></p>
         <button class="big-btn" id="retryBtn">🔄 もういちど</button>
       </div>
@@ -152,12 +170,47 @@
       muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
 
-    const STAGES = [
-      { name: 'たね', emoji: '🌱', need: 'water', needCount: 3, nextEmoji: '🌿' },
-      { name: 'め', emoji: '🌿', need: 'sun', needCount: 3, nextEmoji: '🌷' },
-      { name: 'つぼみ', emoji: '🌷', need: 'water', needCount: 4, nextEmoji: '🌸' },
-      { name: 'はな', emoji: '🌸', need: 'sun', needCount: 4, nextEmoji: '🍎' },
+    const SEEDS = [
+      { id: 'asagao', name: 'あさがお', emoji: '🌱', bloomEmoji: '🌺' },
+      { id: 'himawari', name: 'ひまわり', emoji: '🌱', bloomEmoji: '🌻' },
+      { id: 'hana', name: 'はな', emoji: '🌱', bloomEmoji: '🌸' },
     ];
+
+    function buildStages(seed) {
+      return [
+        { name: 'たね', emoji: '🌱', need: 'water', needCount: 3, nextEmoji: '🌿' },
+        { name: 'め', emoji: '🌿', need: 'sun', needCount: 3, nextEmoji: '🌷' },
+        { name: 'つぼみ', emoji: '🌷', need: 'water', needCount: 4, nextEmoji: '🌸' },
+        { name: 'はな', emoji: '🌸', need: 'sun', needCount: 4, nextEmoji: seed.bloomEmoji },
+      ];
+    }
+
+    let selectedSeed = SEEDS[0];
+    let STAGES = buildStages(selectedSeed);
+
+    const seedRowEl = document.getElementById('seedRow');
+    const seedSelectOverlay = document.getElementById('seedSelectOverlay');
+    const startTitleEl = document.getElementById('startTitle');
+
+    function renderSeedRow() {
+      seedRowEl.innerHTML = '';
+      SEEDS.forEach(seed => {
+        const btn = document.createElement('button');
+        btn.className = 'seed-btn';
+        btn.innerHTML = `<span class="sd-emoji">${seed.emoji}</span><span class="sd-name">${seed.name}</span>`;
+        btn.addEventListener('click', () => chooseSeed(seed));
+        seedRowEl.appendChild(btn);
+      });
+    }
+
+    function chooseSeed(seed) {
+      selectedSeed = seed;
+      STAGES = buildStages(seed);
+      seedSelectOverlay.classList.add('hide');
+      startTitleEl.textContent = `${seed.emoji} ${seed.name}を そだてよう`;
+      startOverlay.classList.remove('hide');
+      GameAudio.playClickTick();
+    }
 
     const plantEmojiEl = document.getElementById('plantEmoji');
     const stageNameDisplayEl = document.getElementById('stageNameDisplay');
@@ -233,9 +286,9 @@
       const elapsed = (performance.now() - startTime) / 1000;
       GameAudio.stopBGM();
       GameAudio.playClearFanfare();
-      stageNameDisplayEl.textContent = 'み';
+      stageNameDisplayEl.textContent = selectedSeed.name;
       stageNumDisplayEl.textContent = '5';
-      endTextEl.textContent = `${elapsed.toFixed(1)}びょうで りっぱな みに そだったよ！すごい！`;
+      endTextEl.textContent = `${elapsed.toFixed(1)}びょうで りっぱな ${selectedSeed.name}が さいたよ！すごい！`;
       endOverlay.classList.remove('hide');
       Leaderboard.showRankFlow({ gameId: 'grow-plant', score: elapsed, higherIsBetter: false, unit: 'びょう', title: '🌱 たねをそだてよう ランキング' });
     }
@@ -257,8 +310,19 @@
       }, 100);
     }
 
+    function backToSeedSelect() {
+      playing = false;
+      clearInterval(timerHandle);
+      GameAudio.stopBGM();
+      endOverlay.classList.add('hide');
+      startOverlay.classList.add('hide');
+      seedSelectOverlay.classList.remove('hide');
+    }
+
     document.getElementById('startBtn').addEventListener('click', startGame);
-    document.getElementById('retryBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', backToSeedSelect);
+
+    renderSeedRow();
   </script>
 </body>
 </html>
