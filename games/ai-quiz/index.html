@@ -120,17 +120,43 @@
       muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
 
-    const APPS = [
-      { id: 'claude', name: 'Claude アプリ', emoji: '🟠' },
-      { id: 'gemini', name: 'Gemini', emoji: '🔵' },
-      { id: 'sousuke', name: 'そうすけの プロAI', emoji: '🦸' },
-    ];
-
     const QUESTIONS = [
-      { key: 'tough', label: 'じょうぶさ', stats: { claude: 70, gemini: 55, sousuke: 95 } },
-      { key: 'smart', label: 'かしこさ', stats: { claude: 90, gemini: 85, sousuke: 99 } },
-      { key: 'speed', label: 'はやさ', stats: { claude: 75, gemini: 90, sousuke: 99 } },
-      { key: 'fun', label: 'たのしさ', stats: { claude: 80, gemini: 70, sousuke: 100 } },
+      {
+        key: 'tough', label: 'じょうぶさ',
+        apps: [
+          { id: 'claude', name: 'Claude アプリ', emoji: '🟠' },
+          { id: 'gemini', name: 'Gemini', emoji: '🔵' },
+          { id: 'sousuke', name: 'そうすけの プロAI', emoji: '🦸' },
+        ],
+        stats: { claude: 70, gemini: 55, sousuke: 95 },
+      },
+      {
+        key: 'smart', label: 'かしこさ',
+        apps: [
+          { id: 'chatgpt', name: 'ChatGPT', emoji: '🟢' },
+          { id: 'copilot', name: 'Copilot', emoji: '🟣' },
+          { id: 'sousuke', name: 'そうすけの プロAI', emoji: '🦸' },
+        ],
+        stats: { chatgpt: 90, copilot: 85, sousuke: 99 },
+      },
+      {
+        key: 'speed', label: 'はやさ',
+        apps: [
+          { id: 'perplexity', name: 'Perplexity', emoji: '🟡' },
+          { id: 'siri', name: 'Siri', emoji: '⚪' },
+          { id: 'sousuke', name: 'そうすけの プロAI', emoji: '🦸' },
+        ],
+        stats: { perplexity: 90, siri: 75, sousuke: 99 },
+      },
+      {
+        key: 'fun', label: 'たのしさ',
+        apps: [
+          { id: 'alexa', name: 'Alexa', emoji: '🔷' },
+          { id: 'bing', name: 'Bing', emoji: '🔺' },
+          { id: 'sousuke', name: 'そうすけの プロAI', emoji: '🦸' },
+        ],
+        stats: { alexa: 70, bing: 80, sousuke: 100 },
+      },
     ];
 
     const qCountEl = document.getElementById('qCount');
@@ -160,7 +186,7 @@
       nextBtn.classList.add('hide');
 
       cardsRowEl.innerHTML = '';
-      APPS.forEach(app => {
+      q.apps.forEach(app => {
         const card = document.createElement('button');
         card.className = 'app-card';
         card.id = 'card_' + app.id;
@@ -181,7 +207,7 @@
       const bestId = Object.entries(q.stats).sort((a, b) => b[1] - a[1])[0][0];
       const correct = app.id === bestId;
 
-      APPS.forEach(a => {
+      q.apps.forEach(a => {
         const card = document.getElementById('card_' + a.id);
         card.disabled = true;
         document.getElementById('bar_' + a.id).style.width = q.stats[a.id] + '%';
@@ -197,7 +223,7 @@
         GameAudio.playClearFanfare();
       } else {
         document.getElementById('card_' + app.id).classList.add('wrong-pick');
-        const bestApp = APPS.find(a => a.id === bestId);
+        const bestApp = q.apps.find(a => a.id === bestId);
         feedbackMsgEl.textContent = `😢 ざんねん！ いちばんは ${bestApp.name} だったよ`;
         feedbackMsgEl.classList.add('wrong');
         GameAudio.playFailBuzz();
