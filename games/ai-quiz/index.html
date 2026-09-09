@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>そうすけの AIクイズ</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  body { background: linear-gradient(135deg, #AEE1FF 0%, #D6C7F0 100%); background-attachment: fixed; }
+
+  .stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 1.05rem; font-weight: bold;
+    background: rgba(255,255,255,0.9); border-radius: 16px; padding: 8px 18px;
+    margin-bottom: 14px;
+  }
+
+  .quiz-box {
+    position: relative;
+    background: #fff;
+    border-radius: 24px;
+    min-height: 420px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 24px rgba(0,0,0,0.2);
+    padding: 22px 18px;
+    box-sizing: border-box;
+  }
+
+  .question-text { text-align: center; font-size: 1.15rem; font-weight: bold; color: #333; margin-bottom: 16px; }
+
+  .cards-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .app-card {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: #F5F5F5; border: none; border-radius: 18px;
+    padding: 16px 12px; cursor: pointer; user-select: none;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+    width: 120px;
+  }
+  .app-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .app-card:disabled { cursor: default; }
+  .app-card.correct { background: #A6E8A0; box-shadow: 0 5px 0 #5cb85c; }
+  .app-card.wrong-pick { background: #FFB3B3; box-shadow: 0 5px 0 #d9534f; }
+  .app-card .a-emoji { font-size: 2.4rem; }
+  .app-card .a-name { font-size: 0.8rem; font-weight: bold; color: #333; text-align: center; }
+
+  .bar-wrap { width: 100%; height: 16px; background: #eee; border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #FF9A56, #FF5D8F); transition: width 0.6s ease-out; }
+  .bar-pct { font-size: 0.75rem; font-weight: bold; color: #333; margin-top: 2px; }
+
+  .feedback-msg { text-align: center; font-size: 1.05rem; font-weight: bold; min-height: 26px; margin: 14px 0; }
+  .feedback-msg.correct { color: #4CAF50; }
+  .feedback-msg.wrong { color: #E05353; }
+
+  .next-btn {
+    display: block; margin: 0 auto;
+    font-size: 1.05rem; font-weight: bold; padding: 14px 30px; border: none; border-radius: 999px;
+    background: #FF5D8F; color: #fff; cursor: pointer;
+    box-shadow: 0 5px 0 #c73f6a;
+  }
+  .next-btn.hide { display: none; }
+  .next-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #c73f6a; }
+
+  .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; text-align: center; z-index: 10; padding: 20px;
+    box-sizing: border-box;
+  }
+  .overlay.hide { display: none !important; }
+  .overlay h2 { font-size: 1.6rem; margin: 6px 0; }
+  .overlay p { font-size: 1rem; margin: 6px 0 14px; line-height: 1.6; }
+</style>
+</head>
+<body class="game-body">
+  <a class="home-link" href="../../index.html">🏠 ホームにもどる</a>
+  <button class="mute-btn" id="muteBtn">🔊</button>
+  <h1 class="game-title">🤖 そうすけの AIクイズ</h1>
+
+  <div class="hud">
+    <span>もんだい <span id="qCount">1</span>/<span id="qTotal">4</span></span>
+    <span>せいかい 🎯 <span id="scoreCount">0</span></span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="quiz-box" id="quizBox">
+      <div class="question-text" id="questionText">どれが いちばん じょうぶかな？</div>
+      <div class="cards-row" id="cardsRow"></div>
+      <div class="feedback-msg" id="feedbackMsg">&nbsp;</div>
+      <button class="next-btn hide" id="nextBtn">▶ つぎへ</button>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🤖 AIクイズ</h2>
+        <p>
+          これは そうすけくんが かんがえた あそびの クイズだよ！<br>
+          3つの AIキャラクターの なかから、いちばんかな？と おもう ものを えらんでね。<br>
+          ぜんぶで 4もんだい あるよ！
+        </p>
+        <button class="big-btn" id="startBtn">▶ スタート</button>
+      </div>
+
+      <div class="overlay hide" id="endOverlay">
+        <h2>🎉 クイズ おわり！ 🎉</h2>
+        <p id="endText"></p>
+        <button class="big-btn" id="retryBtn">🔄 もういちど</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../audio.js?v=13"></script>
+  <script src="../../leaderboard.js?v=2"></script>
+  <script>
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = GameAudio.toggleMute();
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const APPS = [
+      { id: 'claude', name: 'Claude アプリ', emoji: '🟠' },
+      { id: 'gemini', name: 'Gemini', emoji: '🔵' },
+      { id: 'sousuke', name: 'そうすけの プロAI', emoji: '🦸' },
+    ];
+
+    const QUESTIONS = [
+      { key: 'tough', label: 'じょうぶさ', stats: { claude: 70, gemini: 55, sousuke: 95 } },
+      { key: 'smart', label: 'かしこさ', stats: { claude: 90, gemini: 85, sousuke: 99 } },
+      { key: 'speed', label: 'はやさ', stats: { claude: 75, gemini: 90, sousuke: 99 } },
+      { key: 'fun', label: 'たのしさ', stats: { claude: 80, gemini: 70, sousuke: 100 } },
+    ];
+
+    const qCountEl = document.getElementById('qCount');
+    const qTotalEl = document.getElementById('qTotal');
+    const scoreCountEl = document.getElementById('scoreCount');
+    const questionTextEl = document.getElementById('questionText');
+    const cardsRowEl = document.getElementById('cardsRow');
+    const feedbackMsgEl = document.getElementById('feedbackMsg');
+    const nextBtn = document.getElementById('nextBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTextEl = document.getElementById('endText');
+
+    qTotalEl.textContent = QUESTIONS.length;
+
+    let qIndex = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+      const q = QUESTIONS[qIndex];
+      answered = false;
+      qCountEl.textContent = qIndex + 1;
+      questionTextEl.textContent = `どれが いちばん「${q.label}」かな？`;
+      feedbackMsgEl.textContent = ' ';
+      feedbackMsgEl.className = 'feedback-msg';
+      nextBtn.classList.add('hide');
+
+      cardsRowEl.innerHTML = '';
+      APPS.forEach(app => {
+        const card = document.createElement('button');
+        card.className = 'app-card';
+        card.id = 'card_' + app.id;
+        card.innerHTML = `
+          <span class="a-emoji">${app.emoji}</span>
+          <span class="a-name">${app.name}</span>
+          <div class="bar-wrap"><div class="bar-fill" id="bar_${app.id}"></div></div>
+          <span class="bar-pct" id="pct_${app.id}">&nbsp;</span>
+        `;
+        card.addEventListener('click', () => selectApp(app, q));
+        cardsRowEl.appendChild(card);
+      });
+    }
+
+    function selectApp(app, q) {
+      if (answered) return;
+      answered = true;
+      const bestId = Object.entries(q.stats).sort((a, b) => b[1] - a[1])[0][0];
+      const correct = app.id === bestId;
+
+      APPS.forEach(a => {
+        const card = document.getElementById('card_' + a.id);
+        card.disabled = true;
+        document.getElementById('bar_' + a.id).style.width = q.stats[a.id] + '%';
+        document.getElementById('pct_' + a.id).textContent = q.stats[a.id] + '%';
+        if (a.id === bestId) card.classList.add('correct');
+      });
+
+      if (correct) {
+        score++;
+        scoreCountEl.textContent = score;
+        feedbackMsgEl.textContent = '🎉 せいかい！';
+        feedbackMsgEl.classList.add('correct');
+        GameAudio.playClearFanfare();
+      } else {
+        document.getElementById('card_' + app.id).classList.add('wrong-pick');
+        const bestApp = APPS.find(a => a.id === bestId);
+        feedbackMsgEl.textContent = `😢 ざんねん！ いちばんは ${bestApp.name} だったよ`;
+        feedbackMsgEl.classList.add('wrong');
+        GameAudio.playFailBuzz();
+      }
+      nextBtn.classList.remove('hide');
+    }
+
+    function goNext() {
+      qIndex++;
+      if (qIndex >= QUESTIONS.length) {
+        finishGame();
+        return;
+      }
+      loadQuestion();
+    }
+
+    function finishGame() {
+      GameAudio.playClearFanfare();
+      endTextEl.textContent = `${QUESTIONS.length}もんちゅう ${score}もん せいかいしたよ！`;
+      endOverlay.classList.remove('hide');
+      Leaderboard.showRankFlow({ gameId: 'ai-quiz', score: score, higherIsBetter: true, unit: 'もん', title: '🤖 AIクイズ ランキング' });
+    }
+
+    function startGame() {
+      qIndex = 0;
+      score = 0;
+      startOverlay.classList.add('hide');
+      endOverlay.classList.add('hide');
+      loadQuestion();
+    }
+
+    nextBtn.addEventListener('click', goNext);
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('retryBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

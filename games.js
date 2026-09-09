@@ -454,4 +454,12 @@ const GAMES = [
     path: 'games/grow-plant/index.html?v=3',
     desc: '💧みずやりと ☀️たいようを つかって、たねを みが なるまで そだてよう！なにが ひつようか よく みてね。',
   },
+  {
+    id: 'ai-quiz',
+    title: 'そうすけの AIクイズ',
+    emoji: '🤖',
+    color: '#AEE1FF',
+    path: 'games/ai-quiz/index.html',
+    desc: 'Claudeアプリ・Gemini・そうすけのプロAIの 3にんの なかから、いちばんかな？と おもう ものを えらぼう！',
+  },
 ];
