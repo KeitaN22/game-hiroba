@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>ソウスケゲーム広場</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <div class="hero">
@@ -89,24 +89,41 @@
       atmBtn.classList.add('pop');
     });
 
+    const LIKES_KEY = 'soutaGameLikes';
+    function getLikedSet() {
+      try { return new Set(JSON.parse(localStorage.getItem(LIKES_KEY) || '[]')); }
+      catch (e) { return new Set(); }
+    }
+    function toggleLike(gameId) {
+      const liked = getLikedSet();
+      if (liked.has(gameId)) liked.delete(gameId); else liked.add(gameId);
+      localStorage.setItem(LIKES_KEY, JSON.stringify([...liked]));
+      return liked.has(gameId);
+    }
+
     function renderGrid() {
       grid.innerHTML = '';
       if (GAMES.length === 0) {
         grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';
         return;
       }
+      const likedSet = getLikedSet();
       GAMES.forEach((game, index) => {
         const locked = game.unlockPrice && !isGameUnlocked(game);
         const a = document.createElement('a');
         a.className = 'card' + (locked ? ' locked' : '');
         a.href = game.path;
         a.style.background = game.color;
+        const isLiked = likedSet.has(game.id);
         a.innerHTML = `
           <div class="number-badge">${index + 1}</div>
           <div class="emoji">${locked ? '🔒' : game.emoji}</div>
           <div class="title">${game.title}</div>
           <div class="desc">${locked ? `🔒 これは アンロックされていません（おかね ${game.unlockPrice}で あそべるよ）` : game.desc}</div>
-          <div class="play-btn">${locked ? 'ロック中' : 'あそぶ ▶'}</div>
+          <div class="action-row">
+            <div class="play-btn">${locked ? 'ロック中' : 'あそぶ ▶'}</div>
+            <button class="like-btn${isLiked ? ' liked' : ''}" id="like_${game.id}" aria-label="すきボタン">${isLiked ? '❤️' : '🤍'}</button>
+          </div>
         `;
         a.addEventListener('click', (e) => {
           if (locked) {
@@ -116,6 +133,17 @@
           }
           bumpSnackCount();
           handleMoneyChange(bumpMoneyCount(5));
+        });
+        const likeBtn = a.querySelector('.like-btn');
+        likeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const nowLiked = toggleLike(game.id);
+          likeBtn.textContent = nowLiked ? '❤️' : '🤍';
+          likeBtn.classList.toggle('liked', nowLiked);
+          likeBtn.classList.remove('pop');
+          void likeBtn.offsetWidth;
+          likeBtn.classList.add('pop');
         });
         grid.appendChild(a);
       });
