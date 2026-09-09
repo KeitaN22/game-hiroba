@@ -459,7 +459,7 @@ const GAMES = [
     title: 'そうすけの AIクイズ',
     emoji: '🤖',
     color: '#AEE1FF',
-    path: 'games/ai-quiz/index.html?v=2',
+    path: 'games/ai-quiz/index.html?v=3',
     desc: 'Claudeアプリ・Gemini・そうすけのプロAIの 3にんの なかから、いちばんかな？と おもう ものを えらぼう！',
   },
 ];
