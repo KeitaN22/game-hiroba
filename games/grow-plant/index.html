@@ -79,6 +79,16 @@
     transition: width 0.2s ease-out;
   }
 
+  .quit-row { display: flex; justify-content: center; margin-top: 12px; }
+  .quit-btn {
+    font-size: 0.9rem; font-weight: bold; padding: 10px 24px; border: none; border-radius: 999px;
+    background: #999; color: #fff; cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  }
+  .quit-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+
+  .quit-confirm-row { display: flex; justify-content: center; gap: 16px; }
+
   .tool-row {
     display: flex; justify-content: center; gap: 24px;
     margin-top: 18px;
@@ -153,6 +163,19 @@
         <p id="endText"></p>
         <button class="big-btn" id="retryBtn">🔄 もういちど</button>
       </div>
+
+      <div class="overlay hide" id="quitConfirmOverlay">
+        <h2>🚪 おわりますか？</h2>
+        <p>ホーム画面に もどるよ。いいですか？</p>
+        <div class="quit-confirm-row">
+          <button class="big-btn" id="quitYesBtn">はい</button>
+          <button class="big-btn" id="quitNoBtn">いいえ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="quit-row">
+      <button class="quit-btn" id="quitBtn">🚪 おわる</button>
     </div>
 
     <div class="tool-row">
@@ -321,6 +344,23 @@
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', backToSeedSelect);
+
+    const quitBtn = document.getElementById('quitBtn');
+    const quitConfirmOverlay = document.getElementById('quitConfirmOverlay');
+    const quitYesBtn = document.getElementById('quitYesBtn');
+    const quitNoBtn = document.getElementById('quitNoBtn');
+
+    quitBtn.addEventListener('click', () => {
+      quitConfirmOverlay.classList.remove('hide');
+      GameAudio.playClickTick();
+    });
+    quitYesBtn.addEventListener('click', () => {
+      window.location.href = '../../index.html';
+    });
+    quitNoBtn.addEventListener('click', () => {
+      quitConfirmOverlay.classList.add('hide');
+      GameAudio.playClickTick();
+    });
 
     renderSeedRow();
   </script>
