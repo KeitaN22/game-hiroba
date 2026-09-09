@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>ソウスケゲーム広場</title>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <div class="hero">
@@ -17,6 +17,7 @@
       <span class="snack-badge">🍬 <span id="snackCount">0</span></span>
       <span class="money-badge">💰 <span id="moneyCount">0</span></span>
       <button class="atm-badge" id="atmBtn">🏧 ATM</button>
+      <button class="favorite-badge" id="favoriteBtn">⭐ おきにいり</button>
     </p>
   </div>
 
@@ -101,14 +102,31 @@
       return liked.has(gameId);
     }
 
+    let showFavoritesOnly = false;
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    favoriteBtn.addEventListener('click', () => {
+      showFavoritesOnly = !showFavoritesOnly;
+      favoriteBtn.textContent = showFavoritesOnly ? '⭐ ぜんぶ みる' : '⭐ おきにいり';
+      favoriteBtn.classList.toggle('active', showFavoritesOnly);
+      renderGrid();
+    });
+
     function renderGrid() {
       grid.innerHTML = '';
+      const likedSet = getLikedSet();
+      const listToShow = showFavoritesOnly ? GAMES.filter(g => likedSet.has(g.id)) : GAMES;
+
       if (GAMES.length === 0) {
         grid.innerHTML = '<div class="empty-hint">まだ ゲームが ないよ。<br>あたらしい ゲームを つくってみよう！</div>';
         return;
       }
-      const likedSet = getLikedSet();
-      GAMES.forEach((game, index) => {
+      if (showFavoritesOnly && listToShow.length === 0) {
+        grid.innerHTML = '<div class="empty-hint">まだ おきにいりが ないよ。<br>❤️を おして おきにいりを つくろう！</div>';
+        return;
+      }
+
+      listToShow.forEach((game) => {
+        const index = GAMES.indexOf(game);
         const locked = game.unlockPrice && !isGameUnlocked(game);
         const a = document.createElement('a');
         a.className = 'card' + (locked ? ' locked' : '');
@@ -139,6 +157,10 @@
           e.preventDefault();
           e.stopPropagation();
           const nowLiked = toggleLike(game.id);
+          if (showFavoritesOnly) {
+            renderGrid();
+            return;
+          }
           likeBtn.textContent = nowLiked ? '❤️' : '🤍';
           likeBtn.classList.toggle('liked', nowLiked);
           likeBtn.classList.remove('pop');

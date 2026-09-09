@@ -116,6 +116,23 @@ body::before {
   100% { transform: scale(1); }
 }
 
+.favorite-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: #333;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.favorite-badge:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+.favorite-badge.active { background: #FFE58A; box-shadow: 0 4px 0 #d9a900; }
+
 .grid {
   width: 100%;
   max-width: 1000px;
